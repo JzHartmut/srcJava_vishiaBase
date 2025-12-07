@@ -1,5 +1,5 @@
-= Zbnf Parser 
-:toc:
+= Zbnf Syntax description and parser 
+:toc: left
 :toclevels: 4
 :sectnums:
 :sectlinks:
@@ -16,11 +16,13 @@
 |===
 |linked from (parent) |similar files in same level |important links in this
 
-|link:../../../Java/RWtransl.html[Overview Java Text XML conversion] ->
+|link:../../../Java/index.html[Overview Java Text XML conversion] ->
 |-> This page ->
 |-> link:../../../docuZBNF/sfZbnfMain_en.html[ZBNF syntax description]
 
 |===
+
+date=2025-12-06 new <<#ZBNF2>>
 
 == History
 
@@ -29,7 +31,9 @@ This is a personality presentation.
 I have firstly used microprocessors from 1978, in may master thesis. 
 That was programmed in assembly with the Z80 processor. 
 The microprocessor technology was very newly. 
-Firstly I have written some programs to show and change RAM content and such ones.
+Firstly I have written some programs to show and change RAM content and such ones,
+and also written an assembler which works immediately with the stored machine code in RAM,
+but allows also edit the machine code.
 
 Later, from 1982 till 1985, Basic language becomes familiar and I have written
 a system with Basic, also possible to edit on the fly storing a meta machine code.
@@ -44,12 +48,12 @@ but on the first hand I havn't had the necessary time, and second hand
 the {cp} language and my development environment and knowledge 
 was not enough powerful to do so.
 
-Only when I used Java, the idea of a parser which works on the principles of
+First when I used Java, the idea of a parser which works on the principles of
 syntax graphs was successfully. 
 I have written the first version of the parser on only one week end.
 Java which its capabilities for container and the before written class
 link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartScan.html[org.vishia.util.StringPartScan]
-which has had its precursor in some {cpp} classes has enabled this work.  
+which has had its precursor in some {cpp} classes, has enabled this work.  
 
 The result was 
 link:../../docuSrcJava_vishiaBase/org/vishia/zbnf/ZbnfParser.html[org.vishia.zbnf.ZbnfParser]
@@ -66,15 +70,124 @@ which was used to described the syntax of programming language
 in the 50th and 60th, especially for Algol.
 
 The ZBNF has the semantic aspect in the formal syntax definition. The 'Z' is a reverse 'S' for "__Semantic__".
-With that it is possible to immediately store the parsed data in Java instances without additional effort.
+With that it is possible to immediately store the parsed data in Java instances without additional programming effort.
 That is done by the 
 link:../../docuSrcJava_vishiaBase/org/vishia/zbnf/ZbnfParser.html[org.vishia.zbnf.ZbnfParser].
 
 The ``org,vishia.zbnf.ZbnfParser` works with the textual syntax script. 
-It reads the script, stores it as Java data for faster running. 
+It reads the input, interprete it with the ZBNF syntax script, and stores the read data from input 
+as Java data for further evaluation. 
 
 The ZBNF syntax script can also be used to generate proper data storage classes, 
-see <<#ExmplJavaData>>
+see <<#GenJavaData>>
+
+[#ZBNF2]
+== Shorten writing style of syntax (ZBNF2)
+
+date=2025-12-06
+
+The syntax definition as found in 2007 is described in
+link:../../../docuZBNF/sfZbnfMain_en.html[ZBNF syntax description]
+
+* The basic idea in that time was, the control characters for the syntax should be immediately and simple given.
+* The constant texts should be immediately and simple given, not with 'text' as in EBNF.
+* If text character clashes with syntax control character, the backslash is used to transcript.
+* meta-morphems are written in '<...>' with its specific syntax.
+
+With this schema an optional repetition of an identifier is written as:
+
+----
+[ ident = { <$?identItem> ? , } ; ]
+---- 
+
+This is readable. A matching text is:
+
+----
+ident = a,b,c;
+----
+
+But if the syntax contains text literals which conflicts 
+with the syntax control characters, then it is not so well readable: 
+
+----
+[ \[ ident = { \<<$?identItem>\> ? \| } \]]
+---- 
+
+This should be the syntax for the example string:
+
+----
+[ ident= <a>|<b>|<c> ]
+----
+
+Is it well readable in a syntax documentation: NO, it's bad.
+Is it unique able to interpret by the parser: YES, it is.
+
+That's why for documentation another writing style was used in the past.
+One is: colored syntax: The syntax control characters are presented in another background color.
+This is possible for a textual documentation with styles (for example in LibreOffice, or in Word).
+The transcription of literal text is then not necessary, it's better readable.
+
+For plain text, another approach is used:
+
+* The syntax control characters are not simple, a specific string is used.
+hence, they are obviously, predestined.
+* It means, normal characters does not need transcription, 
+excluded the really special case that the literal text should equals with syntax control characters.
+For that a specific transcription is necessary, rarely used.
+
+The writing style of syntax for the example above is then:
+
+----
+[: [ ident = {: <$$identItem> :?: | :} ] :]
+---- 
+
+compare it with
+
+----
+[ \[ident = { \<<$?identItem>\> ? \| } \]]
+---- 
+
+should be better readable.
+
+And now the writing rules:
+
+* Syntax control characters:
+** All control strings have a space before and behind, which is not a constant string literal, 
+does not allow white spaces here. Write a secondary space to enforce white space acceptance.
+Secondly on inner side there is a colon. The basic syntax control character (sequence) is the same.
+** `ALTERNATIVE1 :|: ALTERNATIVE2` instead `ALTERNATIVE1|ALTERNATIVE2`
+** `[: OPTION :]` instead `[OPTION]`
+** `[: OPTION :|: OPTION2 :]` instead `[OPTION|OPTION2]` the choice option
+** `[: OPTION :|: OPTION2 :|]` instead `[OPTION|OPTION2|]` the choice option which can be omitted.
+** `[|: OPTION :|: OPTION2 :]` instead `[|OPTION|OPTION2]` the choice option which can be omitted with first test after.
+** `[?: OPTION should not match :]` instead `[?OPTION should not match]`
+** `[!: OPTION should match :]` instead `[!OPTION should match]` ... but not used to store
+** `[>: IT IS EXPECTED :]` instead `[>IT IS EXPECTED]` the 'expected' test.
+** `{: REPETITION :}` instead `{REPETITION}`
+** `{: REPETITION :?: REPEAT :}` instead `{REPETITION?REPEAT}`
+** `[{: OPTIONAL REPETITION :}]` instead `[{OPTIONAL REPETITION}]`
+** `[{: OPTIONAL REPETITION :?: REPEAT :}]` instead `[{OPTIONAL REPETITION?REPEAT}]`
+** `=::.` instead `.`, the end of the syntax item definition.
+
+* Instead `<syntax?semantic>` with the specific syntax:
+** `pass:[<=::] syntax?semantic pass:[::=>]` instead `<syntax?semantic>`. The semantic is similar the identifier to store the data.
+** `pass:[$$]semantic` instead `<$?semantic>` for a simple identifier. 
+Here the visual disturbing `< >` are omitted. The `$$` is the control string to detect it as non constant literal.
+The semantic need to be an identifier.
+** `pass:[$$-$$]semantic` instead `<$-$?semantic>` accept also special character in the identifier
+** `pass:[##]semantic` instead `<#?semantic>` for a number.
+** All other `<...?semmantic>` variants are similar build with simimlar rules (yet TODO how and describe).
+
+* Definition how to store
+** `[{itemName=containerName: $$itemName.element :}]` instead
++
+`[<?containerName>{<$?element>}]`
+The ZBNF syntax do not need the `itemName` because it is implicitly: If `container` is a container name,
+a LinkedList or Map in Java, then an instance of the element class of the container is created to store.
+But it is more obviously when the item has a name used here.
+The `itenName` can also be used for a gTxt script: 
+link:gTxtOutputter.html[gTxtOutputter, OutTextPreparer].
+ 
 
 == Working principle
 
@@ -126,7 +239,7 @@ As example a bill of material should be used. This may be given in any special f
 in this case in a simple list maybe from older tools.
 
 ----
-include::../../../../src/test/files/zbnfParser/billOfMaterial.txt[]
+include::../../../testJava_vishiaBase/files/zbnfParser/billOfMaterial.txt[]
 ----
 
 The file format is not very well for parsing. Unified delimiters between rows are missing. 
@@ -137,7 +250,7 @@ It is a print out format. But nevertheless it can be parsed:
 
 
 ----
-include::../../../../src/test/files/zbnfParser/billOfMaterial.zbnf[tag=start]
+include::../../../testJava_vishiaBase/files/zbnfParser/billOfMaterial.zbnf[tag=start]
 ----
 
 The first line is only used to inform about the encoding of the syntax file. 
@@ -170,7 +283,7 @@ which's defintion follows. This is a syntax component,
 sometimes in BNF named __meta morphem__ or __non terminal__
 
 ----
-include::../../../../src/test/files/zbnfParser/billOfMaterial.zbnf[tag=mid]
+include::../../../testJava_vishiaBase/files/zbnfParser/billOfMaterial.zbnf[tag=mid]
 ----
 
 The continuation (above) starts with searching the `-------` line, 
@@ -190,7 +303,7 @@ The end of a syntax component, here the main or root, is marked with a dot.
 This is same as older EBNF formats, newer uses also the `;`, but ZBNF only uses the `.`. 
 
 ----
-include::../../../../src/test/files/zbnfParser/billOfMaterial.zbnf[tag=rest]
+include::../../../testJava_vishiaBase/files/zbnfParser/billOfMaterial.zbnf[tag=rest]
 ----
   
 Now above definition of syntax components.
@@ -239,13 +352,13 @@ The syntax definition as part of ...TODO
 
 
 
-[#ExmplJavaData]
-== Example storage class for data, how to get
+[#GenJavaData]
+== Generate the storage class for data, from the ZBNF syntax script
 
 
 ----
 //in file: src/test/java/org/vishia/zbnf/test/Test_Bom_Zbnf.java
-include::../../../../src/test/java/org/vishia/zbnf/test/Test_Bom_Zbnf.java[tag=genDstClassForBom]
+include::../../../testJava_vishiaBase/java/org/vishia/zbnf/test/Test_Bom_Zbnf.java[tag=genDstClassForBom]
 ----
 
 This operation shows how generation of destination classes can be invoked

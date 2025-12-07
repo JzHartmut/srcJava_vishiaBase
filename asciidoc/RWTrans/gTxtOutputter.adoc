@@ -1,0 +1,28 @@
+= Script controlled text generator gTxt or OutTextPreparer 
+:toc: left
+:toclevels: 4
+:sectnums:
+:sectlinks:
+:max-width: 70em
+:prewrap!:
+:cpp: C++
+:cp: C/++
+:wildcard: *
+
+
+== Article structure
+
+[cols="1,1,1"]
+|===
+|linked from (parent) |similar files in same level |important links in this
+
+|link:../../../Java/index.html[Overview Java Text XML conversion] ->
+|-> This page ->
+|-> link:../../docuSrcJava_vishiaBase/org/vishia/util/OutTextPreparer.html[org/vishia/util/OutTextPreparer.java]
+
+|===
+
+== History
+
+TODO
+etc.

@@ -333,7 +333,13 @@ public class XmlCfg
 
 
   
-  /**Read the XmlCfg content from the textual representation. Syntax adequate {@link #writeToText(File, LogMessage)}
+  /**Read the XmlCfg content from the textual representation file.
+   * Syntax adequate {@link #writeToText(File, LogMessage)}
+   * It calls {@link #readFromText(StringPartScan, LogMessage)}.
+   * <br><br>
+   * After reading this instance of {@link XmlCfg} is initialized as config file for {@link XmlJzReader#setCfg(XmlCfg)}
+   * to read a XML files with this configuration. 
+   *  
    * It calls {@link #readFromText(StringPartScan, LogMessage)}.
    * @param fText The file 
    * @param log log on error
@@ -351,11 +357,17 @@ public class XmlCfg
   }
   
   
-  /**Read the XmlCfg content from the textual representation. Syntax adequate {@link #writeToText(File, LogMessage)}
+  /**Read the XmlCfg content from the textual representation in a jar file. 
+   * Syntax adequate {@link #writeToText(File, LogMessage)}
    * It calls {@link #readFromText(StringPartScan, LogMessage)}.
-   * @param fText The file 
-   * @param log log on error
-   * @return true if all ok, false if any syntax error.
+   * <br><br>
+   * After reading this instance of {@link XmlCfg} is initialized as config file for {@link XmlJzReader#setCfg(XmlCfg)}
+   * to read a XML files with this configuration. 
+   *  
+   * @param clazz Any class in the same directory as the text file to read inside the jar file
+   * @param pathInJarFromClazz The relative path from the clazz to the text file
+   * @param log output of errors
+   * @return true if ok.
    * @throws IllegalCharsetNameException
    * @throws UnsupportedCharsetException
    * @throws FileNotFoundException
@@ -489,7 +501,7 @@ public class XmlCfg
   
   
   /**Control for {@link #writeToText(File, LogMessage)} for the head of the text file. */
-  private OutTextPreparer otxCfgHead = new OutTextPreparer("cfgHead", "xmlCfg", 
+  private static final OutTextPreparer otxCfgHead = new OutTextPreparer("cfgHead", "xmlCfg", 
       "XmlJzReader-Config 2024-05" 
     + "<:if:xmlCfg.xmlnsAssign><:for:ns:xmlCfg.xmlnsAssign>"
     + "<:n>NS: <&ns>=\"<&ns_key>\""
@@ -504,7 +516,7 @@ public class XmlCfg
    * <li>node := the root or sub node
    * </ul>
    * */
-  private OutTextPreparer otxNode = new OutTextPreparer("node", "whatis, indent, node", 
+  private static final OutTextPreparer otxNode = new OutTextPreparer("node", "whatis, indent, node", 
       "<:n><&indent><&whatis><:<><&node.tag><:>>" 
     + "<:if:node.attribsForCheck> <:for:attr:node.attribsForCheck> @<&attr.name>==\"<&attr.storeInMap>\"<.for><:n><&indent><.if>"  
     + "<:if:node.cfgSubtreeName> =>SUBTREE:<&node.cfgSubtreeName><.if>"
@@ -526,33 +538,36 @@ public class XmlCfg
   
   
   
-  /**writes the content of the config to a text file.
-   * @param fText
+  /**Writes the content of the config to a text file which can be later read with {@link #readCfgFile(File, LogMessage)}
+   * or with {@link #readFromJar(Class, String, LogMessage)}.
+   * 
+   * @param fText destination.
    * @param log
    * @since 2024-05-17
    */
   public void writeToText (File fText, LogMessage log) {
     StringBuilder wb = new StringBuilder();
     Map<String, OutTextPreparer> idxScript = new TreeMap<>();
-    idxScript.put(this.otxNode.sIdent, this.otxNode);
+    idxScript.put(this.otxNode.sIdent, this.otxNode);      // The gtxt stuff is given hard coded in this class.
     idxScript.put(this.otxCfgHead.sIdent, this.otxCfgHead);
-    try {
+    try {                                                  // first parse the gTxt stuff
       OutTextPreparer.parseTemplates(idxScript, this.getClass(), null, log);
       OutTextPreparer.DataTextPreparer otdCfg = this.otxCfgHead.createArgumentDataObj();
       otdCfg.setArgument("xmlCfg", this);
       otdCfg.setExecObj(this);
-      this.otxCfgHead.exec(wb, otdCfg);
+      this.otxCfgHead.exec(wb, otdCfg);          //<<<<------ write the HEAD information with 'otxCfgHead'
+      //
       OutTextPreparer.DataTextPreparer otdNode = this.otxNode.createArgumentDataObj();
       if(this.subtrees !=null) for( Map.Entry<String, XmlCfgNode> e : this.subtrees.entrySet()) {
         String nameSubtree = e.getKey();
-        XmlCfgNode subtreeNode = e.getValue();
+        XmlCfgNode subtreeNode = e.getValue();   //--------vv write out all SUBTREE
         otdNode.setArgument("whatis", "SUBTREE:" + nameSubtree + " ");
         otdNode.setArgument("indent", "");
         otdNode.setArgument("node", subtreeNode);
         otdNode.setExecObj(this);
         this.otxNode.exec(wb, otdNode);
       }
-      otdNode.setArgument("whatis", "");
+      otdNode.setArgument("whatis", "");         //--------vv write out the main 
       otdNode.setArgument("indent", "");
       otdNode.setArgument("node", this.rootNode);
       otdNode.setExecObj(this);
@@ -743,6 +758,16 @@ public class XmlCfg
   
     final CharSequence tag;
     
+    /**Name of the class where the data are stored.
+     * This element is not used for parsing. 
+     * It is only used to create the java code for classes to store the data.
+     * It is set from {@link XmlJzCfgAnalyzer#storeCfgNode(XmlCfgNode, org.vishia.xmlReader.XmlJzCfgAnalyzer.XmlStructureNode, boolean, int)}
+     * to an identifier derived from the tag name. 
+     * This is usual a proper default name for the (sub-) class to store.
+     * While parsing the class is the given type of the element to store, given as return value from {@link #elementStorePath} evaluation with the user's data,
+     * means the return value of this reflection called operation. 
+     * Hence it is not necessary for parsing. 
+     */
     String dstClassName;
     
     /**If not null, this element refers its {@link #attribs} and {@link #subnodes} in a config-subtree. */

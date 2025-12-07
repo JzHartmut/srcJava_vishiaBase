@@ -285,6 +285,12 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
+   * <li>2025-12-07: remove listArgs, because there was a big bug: If a variable is declared in a script to use, but not declared to set,
+   *   then this variable was missing in listArgs, and access with the faulty index from {@link #nameVariables} for listArgs.get(ix) was done.
+   *   That's why now {@link #nameVariablesByIx} is created instead and filled with the names in order to the indices in {@link #nameVariables}.
+   *   That is the same functionality as with old listArgs, but not with this error because {@link #nameVariablesByIx} is filled afterwards with all known ix,
+   *   whereas listArgs was filled by the way, with not regarded variables.
+   * <li>2025-... some changes 
    * <li>2024-08-30 new &lt;:wr:buffer>Output to another buffer.&lt;.wr> See javadoc description.
    * <li>2024-07-14 new in &lt;:for:var:container> {@link ForCmd} also an integer index can be used as var if container is an Integer. 
    *   For that in {@link #addCmd(String, int, int, ECmd, String, Class, Map, Map)}
@@ -825,10 +831,15 @@ public final class OutTextPreparer
     }
     
     
+    /**Maybe yet experience
+     * @param outer
+     * @param textOrDatapath
+     * @return same 'textOrDatapath'
+     */
     private static StringPartScanLineCol checkVariable(OutTextPreparer outer, StringPartScanLineCol textOrDatapath) {
-      if(outer.listArgs == null) { //variables are not given before parse String
-        //char c0 = textOr
-      }
+//      if(outer.listArgs == null) { //variables are not given before parse String
+//        //char c0 = textOr
+//      }
       return textOrDatapath;
     }
     
@@ -1038,12 +1049,14 @@ public final class OutTextPreparer
     
     public Argument(OutTextPreparer outer, String name, int ixCalledArg, String sTextOrDatapath, Class<?> reflData, final Map<String, Object> idxConstData) throws Exception {
       super(sTextOrDatapath, outer.nameVariables, reflData, idxConstData);
+      if(name.equals("xxxsuperType")) Debugutil.stopp();
       this.name = name;
       this.ixDst = ixCalledArg;
     }
     
     public Argument(String name, int ixCalledArg, Object dataConst, DataAccess datapath, String sText) throws Exception {
       super(-1, datapath, dataConst, sText);
+      if(name.equals("xxxsuperType")) Debugutil.stopp();
       this.name = name;
       this.ixDst = ixCalledArg;
     }
@@ -1051,8 +1064,15 @@ public final class OutTextPreparer
   }
   
   
-  /**All argument variables and internal variables sorted. */
+  /**All argument variables and internal variables sorted with the index to {@link DataTextPreparer#args} as index. */
   protected Map<String, DataAccess.IntegerIx> nameVariables = new TreeMap<String, DataAccess.IntegerIx>();
+  
+  
+  /**Filled after {@link #parse(Class, Map, Map)} from all variable name from {@link #nameVariables}
+   * 
+   */
+  private String[] nameVariablesByIx;
+  
   
   /**Index of the OUT element in variables */
   int ixOUT;
@@ -1086,7 +1106,7 @@ public final class OutTextPreparer
    * This should be given on user level in {@link DataTextPreparer#setArgument(String, Object)} 
    * with the arg1 as 'nameNewlineVariable' given with 'NEWLINE====<$?nameNewlineVariable>' 
    * The name of this 'nameNewlineVariable' is stored in {@link #nameVariables} to get this index
-   * and in {@link #listArgs} on the position of this index.
+   * and in {@link #nameVariablesByIx} on the position of this index to get the name.
    * 
    */
   int ixVarLineoutStart = -1;
@@ -1098,10 +1118,6 @@ public final class OutTextPreparer
   //@SuppressWarnings("unused") private final Class<?> execClass;
   
   
-  /**Via script given arguments for the outText. It does not contain the internal created variables. */
-  protected List<String> listArgs;
-  
- 
   int ctCall = 0;
   
   List<Cmd> cmds = new ArrayList<Cmd>();
@@ -1613,33 +1629,36 @@ public final class OutTextPreparer
   
   
   
-  /**Parse all templates which are read with {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
-     * It calls {@link #parse(Class, Map, Map)} for all sub scripts stored in idxScript.
-     * @param idxScript the index of the sub scripts, filled. Used to parse for all, also used for &lt;:call:...>
-     * @param execClass May be null, from this class some operations or data or also hard coded {@link OutTextPreparer} instances can be gotten.
-     *   Static operations can be called and static data can be accessed. Instance operations and data can be accessed 
-     *   if {@link DataTextPreparer#setExecObj(Object)} is set with the proper instance.
-     * @param idxConstData May be null, from this index some constant data and also sub scripts can be gotten. 
-     * @throws ParseException
-     */
-    public static void parseTemplates ( Map<String, OutTextPreparer> idxScript, Class<?> execClass, final Map<String, Object> idxConstData, LogMessage log ) throws ParseException {
-      if(idxScript!=null) {
-        for(Map.Entry<String, OutTextPreparer> e: idxScript.entrySet()) {
-          OutTextPreparer otx = e.getValue();
-  //        if(otx.sIdent.equals("setVar_FBexpr"))
-  //          Debugutil.stop();
-          try { 
-            otx.parse(execClass, idxConstData, idxScript);
-          } catch( ParseException exc) {
-            if(log !=null) {
-              log.writeError("ERROR parseTemplates in script: " + otx.sIdent, exc);
-            } else {
-              throw exc;
-            }
+  /**Parse all templates which are read with {@link #readTemplateCreatePreparer(InputStream, String, Map)}
+   *  or which are given with hard coded text constructs with {@link OutTextPreparer#OutTextPreparer(String, String, String)}.
+   * <br>
+   * It calls {@link #parse(Class, Map, Map)} for all sub scripts stored in idxScript.
+   * 
+   * @param idxScript the index of the sub scripts, filled. Used to parse for all, also used for &lt;:call:...>
+   * @param execClass May be null, from this class some operations or data or also hard coded {@link OutTextPreparer} instances can be gotten.
+   *   Static operations can be called and static data can be accessed. Instance operations and data can be accessed 
+   *   if {@link DataTextPreparer#setExecObj(Object)} is set with the proper instance.
+   * @param idxConstData May be null, from this index some constant data and also sub scripts can be gotten. 
+   * @throws ParseException
+   */
+  public static void parseTemplates ( Map<String, OutTextPreparer> idxScript, Class<?> execClass, final Map<String, Object> idxConstData, LogMessage log ) throws ParseException {
+    if(idxScript!=null) {
+      for(Map.Entry<String, OutTextPreparer> e: idxScript.entrySet()) {
+        OutTextPreparer otx = e.getValue();
+//        if(otx.sIdent.equals("setVar_FBexpr"))
+//          Debugutil.stop();
+        try { 
+          otx.parse(execClass, idxConstData, idxScript);
+        } catch( ParseException exc) {
+          if(log !=null) {
+            log.writeError("ERROR parseTemplates in script: " + otx.sIdent, exc);
+          } else {
+            throw exc;
           }
         }
       }
     }
+  }
 
   /**Reads a given template which may contain the pattern for several separated OutTextPreparer.
    * See also {@link #readTemplateList(InputStream, String)}
@@ -2037,7 +2056,7 @@ public final class OutTextPreparer
   
   
   
-  /**Sets all variables from list, but at last "OUT", "CMD" and "OTX".
+  /**Sets all variables from list, and add also "OUT", "CMD" and "OTXdata" "OTXcmd".
    * <ul>
    * <li>"OUT" is the opened output writer for generation (Type Appendable)
    * <li>"OTXcmd" is the actual {@link Cmd}
@@ -2047,17 +2066,32 @@ public final class OutTextPreparer
    * The first variables have the index in order of the argument list of the otx scripts.
    * This is important to also access the variables manually by index.
    * Variables after "OTX" are variables created in the otx script itself.
+   * <br><br>
+   * If sets {@link #nameVariables} with the consecutive index adequate the order in 'listArgs'
+   * and then the for named "OUT" etc. 
    * @param listArgs first argument in the list gets the index 0
    */
   private void setVariables(List<String> listArgs) {
-    this.listArgs = listArgs; 
-    this.ixOUT = this.listArgs.size();
-    this.listArgs.add("OUT");
-    this.listArgs.add("OTXcmd");
-    this.listArgs.add("OTXdata");
-    this.listArgs.add("OTX");
+    // Note: get nameVariables.size() newly again because if the name is already stored, it does not increment the size.
     for(String var: listArgs) {
       this.nameVariables.put(var, new DataAccess.IntegerIx(this.nameVariables.size()));
+    }
+    if(this.nameVariables.get("OUT") == null) {
+      this.ixOUT = this.nameVariables.size();
+      this.nameVariables.put("OUT", new DataAccess.IntegerIx(this.ixOUT));
+      this.nameVariables.put("OTXcmd", new DataAccess.IntegerIx(this.nameVariables.size()));
+      this.nameVariables.put("OTXdata", new DataAccess.IntegerIx(this.nameVariables.size()));
+      this.nameVariables.put("OTX", new DataAccess.IntegerIx(this.nameVariables.size()));
+      int nFault = this.ixOUT + 4 - this.nameVariables.size();
+      assert(nFault >=0);   // never <0
+      if(nFault >0) {
+        while(--nFault >=0) {
+          this.nameVariables.put("dummy_OUT_already_given_" + nFault, new DataAccess.IntegerIx(this.nameVariables.size()));
+        }                                                  // assure that this variables are in the correct order, put again in this order.
+        this.nameVariables.put("OTXcmd", new DataAccess.IntegerIx(this.ixOUT +1));
+        this.nameVariables.put("OTXdata", new DataAccess.IntegerIx(this.ixOUT +2));
+        this.nameVariables.put("OTX", new DataAccess.IntegerIx(this.ixOUT +3));
+      }
     }
   }
 
@@ -2072,6 +2106,12 @@ public final class OutTextPreparer
   public void parse(Class<?> execClass, final Map<String, Object> idxConstDataArg, Map<String, OutTextPreparer> idxScript) throws ParseException {
     ParseHelper thiz = new ParseHelper(this, execClass, idxConstDataArg, idxScript);
     thiz.parse();
+    this.nameVariablesByIx = new String[this.nameVariables.size()];
+    for(Map.Entry<String, DataAccess.IntegerIx> e : this.nameVariables.entrySet()) {
+      int ix = e.getValue().ix;
+      String name = e.getKey();
+      this.nameVariablesByIx[ix] = name;
+    }
   }
   
   
@@ -2132,7 +2172,7 @@ public final class OutTextPreparer
           //===============================================vv newline in line mode
           if(this.sp.scanStart().scan(this.otx.sLineoutStart).scanOk()) { //========== newline found 
             if(this.otx.ixVarLineoutStart >=0) {           
-              String sName = this.otx.listArgs.get(this.otx.ixVarLineoutStart);  // insert content of this variable
+              String sName = this.otx.nameVariablesByIx[this.otx.ixVarLineoutStart];  // insert content of this variable
               addCmdSimpleVar(null, this.sp.getlineCol(), 0,0, ECmd.addVar, sName);
             } else {
               addCmd("\n", this.sp.getlineCol(), 0, 1, null);
@@ -2303,7 +2343,6 @@ public final class OutTextPreparer
         if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
           ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
           this.otx.nameVariables.put(entryVar, ixOentry);
-          this.otx.listArgs.add(entryVar);
         }
         cmd.ixEntryVar = ixOentry.ix;
         String entryVarNext = entryVar + "_next";                             // the descendant of the current element is also available. 
@@ -2311,7 +2350,6 @@ public final class OutTextPreparer
         if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
           ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
           this.otx.nameVariables.put(entryVarNext, ixOentry);
-          this.otx.listArgs.add(entryVarNext);
         }
         cmd.ixEntryVarNext = ixOentry.ix;
         String entryKey = entryVar + "_key";                             // the descendant of the current element is also available. 
@@ -2319,7 +2357,6 @@ public final class OutTextPreparer
         if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
           ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
           this.otx.nameVariables.put(entryKey, ixOentry);
-          this.otx.listArgs.add(entryKey);
         }
         cmd.ixEntryKey = ixOentry.ix;
         this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;
@@ -2335,7 +2372,6 @@ public final class OutTextPreparer
         if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
           ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
           this.otx.nameVariables.put(variable, ixOentry);
-          this.otx.listArgs.add(variable);
         }
         cmd.ixVariable = ixOentry.ix;
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
@@ -2499,8 +2535,6 @@ public final class OutTextPreparer
         if(this.sp.scanIdentifier().scanOk()) {
           String sArg = this.sp.getLastScannedString();
           this.otx.nameVariables.put(sArg, new DataAccess.IntegerIx(this.otx.nameVariables.size()));
-          if(this.otx.listArgs == null) { this.otx.listArgs = new LinkedList<String>(); }
-          this.otx.listArgs.add(sArg);
         }
       } while(this.sp.scan(",").scanOk());
     }
@@ -2512,7 +2546,6 @@ public final class OutTextPreparer
       if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
         ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
         this.otx.nameVariables.put(wrBufferIdent, ixOentry);
-        this.otx.listArgs.add(wrBufferIdent);
       }
       WrCmd wrcmd = (WrCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.wr, wrBufferIdent);
       wrcmd.ixDataWr = ixOentry.ix;
@@ -2933,9 +2966,6 @@ public final class OutTextPreparer
           } break;
           case setVar: {
             int ixVar = ((SetCmd)cmd).ixVariable;
-//            if(ixVar < this.listArgs.size() && this.listArgs.get(ixVar).equals("sIx")) {   // for debug: Check the given name of the variable.
-//              Debugutil.stop();
-//            }
             Object res =  dataForCmd(cmd, args, wrCt);
             if(res instanceof CalculatorExpr.Value) {
               CalculatorExpr.Value resExpr = (CalculatorExpr.Value) res;
@@ -2943,7 +2973,7 @@ public final class OutTextPreparer
             } else {
               args.args[ ixVar ] = res;
             }
-            String name = this.listArgs.get(ixVar);
+            String name = this.nameVariablesByIx[ixVar];
             args.argsByName.put(name, args.args[ixVar]);
           } break;
           case typeCheck: if(args.bChecks){
@@ -3165,13 +3195,13 @@ public final class OutTextPreparer
    */
   private void execSubFor( WriteDst wdArg, DataTextPreparer args, ForCmd cmd, int ixStart, int ixEndExcl ) throws IOException {
     int ix = cmd.ixEntryKey;
-    String name = this.listArgs.get(ix);
+    String name = this.nameVariablesByIx[ix];
     args.argsByName.put(name, args.args[ix]);
     ix = cmd.ixEntryVar;
-    name = this.listArgs.get(ix);
+    name = this.nameVariablesByIx[ix];
     args.argsByName.put(name, args.args[ix]);
     ix = cmd.ixEntryVarNext;
-    name = this.listArgs.get(ix);
+    name = this.nameVariablesByIx[ix];
     args.argsByName.put(name, args.args[ix]);
     execSub(wdArg, args, ixStart, ixEndExcl);
   }
