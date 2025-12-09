@@ -212,6 +212,7 @@ table.tableblock #preamble>.sectionbody>[class="paragraph"]:first-of-type p{font
 .listingblock>.content>pre>code[class="language-Cpp"]{background:#a0f7f7}
 .listingblock>.content>pre>code[class="language-Java"]{background:#e0f7e0}
 .listingblock>.content>pre>code[class="language-Vhdl"]{background:#e0ffff}
+.listingblock>.content>pre>code[class="language-ZBNF"]{background:#e0ffff}
 .listingblock>.content>pre>code[class="language-Script"]{background:#ffe994}
 .listingblock>.content>pre>code[class="language-Filetree"]{background:#e0fff0}
 .listingblock>.content{position:relative}

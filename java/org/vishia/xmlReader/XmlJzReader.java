@@ -639,6 +639,8 @@ public class XmlJzReader
             }
     } } } }
       
+    if(subOutput == null) Debugutil.stopp();
+    
     //
     //check content.
     //

@@ -94,10 +94,6 @@ public class GenXmlCfgJavaData {
   
   protected final LogMessage log;
   
-  private final GenJavaOutClass genJava;
-  
-  
-  
   protected final GenJavaOutClass genClass;
   
 
@@ -105,7 +101,6 @@ public class GenXmlCfgJavaData {
   
   public GenXmlCfgJavaData(GenJavaOutClass.CmdArgs cmdArgs, LogMessage log) {
     this.cmdArgs = cmdArgs;
-    this.genJava = new GenJavaOutClass(cmdArgs, log);
     this.genClass = new GenJavaOutClass(cmdArgs, log);
     this.log = log;
   }
@@ -132,33 +127,39 @@ public class GenXmlCfgJavaData {
     Debugutil.stop();
     
     this.genClass.setupWriter();
-    WrClassXml wrClass = this.new WrClassXml();  //the main class to write
+    WrClassXml wrClassMain = this.new WrClassXml();  //the main class to write
     try {
-      XmlCfgNode rootNode = xmlCfg.rootNode;
       SubClassXml classDataRoot = new SubClassXml("root", "root");
+      XmlCfgNode rootNode = xmlCfg.rootNode;
       classDataRoot.subItem = rootNode;
       String sOuterClass = this.cmdArgs.sJavaClass + ".";
-      wrClass.evaluateChildren(sOuterClass, rootNode, classDataRoot, false, 1);
-      wrClass.wrClassJava.writeOperations();
-      //
-      //
+      //this op fills via WrClassXml.getRegisterSubclass(...) the 'this.genClass.listCmpn'
+      //a component is a syntax definition in the Zbnf parser. Here same operations are re used.
+      //======>>>>  evaluate for the root node
+      wrClassMain.evaluateChildren(sOuterClass, rootNode, classDataRoot, false, 1);
+      for( XmlCfgNode ndSubTree : xmlCfg.subtrees.values()) { // All subtree nodes
+        //======>>>>  evaluate for all top nodes of the subtree
+        wrClassMain.evaluateChildren(sOuterClass, ndSubTree, classDataRoot, false, 1);
+        //
+      }
+      
+      wrClassMain.wrClassJava.writeOperations();
       //
       int ixCmpn = 0;
       while(this.genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
         SubClassXml classData = (SubClassXml)this.genClass.listCmpn.get(ixCmpn++);
-        wrClass = new WrClassXml();
+        WrClassXml wrClass = new WrClassXml();
         wrClass.wrClassJava.wrClassCmpn(classData, null);
         //
-        //
+        //======>>>>  evaluate for all child nodes of the root and top nodes and all children of child nodes
         wrClass.evaluateChildren(sOuterClass, classData.subItem, classData, false, 0);
         //
         wrClass.wrClassJava.writeOperations();
         //
-        this.genClass.finishCmpnWrite();
-
+        this.genClass.finishCmpnWrite();  // finish this inner class (component of parsing)
       }
       //
-      this.genClass.finishClassWrite();
+      this.genClass.finishClassWrite();   // finish the whole class stucture.
       //
     } catch (Exception e1) {
       // TODO Auto-generated catch block
@@ -300,15 +301,21 @@ public class GenXmlCfgJavaData {
         XmlCfgNode childNode = eNode.getValue();
 //        if(childNode.tag.equals("section"))
 //          Debugutil.stop();
-        if(childNode.dstClassName !=null) {
+        boolean bListChild = childNode.bList;              // the LIST property should be taken from the non subtree childNode.
+        if(childNode.cfgSubtreeName !=null) {              // If this node has the reference to SUBTREE
+          childNode = GenXmlCfgJavaData.this.subtrees.get(childNode.cfgSubtreeName); // then use the sub tree instead.
+          if(childNode == null) { log.writef("\nERROR subtree missing: %s", childNode.cfgSubtreeName ); }
+        }
+        if(childNode == null) {
+        } else if(childNode.dstClassName !=null) {
           String sType = GenJavaOutClass.firstUppercaseIdentifier(childNode.dstClassName);
           if(GenXmlCfgJavaData.this.genClass.idxStdTypes.get(sType) !=null) {
             sType += "__";  //It must not be a Standard type.
           }
           SubClassXml metaClass = getRegisterSubclass(sType, childNode); //idxMetaClass.get(semantic1);
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, sOuterClass, sType, sName, childNode.elementStorePath, "Complex node " + childNode.tag, false, childNode.bList, true);  //write the create routine and access
-        } else {
+          wrVariable(classData, sOuterClass, sType, sName, childNode.elementStorePath, "Complex node " + childNode.tag, false, bListChild, true);  //write the create routine and access
+        } else {                                 //--------vv dstClassName not given, it is a String result.
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
           wrVariable(classData, null, "String", sName, childNode.elementStorePath, "Simple node " + childNode.tag, true, false, false);
             

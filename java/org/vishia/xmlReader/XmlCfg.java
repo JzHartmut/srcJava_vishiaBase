@@ -481,6 +481,7 @@ public class XmlCfg
     while(bOk && sp.scan("<").scanIdentifier(null, "-:").scan(">").scanOk()) {
       String sTag = sp.getLastScannedString();
       XmlCfgNode subnode = new XmlCfgNode(null, this, sTag);
+      //if(node.tag.equals("style:style")) Debugutil.stopp();
       if(node.subnodes == null) { node.subnodes = new TreeMap<>(); }
       node.subnodes.put(sTag, subnode);
       bOk &= readFromTextNode(subnode, sp, log);
@@ -526,7 +527,7 @@ public class XmlCfg
     + "<:if:node.elementFinishPath><:n><&indent>  ADD:\"<:exec:wrDataAccess(OUT, node.elementFinishPath)>\"<.if>"
     + "<:if:node.contentStorePath><:n><&indent>  TEXT:\"<:exec:wrDataAccess(OUT, node.contentStorePath)>\"<.if>"
     + "<:if:node.nameSpaceDef><:n><&indent>  NAMESPACE:\"<&node.nameSpaceDef>\"<.if>"
-    + "<:if:node.attribs><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=\"<:if:attr.storeInMap>@<&attr.storeInMap><.if><:if:attr.daccess><&attr.daccess><.if>\"<.for><.if>"  
+    + "<:if:node.attribs><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=\"<:if:attr.storeInMap>@<&attr.storeInMap><.if><:if:attr.daccess><&attr.daccess.writeAccessString(OUT)><.if>\"<.for><.if>"  
     + "<:if:node.subnodes><:for:subnode:node.subnodes><:exec:writeSubNode(OUT, indent, subnode)><.for><.if>"  
     + "<:n><&indent><:<>/<&node.tag><:>>" 
     //<:n>"
@@ -1178,7 +1179,7 @@ public class XmlCfg
       }
     }
     
-  
+    
     @Override public String toString(){ 
       if(this.subnodes !=null && this.subnodes.size() >=1) {
         XmlCfgNode subnode0 = this.subnodes.get("?");

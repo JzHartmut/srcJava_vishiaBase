@@ -8,6 +8,7 @@
 :cpp: C++
 :cp: C/++
 :wildcard: *
+:stylesheet: ../CppJava.css
 
 * link:../../../index.html[Parent page]
 * link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html[org/vishia/xmlReader/XmlJzReader.java]
@@ -320,10 +321,16 @@ The root node structure (configuration to parse) is now following.
 The following ZBNF2 definition defines one node in XML which may have attributes, text and sub nodes.
 The syntax presentation is dispersed till the end of chapter with the closing '=::.'.
 
+[source,ZBNF]
 ----
-node::= <$$node.tag> [{: $$attr=node.attribsForCheck: @$$attr.name==$$attr.storeInMap :}]
+node::= <$$node.tag> [{?attr=node.attribsForCheck: @$$attr.name==$$attr.storeInMap :}]
 ... [: ==>SUBTREE:$$node.cfgSubtreeName 
 :|:
+----
+
+[source,Script]
+----
+<style:graphic-properties> =>SUBTREE:style:graphic-properties
 ----
 
 * link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#tag[$$node.tag]: The tag name of the XML node
@@ -348,8 +355,14 @@ If this is given, then the description how the parsed XML node is given is found
 Then no more description is necessary here.
 
 
+[source,ZBNF]
 ----
-  [: $$node.bList: LIST :] [: CLASS:$$node.dstClassName :]
+... [?node.bList: LIST :] [: CLASS:$$node.dstClassName :]
+----
+
+[source,Script]
+----
+<style:font-face> LIST CLASS:Style_font_face
 ----
 
 
@@ -364,12 +377,21 @@ Then a container is not necessary, a simple reference to the node's data of the 
 * `CLASS`:link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#dstClassName[$$node.dstClassName]:
 This here written name is used only to create the user's data class using 
 link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/GenXmlCfgJavaData[org/vishia/xmlReader/GenXmlCfgJavaData.java].
+If `CLASS` is not given, the result to store from XML is a String.
 
+[source,ZBNF]
 ----
   [: NEW:"$$node.elementStoreInPath" :]
   [: ADD:"$$node.elementFinishPath" :]
   [: TEXT:"$$node.contentStorePath" :]
 ----
+
+[source,Script]
+----
+  NEW:"new_style_graphic_properties()"
+  ADD:"add_style_graphic_properties(value)"
+----
+
 
 * `NEW`:link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#elementStoreInPath[$$node.elementStoreInPath]:
 This is the description of reflection access to an operation in the data (user's) class 
@@ -391,12 +413,20 @@ This has the advantage that the order of texts within other sub nodes is documen
 But due to the user's decision also an only one String can be set, if only one text is expected and the order does not play a role.  
 
 
+[source,ZBNF]
 ----
   [: NAMESPACE:"$$node.nameSpaceDef" :]
   [{: $$attrib=node.attribs: @$$attr.name=" [: @$$attr.storeInMap :|: $$attr.daccess :] " :}]
   [{: $$subnode=node.subnodes: <=::node:subnode::=> :}]
 :]
 <$$node.tag> =::.
+----
+
+[source,Script]
+----
+  @fo:color="@fo_color"
+  @draw:auto-grow-height="set_draw_auto_grow_height(value)"
+  
 ----
 
 * `NAMESPACE`:link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#nameSpaceDef[$$node.nameSpaceDef]:
@@ -412,13 +442,14 @@ It is used if an attribute `xmlns:key="value"` is detected in the XML node.
 The name of the attribute which should be processed
 
 ** link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.AttribDstCheck.html#storeInMap[attr.storeInMap]:
-If this is given, then the attribute value is stored with this identifier in a temporary map 
-before the instance for the XML node data is created,
-for using on call of the `NEW:operation(args,...)`
+If `@identifier` is given, then the attribute value is stored with this identifier in a temporary map 
+before the instance for the XML node data is created.
 The identifier given here is the name of the argument in the `NEW:operation(args,...)` definition. 
 It may (do not need) also the real used argument name in this user's operation. 
 It can be often identically with the attribute name in XML, but of course without the ':' and often used '-'.
-On analyzing the XML with 
+On analysing the XML with 
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzCfgAnalyzer.html[org/vishia/xmlReader/XmlJzCfgAnalyzer.java].
+attributes which are existing on all nodes are marked with this.
 
 ** link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.AttribDstCheck.html#daccess[attr.daccess]:
 This is the description of reflection access to an operation in the data (user's) class 
