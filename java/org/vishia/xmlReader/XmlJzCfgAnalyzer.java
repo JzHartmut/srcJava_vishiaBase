@@ -26,6 +26,7 @@ import org.vishia.util.ApplMain;
 import org.vishia.util.Arguments;
 import org.vishia.util.Debugutil;
 import org.vishia.util.ExcUtil;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions_B;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -86,9 +87,7 @@ public class XmlJzCfgAnalyzer
 
   private static class CmdArgs extends Arguments {
 
-    File fIn;
-    
-    String sContent;
+    List<FileFunctions.FileZipPath> listfIn = new LinkedList<>();;
     
     /**A given config file to supplement */
     File fInCfg;
@@ -103,19 +102,18 @@ public class XmlJzCfgAnalyzer
     /**Structure XML file to write. */
     File fxOut;
     
+    File dirDbg;
+    
     Argument[] argsXmlJzCfgAnalyzer =
     { new Argument("-inXML", ":D:/path/to/file.xml to analyze"
         , new SetArgument() { @Override public boolean setArgument (String val) {
-          CmdArgs.this.fIn = new File(val); return CmdArgs.this.fIn.exists(); 
+          File fIn = new File(val); CmdArgs.this.listfIn.add(new FileFunctions.FileZipPath(fIn, null)); return fIn.exists(); 
         } })
     , new Argument("-inZip", ":D:/path/to/file.odx:content.xml to analyze a stored XML in a zip format"
         , new SetArgument() { @Override public boolean setArgument (String val) {
-          int posSep = val.indexOf(':', 3);
-          if(posSep <0) { 
-            return false; }
-          CmdArgs.this.fIn = new File(val.substring(0, posSep));
-          CmdArgs.this.sContent = val.substring(posSep+1);
-          return CmdArgs.this.fIn.exists(); 
+          FileFunctions.FileZipPath fzip =  FileFunctions.FileZipPath.parseArgument(null, val, ':');
+          CmdArgs.this.listfIn.add(fzip); 
+          return fzip.fIn.exists(); 
         } })
     , new Argument("-inCfg", ":D:/path/to/file.cfg a given config file to supplement"
         , new SetArgument() { @Override public boolean setArgument (String val) {
@@ -134,6 +132,12 @@ public class XmlJzCfgAnalyzer
           }
           return true;
         } })
+    , new Argument("-dirDebug", ":D:/path/to/xmlCfg.txt in given write debug info", new SetArgument() {
+      @Override public boolean setArgument(String val) throws FileNotFoundException { 
+        CmdArgs.this.dirDbg = new File(val) ;  
+        FileFunctions.mkDir(CmdArgs.this.dirDbg);
+        return CmdArgs.this.dirDbg.exists();
+      }})
     };
     
     
@@ -159,6 +163,8 @@ public class XmlJzCfgAnalyzer
     
   }
 
+  
+  File dirDbg;
   
   public static void main ( String[] sArgs) {
     try {
@@ -204,17 +210,16 @@ public class XmlJzCfgAnalyzer
   public static int amain(CmdArgs args) {
     int error = 0;
     XmlJzCfgAnalyzer main = new XmlJzCfgAnalyzer();
+    main.setDirDebug(args.dirDbg);
     try {
       if(args.fInCfg !=null) {   //=========================== read a given cfg file to accordingly in subtree organization.
         main.cfgGiven = new XmlCfg(true);
         main.cfgGiven.readCfgFile(args.fInCfg, main.log);
-        main.cfgGiven.writeToText(new File("T:/cfgGiven.read.back.txt"), main.log);  // only for test.
+        if(args.dirDbg !=null) {
+          main.cfgGiven.writeToText(new File(args.dirDbg, "cfgGiven.read.back.txt"), main.log);  // only for test.
+        }
       }
-      if(args.sContent !=null) {
-        main.analyzeXmlStructZip(args.fIn, args.sContent);
-      } else {
-        main.analyzeXmlStruct(args.fIn);
-      }
+      main.analyzeXmlStructZip(args.listfIn);
       if(args.fdOut !=null) {
         main.writeData(args.fdOut);
       }
@@ -279,8 +284,14 @@ public class XmlJzCfgAnalyzer
   
   XmlCfg cfgGiven;
   
+  
   public XmlJzCfgAnalyzer(){
     this.log = new LogMessageStream(null, null, System.out, System.err, false, Charset.forName("UTF-8"));
+  }
+  
+  
+  public void setDirDebug(File dir) {
+    this.dirDbg = dir;
   }
   
   /**Only for internal debug. See implementation. There is a possibility to set a break point if the parser reaches the line.
@@ -576,6 +587,7 @@ public class XmlJzCfgAnalyzer
           wrCfgXmlNode.setAttribute("class", "xmlinput", sClass  );
         }
         if(structNode.nameSpaces !=null) {
+          Debugutil.stop();
           for(Map.Entry<String, String> e: structNode.nameSpaces.entrySet()) {
             wrCfgXmlNode.addNamespaceDeclaration(e.getKey(), e.getValue());
           }
@@ -602,16 +614,45 @@ public class XmlJzCfgAnalyzer
   }
 
 
-  /**Reads any XML file and stores the structure in the {@link #xmlStructTree}.
+  /**Reads and analyses any XML file and stores the structure in the {@link #XmlCfg}.
    * Description see {@link #analyzeXmlStructZip(File, String)}
-   * Note: renamed from readXmlStruct(...)
+   * Note: compatible form calls {@link #analyzeXmlStructZip(List)}
    * @param fXmlIn
    * @throws IOException 
    */
-  public void analyzeXmlStruct(File fXmlIn) throws IOException {
-    analyzeXmlStructZip(fXmlIn, null);
+  public XmlCfg analyzeXmlStruct(File fXmlIn) throws IOException {
+    LinkedList<FileFunctions.FileZipPath> list = new LinkedList<>();
+    list.add(new FileFunctions.FileZipPath(fXmlIn, null));
+    return analyzeXmlStructZip(list);
   }
 
+  
+  
+  /**Compatible form
+   * @param fXmlIn
+   * @return
+   * @throws IOException
+   * @Deprecated use {@link #analyzeXmlStruct(File)}
+   */
+  public XmlCfg readXmlStruct(File fXmlIn) throws IOException {
+    return analyzeXmlStruct(fXmlIn);
+  }
+
+  /**Reads any XML file and stores the structure in the {@link #XmlCfg}.
+   * Description see {@link #analyzeXmlStructZip(File, String)}
+   * Note: compatible form calls {@link #analyzeXmlStructZip(List)}
+   * @param fIn zip file
+   * @param sPathInZip null then fIn should be an XML file, else path of the XML file in the zip
+   * @throws IOException 
+   */
+  public XmlCfg readXmlStructZip(File fIn, String sPathInZip) throws IOException {
+    LinkedList<FileFunctions.FileZipPath> list = new LinkedList<>();
+    list.add(new FileFunctions.FileZipPath(fIn, sPathInZip));
+    return analyzeXmlStructZip(list);
+  }
+
+  
+  
   /**Reads any XML file and stores the structure in the returned {@link XmlCfg}.
    * The found configuration should be write out after them with {@link XmlCfg#writeToText(File, LogMessage)}
    * to use it to configure the {@link XmlJzReader#setCfg(XmlCfg)} with a proper configuration,
@@ -636,18 +677,18 @@ public class XmlJzCfgAnalyzer
    * @return
    * @throws IOException
    */
-  public XmlCfg analyzeXmlStructZip(File fXmlIn, String pathInZip) throws IOException {
+  public XmlCfg analyzeXmlStructZip(List<FileFunctions.FileZipPath> fIn) throws IOException {
     XmlJzReader xmlReader = new XmlJzReader();
     xmlReader.setCfg(newCfgReadStruct());        //<<<<------ this is the essential one, analyse as SAX parser any node.
     if(this.debugStopLineXmlInp >0) {
       xmlReader.setDebugStop(this.debugStopLineXmlInp);
     }
-    String sInName = fXmlIn.getName();
-    xmlReader.openXmlTestOut( new File( "T:/" + sInName + "-back.xml")); //fout1);
-    if(pathInZip ==null) {
-      xmlReader.readXml(fXmlIn, this.xmlStructTree, null);
-    } else {
-      xmlReader.readZipXml(fXmlIn, pathInZip, this.xmlStructTree);
+    for(FileFunctions.FileZipPath fIn1: fIn) {
+      String sInName = fIn1.fIn.getName();
+      if(this.dirDbg !=null) {
+        xmlReader.openXmlTestOut( new File( this.dirDbg, sInName + "-back.xml")); //fout1);
+      }
+      xmlReader.readZipXml(fIn1.fIn, fIn1.sPathInZip, this.xmlStructTree);
     }
     //
     checkStructTree();
@@ -739,15 +780,16 @@ public class XmlJzCfgAnalyzer
    * @param src read data from evaluated XML
    * @param bRoot true then ignore {@link XmlStructureNode#sSubtreenode} because it is the name of the subtree itself,
    *   and not the reference to a subtree.
-   * @param recursion
+   * @param recursion called recursively for all sub nodes
    * @throws ParseException
    */
   private void storeCfgNode(XmlCfg.XmlCfgNode dst, XmlStructureNode src, boolean bRoot, int recursion) throws ParseException {
     if(recursion <=0) { assert(false); return; }
     XmlStructureNode srcx = src;
-    if(src.tag.equals("style:style")) Debugutil.stopp();
+    //if(src.tag.equals("style:style")) Debugutil.stopp();
     dst.bList |= !src.onlySingle;
     String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
+    assert(dst.dstClassName == null || dst.dstClassName.equals(sClass));
     dst.dstClassName = sClass;
     if(!bRoot || src.sSubtreenode ==null) {      // bRoot && sSubtreeNode: In a subtree root definition do not write SET or ADD.
       if(dst.bList) {                            // write ADD:"operation" alsways in the original node, not in the subtree node
@@ -788,6 +830,7 @@ public class XmlJzCfgAnalyzer
       if(src.attribs !=null) { //============================ Transfer all attribs
         for(AttribRead attrib: src.attribs.values()) {
           String key = attrib.namespace + ':' + attrib.name;
+          if(key.equals("draw:fit-to-size")) Debugutil.stopp();
           dst.addAttribStorePath(key, attrib.value);
         }
       }
@@ -797,18 +840,19 @@ public class XmlJzCfgAnalyzer
           XmlCfg.XmlCfgNode nodeDst = dst.subnodes.get(nodez.tag);
           if(nodeDst == null) {
             nodeDst = new XmlCfg.XmlCfgNode(dst, this.cfgData, nodez.tag);
-            dst.addSubnode(nodeDst.tag.toString(), nodeDst);
+            dst.addSubnode(nodeDst.tag.toString(), nodeDst);   // a new till now not existing new node
           } else {
             mergeNode(nodeDst, nodez);
           }
-          storeCfgNode(nodeDst, nodez, false, recursion -1);
+          storeCfgNode(nodeDst, nodez, false, recursion -1);  // store and merge
+          Debugutil.stop();
         }
       }
     }
   }
   
   public void mergeNode(XmlCfg.XmlCfgNode ndDst, XmlStructureNode ndSrc) {
-    Debugutil.stopp();
+    Debugutil.stop();
   }
 
 
@@ -872,6 +916,7 @@ public class XmlJzCfgAnalyzer
       protected void addContentOfFoundNode(XmlStructureNode node){
         if(node.attribs !=null) for(Map.Entry<String, AttribRead> e: node.attribs.entrySet()) {
           String key = e.getKey();
+          if(key.equals("draw:fit-to-size")) Debugutil.stopp();
           if(this.attributeNames.get(key) ==null) {
             this.attributeNames.put(key, key);     //an attribute non detected as yet, add it in representative.;
             if(this.representative.attribs == null) {
@@ -1294,6 +1339,7 @@ public class XmlJzCfgAnalyzer
       } else {
         attrib.name = namespacename;
       }
+      if(namespacename.equals("draw:fit-to-size")) Debugutil.stopp();
       if(this.attribs == null) { 
         this.attribs = new TreeMap<String, AttribRead>(); 
         this.bNewAttributes = true;

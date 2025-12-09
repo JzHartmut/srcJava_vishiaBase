@@ -127,8 +127,8 @@ public class GenXmlCfgJavaData {
     Debugutil.stop();
     
     this.genClass.setupWriter();
-    WrClassXml wrClassMain = this.new WrClassXml();  //the main class to write
     try {
+      WrClassXml wrClassMain = this.new WrClassXml();  //the main class to write
       SubClassXml classDataRoot = new SubClassXml("root", "root");
       XmlCfgNode rootNode = xmlCfg.rootNode;
       classDataRoot.subItem = rootNode;
@@ -137,19 +137,25 @@ public class GenXmlCfgJavaData {
       //a component is a syntax definition in the Zbnf parser. Here same operations are re used.
       //======>>>>  evaluate for the root node
       wrClassMain.evaluateChildren(sOuterClass, rootNode, classDataRoot, false, 1);
-      for( XmlCfgNode ndSubTree : xmlCfg.subtrees.values()) { // All subtree nodes
-        //======>>>>  evaluate for all top nodes of the subtree
-        wrClassMain.evaluateChildren(sOuterClass, ndSubTree, classDataRoot, false, 1);
-        //
-      }
-      
       wrClassMain.wrClassJava.writeOperations();
+//      for( XmlCfgNode ndSubTree : xmlCfg.subtrees.values()) { // All subtree nodes
+//        WrClassXml wrClassSubtree = this.new WrClassXml();  //the main class to write
+//        SubClassXml classDataSubtree = new SubClassXml(ndSubTree.tag.toString(), ndSubTree.dstClassName);
+//        wrClassSubtree.wrClassJava.wrClassCmpn(classDataSubtree, null);           // writes the head of the sub class
+//        classDataSubtree.subItem = ndSubTree;
+//          //======>>>>  evaluate for all top nodes of the subtree
+//        wrClassSubtree.evaluateChildren(sOuterClass, ndSubTree, classDataSubtree, false, 1);
+//        wrClassSubtree.wrClassJava.writeOperations();
+//        this.genClass.finishCmpnWrite();  // finish this inner class (component of parsing)
+//        //
+//      }
+      
       //
       int ixCmpn = 0;
       while(this.genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
         SubClassXml classData = (SubClassXml)this.genClass.listCmpn.get(ixCmpn++);
         WrClassXml wrClass = new WrClassXml();
-        wrClass.wrClassJava.wrClassCmpn(classData, null);
+        wrClass.wrClassJava.wrClassCmpn(classData, null);  // writes the head of the sub class
         //
         //======>>>>  evaluate for all child nodes of the root and top nodes and all children of child nodes
         wrClass.evaluateChildren(sOuterClass, classData.subItem, classData, false, 0);

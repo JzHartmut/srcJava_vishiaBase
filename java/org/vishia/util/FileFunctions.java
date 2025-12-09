@@ -170,6 +170,44 @@ public class FileFunctions {
   }
   
   
+  /**Small helper class can be used for a File inside a zip.
+   * It can be used to describe a file in a zip entry, or if sContent is null, also an ordinary file.
+   * 
+   */
+  public static class FileZipPath { 
+    
+    /**May be a zip file. */
+    public final File fIn; 
+    
+    /**May be the path in the zip file to the file. */
+    public final String sPathInZip;
+    
+    /**ctor with final initialisation. */
+    public FileZipPath(File fIn, String sContent) { this.fIn = fIn; this.sPathInZip = sContent; }
+    
+    /**Parse one argument for a file and possible zip entry
+     * @param currDir can be null, may be given for a relative path
+     * @param sArg the given argument. The zip entry is separated with 'cSep' after the 2th position.
+     *   for example "D:\path\to\file.zip:path/inZip"
+     * @param cSep separator char before path in zip, recommended use a colon ':'  
+     * @return proper ZipEntry, whereas {@link #fIn} {@link File#exists()} is not tested. 
+     */
+    public static FileZipPath parseArgument(File currDir, String sArg, char cSep) {
+      int posSep = sArg.indexOf(cSep, 2);   // search ':' after pos2 to excluse clash in windows with "D:..."
+      String sFile, sZipPath;
+      if(posSep < 0 ) {
+        sZipPath = null;
+        sFile = sArg;
+      } else {
+        sZipPath = sArg.substring(posSep+1);
+        sFile = sArg.substring(0, posSep);
+      }
+      File file = new File(currDir, sFile);
+      return new FileZipPath(file, sZipPath);
+    }
+  }
+
+  
   /**This class supports the call of {@link #addFileToList(String, List)}. */
   private static class ListWrapper implements AddFileToList
   { private final List<File> files;

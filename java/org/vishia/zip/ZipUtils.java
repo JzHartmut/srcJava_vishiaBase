@@ -24,7 +24,7 @@ public class ZipUtils {
   
   /**Version, history and license.
    * <ul>
-   * <li>20xx-xx-xx Hartmut creation. The ideas were created in 1979..80 by me.  
+   * <li>20xx-xx-xx Hartmut creation.  
    * </ul>
    *
    * 
@@ -175,5 +175,8 @@ public class ZipUtils {
     return true;
   }
   
+  
+
+
   
 }
