@@ -211,9 +211,9 @@ public class XmlJzCfgAnalyzer
         main.cfgGiven.writeToText(new File("T:/cfgGiven.read.back.txt"), main.log);  // only for test.
       }
       if(args.sContent !=null) {
-        main.readXmlStructZip(args.fIn, args.sContent);
+        main.analyzeXmlStructZip(args.fIn, args.sContent);
       } else {
-        main.readXmlStruct(args.fIn);
+        main.analyzeXmlStruct(args.fIn);
       }
       if(args.fdOut !=null) {
         main.writeData(args.fdOut);
@@ -603,23 +603,23 @@ public class XmlJzCfgAnalyzer
 
 
   /**Reads any XML file and stores the structure in the {@link #xmlStructTree}.
-   *  
+   * Description see {@link #analyzeXmlStructZip(File, String)}
+   * Note: renamed from readXmlStruct(...)
    * @param fXmlIn
    * @throws IOException 
    */
-  public void readXmlStruct(File fXmlIn) throws IOException {
-    XmlJzReader xmlReader = new XmlJzReader();
-    if(this.debugStopLineXmlInp >0) {
-      xmlReader.setDebugStop(this.debugStopLineXmlInp);
-    }
-    XmlCfg cfg = newCfgReadStruct();   // use this special config file to read all data
-    xmlReader.readXml(fXmlIn, this.xmlStructTree, cfg);
-    this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
-    storeInCfg(xmlReader);
-    Debugutil.stop();
+  public void analyzeXmlStruct(File fXmlIn) throws IOException {
+    analyzeXmlStructZip(fXmlIn, null);
   }
 
-  /**Reads any XML file and stores the structure in the {@link #xmlStructTree}.
+  /**Reads any XML file and stores the structure in the returned {@link XmlCfg}.
+   * The found configuration should be write out after them with {@link XmlCfg#writeToText(File, LogMessage)}
+   * to use it to configure the {@link XmlJzReader#setCfg(XmlCfg)} with a proper configuration,
+   * which reads the here created textual configuration file via
+   * {@link XmlCfg#readCfgFile(File, LogMessage)} or {@link XmlCfg#readFromJar(Class, String, LogMessage)}. 
+   * Whereby, for further usage, the configuration file and also the possible created Java classes
+   * can be manual adapted before further usage.
+   * <br>
    * It calls the following operations per node and attribute in the read XML file, 
    * set a breakpoint there to see what's happen. 
    * This operations are called inside {@link XmlJzReader#readXml(File, Object)}
@@ -630,10 +630,13 @@ public class XmlJzCfgAnalyzer
    * <li>{@link XmlStructureNode#addNamespace(String, String)} on a 'xmlns:...' attribute
    * <li>{@link XmlStructureNode#setTextOccurrence()} on a text.
    * </ul> 
-   * @param fXmlIn
-   * @throws IOException 
+   * Note: renamed from readXmlStructZip(...)
+   * @param fXmlIn The file, immediately the XML file or a zip file containing the XML file.
+   * @param pathInZip null for reading immediately XML, else the path in the zip file to the XML file to read.
+   * @return
+   * @throws IOException
    */
-  public XmlCfg readXmlStructZip(File fXmlIn, String pathInZip) throws IOException {
+  public XmlCfg analyzeXmlStructZip(File fXmlIn, String pathInZip) throws IOException {
     XmlJzReader xmlReader = new XmlJzReader();
     xmlReader.setCfg(newCfgReadStruct());        //<<<<------ this is the essential one, analyse as SAX parser any node.
     if(this.debugStopLineXmlInp >0) {
@@ -641,7 +644,11 @@ public class XmlJzCfgAnalyzer
     }
     String sInName = fXmlIn.getName();
     xmlReader.openXmlTestOut( new File( "T:/" + sInName + "-back.xml")); //fout1);
-    xmlReader.readZipXml(fXmlIn, pathInZip, this.xmlStructTree);
+    if(pathInZip ==null) {
+      xmlReader.readXml(fXmlIn, this.xmlStructTree, null);
+    } else {
+      xmlReader.readZipXml(fXmlIn, pathInZip, this.xmlStructTree);
+    }
     //
     checkStructTree();
     //this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
@@ -739,25 +746,28 @@ public class XmlJzCfgAnalyzer
     if(recursion <=0) { assert(false); return; }
     XmlStructureNode srcx = src;
     if(src.tag.equals("style:style")) Debugutil.stopp();
-    if(!bRoot) {
-      dst.cfgSubtreeName = src.sSubtreenode;
-    }
-    dst.bList |= !srcx.onlySingle;
-    if(dst.cfgSubtreeName ==null) {
-      String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
-      dst.dstClassName = sClass;
+    dst.bList |= !src.onlySingle;
+    String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
+    dst.dstClassName = sClass;
+    if(!bRoot || src.sSubtreenode ==null) {      // bRoot && sSubtreeNode: In a subtree root definition do not write SET or ADD.
+      if(dst.bList) {                            // write ADD:"operation" alsways in the original node, not in the subtree node
+        String sAddPath = "add_" + src.tagIdent + "(value)";
+        dst.setFinishElementPath(sAddPath);      //... because it is different how to store in the parent node, List or No List.
+      } else {
+        String sAddPath = "set_" + src.tagIdent + "(value)";
+        dst.setFinishElementPath(sAddPath);      //If no LIST, then use set_... due to code generation. 
+    } }
+    if(!bRoot && src.sSubtreenode !=null) {      //--------vv if bRoot then the 'sSubtreenode' is only the name of the sub tree
+      dst.cfgSubtreeName = src.sSubtreenode;               // sets the reference to the subtree node to use.
+    } else {                                     //--------vv SUBTREE is not given, or it is the start node of a subtree
       if(src.bText) {
-        dst.setContentStorePath("set_Text(text)");
+        dst.setContentStorePath("set_Text(text)");         // write the necessities.
       }
       StringBuilder sNewElement = new StringBuilder(20 + (src.attribs == null ? 0 : src.attribs.size() * 10));
       if(src.onlySingle) {
         sNewElement.append("new_").append(src.tagIdent).append('(');  // new creates the instance and sets the reference.
-        String sAddPath = "set_" + src.tagIdent + "(value)";
-        dst.setFinishElementPath(sAddPath);
       } else {
         sNewElement.append("new_").append(src.tagIdent).append('(');
-        String sAddPath = "add_" + src.tagIdent + "(value)";
-        dst.setFinishElementPath(sAddPath);
       }
       if(src.attribs !=null) {
         String sep = "";

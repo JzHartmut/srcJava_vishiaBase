@@ -314,10 +314,10 @@ public class GenXmlCfgJavaData {
           }
           SubClassXml metaClass = getRegisterSubclass(sType, childNode); //idxMetaClass.get(semantic1);
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, sOuterClass, sType, sName, childNode.elementStorePath, "Complex node " + childNode.tag, false, bListChild, true);  //write the create routine and access
+          wrVariable(classData, sOuterClass, sType, sName, childNode.elementCreatePath, "Complex node " + childNode.tag, false, bListChild, true);  //write the create routine and access
         } else {                                 //--------vv dstClassName not given, it is a String result.
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, null, "String", sName, childNode.elementStorePath, "Simple node " + childNode.tag, true, false, false);
+          wrVariable(classData, null, "String", sName, childNode.elementCreatePath, "Simple node " + childNode.tag, true, false, false);
             
         }
       }

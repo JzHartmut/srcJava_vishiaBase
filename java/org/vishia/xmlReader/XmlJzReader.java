@@ -272,11 +272,13 @@ public class XmlJzReader
    * This operation is used internally in for all read operations too. It is the common entry to read.
    * @param input The xml file
    * @param output The empty data where the first operation is called or the first data are stored via reflection.
-   * @param xmlCfg Already read XmlCfg from a file using {{@link #readCfg(File)}} or {@link #readCfgFromJar(Class, String)}
-   *   or alternatively a immediate prepared XmlCfg. 
+   * @param xmlCfg The used configuration. If it is null, then the internal stored {@link #cfg} is used
+   *   which may be set by {@link #setCfg(XmlCfg)}, {@link #readCfg(File)} etc.
+   *   If this instance is given, it is used, ignoring the internal {@link #cfg}.
+   *   This is helpfully if an XML file with another configuration should be processed as commonly given.
    *   <ul>
    *   <li>For reading the config file itself it is {@link XmlCfg#newCfgCfg()}.
-   *   <li>For storing to a XmlNodeSimple it is 
+   *   <li>For storing to a XmlNodeSimple it is a config file which needs only contain the name spaces.
    *   <li>Also a user can prepare a XmlCfg by himself.
    *   </ul>
    * @return
@@ -336,7 +338,10 @@ public class XmlJzReader
    * @param input any opened InputStream. Typically it is an FileInputStream or InputStream from a {@link ZipEntry}.
    * @param sInputPath The path to the input stream, used for error hints while parsing.
    * @param output Any output data. The structure should match to the xmlCfg.
-   * @param xmlCfg A configuration. It can be gotten via {@link #readCfg(File)}.
+   * @param xmlCfg The used configuration. If it is null, then the internal stored {@link #cfg} is used
+   *   which may be set by {@link #setCfg(XmlCfg)} etc.
+   *   If this instance is given, it is used, ignoring the internal {@link #cfg}.
+   *   This is helpfully if an XML file with another configuration should be processed as commonly given.
    * @return null if no error. Elsewhere an error message, instead of throwing.
    */
   public String readXml(InputStream input, String sInputPath, Object output, XmlCfg xmlCfg) {
@@ -368,7 +373,6 @@ public class XmlJzReader
    * @param input any opened InputStream. Typically it is an FileInputStream or InputStream from a {@link ZipEntry}.
    * @param sInputPath The path to the input stream, used for error hints while parsing.
    * @param output Any output data. The structure should match to the xmlCfg.
-   * @param xmlCfg A configuration. It can be gotten via {@link #readCfg(File)}.
    * @return null if no error. Elsewhere an error message, instead of throwing.
    * @throws Exception 
    */
@@ -387,7 +391,10 @@ public class XmlJzReader
    * @param input any opened InputStream. Typically it is an FileInputStream or InputStream from a {@link ZipEntry}.
    * @param sInputPath The path to the input stream, used for error hints while parsing.
    * @param output Any output data. The structure should match to the xmlCfg.
-   * @param xmlCfg A configuration. It can be gotten via {@link #readCfg(File)}.
+   * @param xmlCfg The used configuration. If it is null, then the internal stored {@link #cfg} is used
+   *   which may be set by {@link #setCfg(XmlCfg)}, {@link #readCfg(File)} etc.
+   *   If this instance is given, it is used, ignoring the internal {@link #cfg}.
+   *   This is helpfully if an XML file with another configuration should be processed as commonly given.
    * @return null if no error. Elsewhere an error message, instead of throwing.
    */
   public String readXml(Reader input, String sInputPath, Object output, XmlCfg xmlCfg) {
@@ -414,11 +421,15 @@ public class XmlJzReader
    * @param inp A StringPartScan can be built from a String too, using {@link StringPartScan#assign(CharSequence)}.
    *   for file reading the constructor {@link StringPartFromFileLines#StringPartFromFileLines(File)} is used.
    * @param output the data to store the read content. Should match to the root instance in the cfg file.
-   * @param xmlCfg The used configuration (it does not access the {@link #cfg} if the instance, may call with {@link #cfg}.
+   * @param xmlCfg The used configuration. If it is null, then the internal stored {@link #cfg} is used
+   *   which may be set by {@link #setCfg(XmlCfg)} etc.
+   *   If this instance is given, it is used, ignoring the internal {@link #cfg}.
+   *   This is helpfully if an XML file with another configuration should be processed as commonly given.
    * @throws Exception
    */
-  public void readXml(StringPartScan inp, Object output, XmlCfg xmlCfg) 
+  public void readXml(StringPartScan inp, Object output, XmlCfg xmlCfgArg) 
   throws Exception { 
+    XmlCfg xmlCfg = xmlCfgArg !=null ? xmlCfgArg : this.cfg;
     inp.setIgnoreWhitespaces(true);
     this.bUseNonSemanticDataStore = output instanceof XmlAddData_ifc;
     if(this.bUseNonSemanticDataStore) {
@@ -554,8 +565,11 @@ public class XmlJzReader
     //
     if(dbgline == this.debugStopLine)
       Debugutil.stop();
-    //Hint: The element (node) where the attributes should be associated is not created.
-    //output is currently the parent node. Hence store attributes firstly locally. Do not offer output as argument.
+    //Hint: The element (node) where the attributes should be associated is not created just now.
+    //The attributes are here first parsed because they may contribute to arguments of the 'elementStorePath'.
+    //The attributes which should be stored are assembled in 'attribsToStore' as also 'nameSpacesToStore'
+    // whereas 'attribsToStore' is not the LinkedList itself, it is an List[1] to get a linkedList.
+    //======>>>>
     String keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, nameSpacesToStore);
     //
     if(keyResearch.length() > sTag.length()) {
@@ -569,14 +583,14 @@ public class XmlJzReader
       if(subCfgNode.cfgSubtreeName !=null) {
         XmlCfg.XmlCfgNode subCfgNodeSubtree = null;
         subCfgNodeSubtree = this.cfg.subtrees.get(subCfgNode.cfgSubtreeName);
-        elementStorePath = subCfgNode.elementStorePath !=null ? subCfgNode.elementStorePath : subCfgNodeSubtree.elementStorePath;
+        elementStorePath = subCfgNode.elementCreatePath !=null ? subCfgNode.elementCreatePath : subCfgNodeSubtree.elementCreatePath;
         elementFinishPath = subCfgNode.elementFinishPath !=null ? subCfgNode.elementFinishPath : subCfgNodeSubtree.elementFinishPath;
         contentStorePath = subCfgNode.contentStorePath !=null ? subCfgNode.contentStorePath : subCfgNodeSubtree.contentStorePath;
         nameSpaceDef = subCfgNode.nameSpaceDef !=null ? subCfgNode.nameSpaceDef : subCfgNodeSubtree.nameSpaceDef;
         //only test: subCfgNode.cmpNode(subCfgNodeSubtree, this.log);
         subCfgNode = subCfgNodeSubtree;
       } else {  //--------------------------------- not in SUBTREE
-        elementStorePath = subCfgNode.elementStorePath;
+        elementStorePath = subCfgNode.elementCreatePath;
         elementFinishPath = subCfgNode.elementFinishPath;
         contentStorePath = subCfgNode.contentStorePath;
         nameSpaceDef = subCfgNode.nameSpaceDef;
@@ -622,7 +636,7 @@ public class XmlJzReader
       //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
       if(attribsToStore[0] !=null) { 
         if(subOutput ==null) {
-          System.err.print("\nProblem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+          System.err.print("\nProblem storing attribute values, getDataForTheElement \"" + subCfgNode.elementCreatePath + "\" returns null");
         } else {
           for(AttribToStore e: attribsToStore[0]) {
             if(e.daccess !=null) {
@@ -631,7 +645,7 @@ public class XmlJzReader
       } } }
       if(nameSpacesToStore[0] !=null) { 
         if(subOutput ==null) {
-          System.err.print("\nProblem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+          System.err.print("\nProblem storing attribute values, getDataForTheElement \"" + subCfgNode.elementCreatePath + "\" returns null");
         } else {
           for(AttribToStore e: nameSpacesToStore[0]) {
             if(e.daccess !=null) { //only if should be stored. nameSpacesToStore[0] contains all xmlns attributes.
@@ -775,6 +789,7 @@ public class XmlJzReader
         if(dbgAttrname !=null && sAttrNsNameRaw.equals(dbgAttrname)) {
           Debugutil.stop();
         }
+        //if(sAttrNsNameRaw.equals("fo:font-family")) Debugutil.stopp();
         int posNs = StringFunctions.indexOf(sAttrNsNameRaw, ':');  //namespace check
         final CharSequence sAttrNsName;
         if(posNs >=0) {  //================================== ns:... given, replace with real ns definition
@@ -833,7 +848,10 @@ public class XmlJzReader
                 || cfgNode.attribsUnspec !=null) {         // it is especially to read the config file itself.
             attribsToStore[0].add(new AttribToStore(cfgNode.attribsUnspec, sAttrNsName.toString(), sAttrValue));
           }
-
+          else {                                 //--------vv store the attribute without daccess because should look later ...
+            if(attribsToStore[0]==null ) { attribsToStore[0] = new LinkedList<AttribToStore>(); }
+            attribsToStore[0].add(new AttribToStore(null, sAttrNsName.toString(), sAttrValue));
+          }                                                // ... should look later in the subtree config for that.
         }
       }
       inp.readNextContent(this.sizeBuffer/2);

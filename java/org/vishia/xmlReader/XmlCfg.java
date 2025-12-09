@@ -523,7 +523,7 @@ public class XmlCfg
     + "<:if:node.cfgSubtreeName> =>SUBTREE:<&node.cfgSubtreeName><.if>"
     + "<:if:node.bList> LIST<.if>"
     + "<:if:node.dstClassName> CLASS:<&node.dstClassName><.if>"
-    + "<:if:node.elementStorePath><:n><&indent>  NEW:\"<:exec:wrDataAccess(OUT, node.elementStorePath)>\"<.if>"
+    + "<:if:node.elementCreatePath><:n><&indent>  NEW:\"<:exec:wrDataAccess(OUT, node.elementCreatePath)>\"<.if>"
     + "<:if:node.elementFinishPath><:n><&indent>  ADD:\"<:exec:wrDataAccess(OUT, node.elementFinishPath)>\"<.if>"
     + "<:if:node.contentStorePath><:n><&indent>  TEXT:\"<:exec:wrDataAccess(OUT, node.contentStorePath)>\"<.if>"
     + "<:if:node.nameSpaceDef><:n><&indent>  NAMESPACE:\"<&node.nameSpaceDef>\"<.if>"
@@ -541,7 +541,8 @@ public class XmlCfg
   
   /**Writes the content of the config to a text file which can be later read with {@link #readCfgFile(File, LogMessage)}
    * or with {@link #readFromJar(Class, String, LogMessage)}.
-   * 
+   * This operation is especially used after {@link XmlJzCfgAnalyzer#analyzeXmlStruct(File)} or {@link XmlJzCfgAnalyzer#analyzeXmlStructZip(File, String)}
+   * to write out the result.
    * @param fText destination.
    * @param log
    * @since 2024-05-17
@@ -698,12 +699,12 @@ public class XmlCfg
      * The {@link DataAccess.DatapathElement#args} contains the arguments for new_...(...). 
      * This comes from the textual given expression. This values are necessary to store in the created class, but final. 
      */
-    DataAccess.DatapathElement elementStorePath;
+    DataAccess.DatapathElement elementCreatePath;
     
     /**Reflection path of usual an operation which is called on end of the node. 
      * This is on <code>&lt;/tag></code> or also on <code>/></code> if the node has not further sub nodes.
      * This operation can be sensible, if the data for the node should be post-prepared if all information inside the node are available.
-     * This element can be null if the store path is not necessary.
+     * This element can be null if #elementCreatePath already adds the element.
      */
     DataAccess.DatapathElement elementFinishPath;
     
@@ -715,7 +716,7 @@ public class XmlCfg
     /**Argument names from attributes which are used for the new_<&element>
      * but also 4 possible standard argument names: tag, name, value, text. 
      * It is not the arguments of the new_<&element>(...) only, it can be all possible and unnecessary arguments.
-     * Place holder for possible ones. See {@link #elementStorePath} 
+     * Place holder for possible ones. See {@link #elementCreatePath} 
      */
     Map<String, DataAccess.IntegerIx> allArgNames;
   
@@ -723,7 +724,7 @@ public class XmlCfg
     boolean bCheckAttributeNode;
     
     /**True if the value of attributes should be stored in the new content.
-     * False if attributes are stored only in the attribute map and evaluate especially by the invocation of {@link #elementStorePath}
+     * False if attributes are stored only in the attribute map and evaluate especially by the invocation of {@link #elementCreatePath}
      * It is set if at least one attributes with  a store path (with "!...") is found.
      */
     boolean bStoreAttribsInNewContent;
@@ -765,7 +766,7 @@ public class XmlCfg
      * It is set from {@link XmlJzCfgAnalyzer#storeCfgNode(XmlCfgNode, org.vishia.xmlReader.XmlJzCfgAnalyzer.XmlStructureNode, boolean, int)}
      * to an identifier derived from the tag name. 
      * This is usual a proper default name for the (sub-) class to store.
-     * While parsing the class is the given type of the element to store, given as return value from {@link #elementStorePath} evaluation with the user's data,
+     * While parsing the class is the given type of the element to store, given as return value from {@link #elementCreatePath} evaluation with the user's data,
      * means the return value of this reflection called operation. 
      * Hence it is not necessary for parsing. 
      */
@@ -784,7 +785,7 @@ public class XmlCfg
       this.allArgNames.put("text", new DataAccess.IntegerIx(3));
     }
   
-    /**Sets the path for the "new element" invocation see {@link XmlCfgNode#elementStorePath}.
+    /**Sets the path for the "new element" invocation see {@link XmlCfgNode#elementCreatePath}.
      * @param dstPath either a method or an access to a field.
      * @throws ParseException 
      */
@@ -800,7 +801,7 @@ public class XmlCfg
       }
       StringPartScan spPath = new StringPartScan(sPath);
       spPath.setIgnoreWhitespaces(true);                   // NOTE: this.allArgNames will be completed by necessary arguments given as String
-      this.elementStorePath = new DataAccess.DatapathElement(spPath, this.allArgNames, null);  //gathered necessary names.
+      this.elementCreatePath = new DataAccess.DatapathElement(spPath, this.allArgNames, null);  //gathered necessary names.
       if(this.allArgNames.size() ==0) {
         this.allArgNames = null; //not necessary.
       }
@@ -936,7 +937,7 @@ public class XmlCfg
      *   The entry in the current element is then significant (the called store operation as attribute value).
      *   But both should be equivalent.
      * <li>The {@link #setContentStorePath(String)} is not taken from the subtree (ignored, 2024-05-12)
-     * <li>The {@link #elementStorePath} and {@link #elementFinishPath} are not taken from the subtree ( ignored, 2024-05-12).  
+     * <li>The {@link #elementCreatePath} and {@link #elementFinishPath} are not taken from the subtree ( ignored, 2024-05-12).  
      * @param subtree
      */
     void addFromSubtree(XmlCfgNode subtree) {
@@ -1002,7 +1003,7 @@ public class XmlCfg
       } 
       if(subNode == null) {
         subNode = new XmlCfgNode(this, this.cfg, sname);  //A sub node for the config.
-        //subNode.elementStorePath = this.elementStorePath;  //the same routine to create the next sub node.
+        //subNode.elementCreatePath = this.elementCreatePath;  //the same routine to create the next sub node.
         //subNode.subNodeUnspec = this.subNodeUnspec;
         //subNode.attribsUnspec = this.attribsUnspec;
         //subNode.attribs = this.attribs;
@@ -1146,7 +1147,7 @@ public class XmlCfg
             if(log !=null) log.writeError("ERROR CheckCfgSubtree dstClassName %s: %s ?? %s", this.tag, this.dstClassName, nodeCmp.dstClassName);
           }
           bOk &= cmpDataAccess(this.tag, "contentStorePath", this.contentStorePath, nodeCmp.contentStorePath, log);
-          bOk &= cmpDataAccess(this.tag, "elementStorePath", this.elementStorePath, nodeCmp.elementStorePath, log);
+          bOk &= cmpDataAccess(this.tag, "elementCreatePath", this.elementCreatePath, nodeCmp.elementCreatePath, log);
           bOk &= cmpDataAccess(this.tag, "elementFinishPath", this.elementFinishPath, nodeCmp.elementFinishPath, log);
           bOk &= cmpDataAccess(this.tag, "nameSpaceDef", this.nameSpaceDef, nodeCmp.nameSpaceDef, log);
           if(!this.tag.equals(nodeCmp.tag)) {
