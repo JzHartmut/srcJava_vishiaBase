@@ -87,7 +87,7 @@ public class XmlJzCfgAnalyzer
 
   private static class CmdArgs extends Arguments {
 
-    List<FileFunctions.FileZipPath> listfIn = new LinkedList<>();;
+    List<FileFunctions.FilePathnameExt> listfIn = new LinkedList<>();;
     
     /**A given config file to supplement */
     File fInCfg;
@@ -107,13 +107,13 @@ public class XmlJzCfgAnalyzer
     Argument[] argsXmlJzCfgAnalyzer =
     { new Argument("-inXML", ":D:/path/to/file.xml to analyze"
         , new SetArgument() { @Override public boolean setArgument (String val) {
-          File fIn = new File(val); CmdArgs.this.listfIn.add(new FileFunctions.FileZipPath(fIn, null)); return fIn.exists(); 
+          File fIn = new File(val); CmdArgs.this.listfIn.add(new FileFunctions.FilePathnameExt(fIn, null)); return fIn.exists(); 
         } })
     , new Argument("-inZip", ":D:/path/to/file.odx:content.xml to analyze a stored XML in a zip format"
-        , new SetArgument() { @Override public boolean setArgument (String val) {
-          FileFunctions.FileZipPath fzip =  FileFunctions.FileZipPath.parseArgument(null, val, ':');
+        , new SetArgument() { @Override public boolean setArgument (String val) throws FileNotFoundException {
+          FileFunctions.FilePathnameExt fzip =  FileFunctions.FilePathnameExt.parseZipPath(null, val, ':');
           CmdArgs.this.listfIn.add(fzip); 
-          return fzip.fIn.exists(); 
+          return fzip.file.exists(); 
         } })
     , new Argument("-inCfg", ":D:/path/to/file.cfg a given config file to supplement"
         , new SetArgument() { @Override public boolean setArgument (String val) {
@@ -621,8 +621,8 @@ public class XmlJzCfgAnalyzer
    * @throws IOException 
    */
   public XmlCfg analyzeXmlStruct(File fXmlIn) throws IOException {
-    LinkedList<FileFunctions.FileZipPath> list = new LinkedList<>();
-    list.add(new FileFunctions.FileZipPath(fXmlIn, null));
+    LinkedList<FileFunctions.FilePathnameExt> list = new LinkedList<>();
+    list.add(new FileFunctions.FilePathnameExt(fXmlIn, null));
     return analyzeXmlStructZip(list);
   }
 
@@ -646,8 +646,8 @@ public class XmlJzCfgAnalyzer
    * @throws IOException 
    */
   public XmlCfg readXmlStructZip(File fIn, String sPathInZip) throws IOException {
-    LinkedList<FileFunctions.FileZipPath> list = new LinkedList<>();
-    list.add(new FileFunctions.FileZipPath(fIn, sPathInZip));
+    LinkedList<FileFunctions.FilePathnameExt> list = new LinkedList<>();
+    list.add(new FileFunctions.FilePathnameExt(fIn, sPathInZip));
     return analyzeXmlStructZip(list);
   }
 
@@ -677,18 +677,18 @@ public class XmlJzCfgAnalyzer
    * @return
    * @throws IOException
    */
-  public XmlCfg analyzeXmlStructZip(List<FileFunctions.FileZipPath> fIn) throws IOException {
+  public XmlCfg analyzeXmlStructZip(List<FileFunctions.FilePathnameExt> fIn) throws IOException {
     XmlJzReader xmlReader = new XmlJzReader();
     xmlReader.setCfg(newCfgReadStruct());        //<<<<------ this is the essential one, analyse as SAX parser any node.
     if(this.debugStopLineXmlInp >0) {
       xmlReader.setDebugStop(this.debugStopLineXmlInp);
     }
-    for(FileFunctions.FileZipPath fIn1: fIn) {
-      String sInName = fIn1.fIn.getName();
+    for(FileFunctions.FilePathnameExt fIn1: fIn) {
+      String sInName = fIn1.file.getName();
       if(this.dirDbg !=null) {
         xmlReader.openXmlTestOut( new File( this.dirDbg, sInName + "-back.xml")); //fout1);
       }
-      xmlReader.readZipXml(fIn1.fIn, fIn1.sPathInZip, this.xmlStructTree);
+      xmlReader.readZipXml(fIn1.file, fIn1.sNamePath, this.xmlStructTree);
     }
     //
     checkStructTree();
@@ -830,7 +830,7 @@ public class XmlJzCfgAnalyzer
       if(src.attribs !=null) { //============================ Transfer all attribs
         for(AttribRead attrib: src.attribs.values()) {
           String key = attrib.namespace + ':' + attrib.name;
-          if(key.equals("draw:fit-to-size")) Debugutil.stopp();
+          //if(key.equals("draw:fit-to-size")) Debugutil.stopp();
           dst.addAttribStorePath(key, attrib.value);
         }
       }
@@ -1339,7 +1339,7 @@ public class XmlJzCfgAnalyzer
       } else {
         attrib.name = namespacename;
       }
-      if(namespacename.equals("draw:fit-to-size")) Debugutil.stopp();
+      //if(namespacename.equals("draw:fit-to-size")) Debugutil.stopp();
       if(this.attribs == null) { 
         this.attribs = new TreeMap<String, AttribRead>(); 
         this.bNewAttributes = true;

@@ -52,6 +52,7 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-03-15 Hartmut new {@link FilePathnameExt}, new {@link #newFile(File, String, boolean)}
    * <li>2023-03-15 Hartmut bugfix {@link #addFilesWithBasePath(File, String, List)} used in {@link org.vishia.cmd.JZtxtcmdFileset}:
    *   If the basepath is given with 'basepath/:' or especially './:' then this should be admissible. Without fix, the first character of local path was missing. 
    *   It was obviously in {@link org.vishia.header2Reflection.Header2Reflection} generation.
@@ -170,30 +171,39 @@ public class FileFunctions {
   }
   
   
-  /**Small helper class can be used for a File inside a zip.
-   * It can be used to describe a file in a zip entry, or if sContent is null, also an ordinary file.
+  /**Small helper class with File or directory and additional name or path info 
+   * to save the dir and file mask in one argument instance.
+   * <ul>
+   * <li>It can be used to describe a file in a zip entry.
+   *   argument form: <code>D:/path/to/file.zip:path/inZip/content.xml"</code>.
+   *   The colon behind the 2th position separates the path to the zip file and the path inside the zip file.
+   *   Use {@link #parseZipPath(File, String, char)} to evaluate it.
    * 
    */
-  public static class FileZipPath { 
+  public static class FilePathnameExt { 
     
     /**May be a zip file. */
-    public final File fIn; 
+    public final File file; 
     
     /**May be the path in the zip file to the file. */
-    public final String sPathInZip;
+    public final String sNamePath, sExt;
     
     /**ctor with final initialisation. */
-    public FileZipPath(File fIn, String sContent) { this.fIn = fIn; this.sPathInZip = sContent; }
+    public FilePathnameExt(File fIn, String sContent, String sExt) { this.file = fIn; this.sNamePath = sContent; this.sExt = sExt; }
+    
+    public FilePathnameExt(File fIn, String sContent) { this.file = fIn; this.sNamePath = sContent; this.sExt = null; }
     
     /**Parse one argument for a file and possible zip entry
-     * @param currDir can be null, may be given for a relative path
+     * @param currDir can be null, may be given for a relative path.
      * @param sArg the given argument. The zip entry is separated with 'cSep' after the 2th position.
      *   for example "D:\path\to\file.zip:path/inZip"
      * @param cSep separator char before path in zip, recommended use a colon ':'  
-     * @return proper ZipEntry, whereas {@link #fIn} {@link File#exists()} is not tested. 
+     * @return proper ZipEntry, whereas {@link #file} is the zip file, {@link File#exists()} is not tested. 
+     *   #sNamePath is the relative path in the zip file for the entry (part after 'cSep').
+     * @throws FileNotFoundException 
      */
-    public static FileZipPath parseArgument(File currDir, String sArg, char cSep) {
-      int posSep = sArg.indexOf(cSep, 2);   // search ':' after pos2 to excluse clash in windows with "D:..."
+    public static FilePathnameExt parseZipPath(File currDir, String sArg, char cSep) throws FileNotFoundException {
+      int posSep = sArg.indexOf(cSep, 2);   // search ':' after pos2 to exclude clash in windows with "D:..."
       String sFile, sZipPath;
       if(posSep < 0 ) {
         sZipPath = null;
@@ -202,9 +212,42 @@ public class FileFunctions {
         sZipPath = sArg.substring(posSep+1);
         sFile = sArg.substring(0, posSep);
       }
-      File file = new File(currDir, sFile);
-      return new FileZipPath(file, sZipPath);
+      File file = newFile(currDir, sFile, false);
+      return new FilePathnameExt(file, sZipPath);
     }
+
+  
+    /**Parse one argument for a file as directory and the parts of a file name for a file to create.
+     * @param currDir can be null, may be given for a relative path
+     * @param sArg the given argument. It cab have the form "path/to/name*.ext"
+     *   with absolute or relative path, see {@link FileFunctions#absolutePath(String, File)}.
+     * @return proper instance whereas {@link #file} is the directory of the given path. file. {@link File#exists()} is not tested.
+     *   <br>#sNamePath is the name till '*' or the whole name, it is "" if "path/to/*.ext" is given. 
+     *   It is also "" if sArg is given with ending slash or backslash.
+     *   <br>sExt is the part after the * or null if a * is not given.  
+     * @throws FileNotFoundException can occur if the absolute directory is created.
+     */
+    public static FilePathnameExt parseDirWildcardName(File currDir, String sArg) throws FileNotFoundException {
+      String sArg2 = sArg.replace('\\', '/');
+      int posDir = sArg2.lastIndexOf('/');
+      File dir;
+      if(posDir >0) {
+        dir = newFile(currDir, sArg.substring(0, posDir), false);
+      } else {
+        dir = currDir == null ? new File(".").getAbsoluteFile(): currDir;
+      }
+      int posWildcard = sArg2.indexOf('*', posDir+1);   // search ':' after pos2 to exclude clash in windows with "D:..."
+      String s1,s2;
+      if(posWildcard < 0 ) {
+        s2 = null;
+        s1 = sArg.substring(posDir+1);
+      } else {
+        s2 = sArg.substring(posWildcard +1);
+        s1 = sArg.substring(posDir+1, posWildcard);
+      }
+      return new FilePathnameExt(dir, s1, s2);
+    }
+
   }
 
   
@@ -393,12 +436,28 @@ public class FileFunctions {
    * If the sPath is relative, it uses the <code>System.getProperty("user.dir")</code>
    * as base directory, and not the given operation system's current directory.
    * The first one can be changed with Java capabilities before, the last one cannot be changed inside the JRE.   
+   * @param currDir maybe null. If given use this as base dir for a given relative path.
+   *   if null, then call {@link #absolutePath(String, File)} for build the absolute path.
    * @param sPath relative or absolute path maybe with environment variables or starts with "/tmp/", see {@link #absolutePath(String, File)}
+   * @param bMkDir only if it is true {@link #mkDirPath(String)} is called with the resulting path.
    * @return File object.
    * @throws FileNotFoundException if the sPath is faulty
-   * @since 2023-09-21 recognizes also environment variables in sPath, creates necessary directory levels
+   * @since 2023-09-21 recognises also environment variables in sPath, creates necessary directory levels
    */
-  public static File newFile(String sPath) throws FileNotFoundException {
+  public static File newFile ( File currDir, String sPath, boolean bMkdir) throws FileNotFoundException {
+    String sAbsPath = absolutePath(sPath, currDir);
+    if(bMkdir) { mkDirPath(sAbsPath); }
+    return new File(sAbsPath);
+  }
+
+  
+  
+  /**Same as {@link #newFile(String, File. boolean)} but with currDir = null and bMkDir=true.
+   * @param sPath
+   * @return File Object with absolute path.
+   * @throws FileNotFoundException
+   */
+  public static File newFile (String sPath) throws FileNotFoundException {
     String sAbsPath = absolutePath(sPath, null);
     mkDirPath(sAbsPath);
     return new File(sAbsPath);
@@ -1201,8 +1260,8 @@ public class FileFunctions {
       } else {                                   // TMP or TEMP not found,  
         sAbs = sFilePath1;                       // do not change  /tmp/ on start, it is for Linux.
       }
-    } else if(!                                // check whether it is NOT an absolute path:
-        (  sFilePath1.startsWith("/")   
+    } else if(                                  // check whether it is NOT an absolute path:
+      ! (  sFilePath1.startsWith("/")   
         || sFilePath1.startsWith("\\") // D:/windowsAbsPath or D:\path 
         || sFilePath1.length() >=3 && (sFilePath1.substring(1, 3).equals(":/") || sFilePath1.substring(1, 3).equals(":\\"))
         ) ){

@@ -121,6 +121,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Itera
 {
   /**Version, history and license.
    * <ul>
+   * <li>2025-12-10 Hartmut chg: {@link #lentoLineEnd()} works now also with the last (or only one) line which is not terminated with newline.
    * <li>2023-04-30 Hartmut new: {@link #contentTillSpaceEndOrQuotation(String, char)}
    * <li>2022-06-06 Hartmut chg: Now implements {@link Closeable} is removed. This is faulty, because nothing is open. 
    *   The {@link #close()} operarion does not close, it cleans only. Some unnecessary warnings were created because the Closeable property. 
@@ -2325,12 +2326,23 @@ public final StringPart lentoQuotionEnd(char sEndQuotion, int maxToTest)
 /**Sets the length of the current part to the end of the current line.
  * Note The current part is empty if the position is on end of a line yet.
  * @java2c=return-this.
- * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
- *   Hint: use {@link #found()} to detect whether the end string is found.
- *   if the end String is not found, the current part has length ==0
+ * @return <code>this</code> to concatenate some operations, usage example <code>part.lentoLineEnd().seek(sKey).lento(';').len0end();</code>
+ * @since 2025-12-10 if any newline character of "\n\r\f" is not found, then the last line seems to be active and has not a newline on end.
+ *   In this case this last line is returned, as expected with the description of this operation.
+ *   This effect was not obviously before because usual the last lines were terminated with '\n' 
+ *   or this operation was not applied on such a last line. It was first detected with a {@link OutTextPreparer} with a control string,
+ *   which is only one line. 
  */
 @Java4C.Retinline
-public final StringPart lentoLineEnd(){ return lentoAnyChar("\n\r\f"); }
+public final StringPart lentoLineEnd(){ 
+  int posEnd = indexOfAnyChar("\n\r\f");
+  if(posEnd<0) { // the last line may not be terminated with newline:
+    return setLengthMax();
+  } else {
+    return lentoPos(posEnd);
+  }
+  //return lentoAnyChar("\n\r\f"); 
+}
 
 
 /**Increments the begin of the current part over maybe found whitespaces

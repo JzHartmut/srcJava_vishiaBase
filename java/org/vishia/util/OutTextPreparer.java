@@ -1111,6 +1111,15 @@ public final class OutTextPreparer
    */
   int ixVarLineoutStart = -1;
   
+  /**If this field is !=null then it is the name of the argument variable for the newline String. 
+   * This should be given on user level in {@link DataTextPreparer#setArgument(String, Object)} 
+   * with the arg1 as 'nameNewlineVariable' given with 'NEWLINE====<$?nameNewlineVariable>' 
+   * The name of this 'nameNewlineVariable' is stored in {@link #nameVariables} to get this index
+   * and in {@link #nameVariablesByIx} on the position of this index to get the name.
+   * 
+   */
+  String nameVarLineoutStart;
+  
   /**This is only stored as info, not used in this class.
    * It is the argument execClass from the user, 
    * which is immediately evaluated in the {@link #parse(Class, String)} operations while construction.
@@ -2041,6 +2050,7 @@ public final class OutTextPreparer
         if(sp.scanStart().scanIdentifier().scanOk()) {
           String sVariableLineIndent = sp.getLastScannedString();
           this.ixVarLineoutStart = listvarValues.size();
+          this.nameVarLineoutStart = sVariableLineIndent;
           listvarValues.add(sVariableLineIndent);
         }
       } else {
@@ -2171,9 +2181,8 @@ public final class OutTextPreparer
         if(this.bNewline && this.otx.sLineoutStart !=null) {  
           //===============================================vv newline in line mode
           if(this.sp.scanStart().scan(this.otx.sLineoutStart).scanOk()) { //========== newline found 
-            if(this.otx.ixVarLineoutStart >=0) {           
-              String sName = this.otx.nameVariablesByIx[this.otx.ixVarLineoutStart];  // insert content of this variable
-              addCmdSimpleVar(null, this.sp.getlineCol(), 0,0, ECmd.addVar, sName);
+            if(this.otx.nameVarLineoutStart !=null) {      // insert name of this variable to write the newline content later.
+              addCmdSimpleVar(null, this.sp.getlineCol(), 0,0, ECmd.addVar, this.otx.nameVarLineoutStart);
             } else {
               addCmd("\n", this.sp.getlineCol(), 0, 1, null);
             }
