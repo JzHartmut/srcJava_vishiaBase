@@ -9,6 +9,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -20,6 +22,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.genJavaOutClass.GenJavaOutClass;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.msgDispatch.LogMessageStream;
 import org.vishia.util.ApplMain;
@@ -89,6 +92,8 @@ public class XmlJzCfgAnalyzer
 
     List<FileFunctions.FilePathnameExt> listfIn = new LinkedList<>();;
     
+    File fLog;
+
     /**A given config file to supplement */
     File fInCfg;
     
@@ -97,29 +102,37 @@ public class XmlJzCfgAnalyzer
     File fdOut;
     
     /**Structure file to write. */
-    File fOut;
+    File fWriteXmlConfigText;
     
     /**Structure XML file to write. */
     File fxOut;
     
     File dirDbg;
     
+    /**If true then call {@link GenXmlCfgJavaData} with the used existing XmlCfg. */
+    File dirCreateCfgJavaData;
+    
+    /**package path and base class name for the java data.
+     * form: <code>"org.package.path.Classname"</code>
+     */
+    String sPkgJava, sClassJava;
+    
     Argument[] argsXmlJzCfgAnalyzer =
-    { new Argument("-inXML", ":D:/path/to/file.xml to analyze"
+    { new Argument("-iXML", ":D:/path/to/file.xml to analyze"
         , new SetArgument() { @Override public boolean setArgument (String val) {
           File fIn = new File(val); CmdArgs.this.listfIn.add(new FileFunctions.FilePathnameExt(fIn, null)); return fIn.exists(); 
         } })
-    , new Argument("-inZip", ":D:/path/to/file.odx:content.xml to analyze a stored XML in a zip format"
+    , new Argument("-iZip", ":D:/path/to/file.odx:content.xml to analyze a stored XML in a zip format"
         , new SetArgument() { @Override public boolean setArgument (String val) throws FileNotFoundException {
           FileFunctions.FilePathnameExt fzip =  FileFunctions.FilePathnameExt.parseZipPath(null, val, ':');
           CmdArgs.this.listfIn.add(fzip); 
           return fzip.file.exists(); 
         } })
-    , new Argument("-inCfg", ":D:/path/to/file.cfg a given config file to supplement"
+    , new Argument("-iCfg", ":D:/path/to/file.cfg a given config file to supplement or for genJavaClass"
         , new SetArgument() { @Override public boolean setArgument (String val) {
           CmdArgs.this.fInCfg = new File(val); return CmdArgs.this.fInCfg.exists(); 
         } })
-    , new Argument("-o", ":D:/path/to/file.xml to write the config or file.txt"
+    , new Argument("-oCfg", ":D:/path/to/file.xml or file.txt to write the config as cfg.xml or cfg.txt"
         , new SetArgument() { @Override public boolean setArgument (String val) {
           File fOut = new File(val); 
           if( !fOut.getParentFile().exists()) {
@@ -128,14 +141,33 @@ public class XmlJzCfgAnalyzer
           if(val.endsWith(".xml")) {
             CmdArgs.this.fxOut = new File(val);
           } else {
-            CmdArgs.this.fOut = new File(val); 
+            CmdArgs.this.fWriteXmlConfigText = new File(val); 
           }
           return true;
         } })
+    , new Argument("-genJavaData", ":path/to/JavaDir:pkg.path.Classname - Generates new versions of Java data in pkg path", new SetArgument(){ 
+      @Override public boolean setArgument(String val) throws IOException { 
+        FileFunctions.FilePathnameExt filePkg = FileFunctions.FilePathnameExt.parseZipPath(null, val, ':');
+        File dirJava = filePkg.file;
+        if(!dirJava.exists() || !dirJava.isDirectory()) {
+          return CmdArgs.this.errMsg("-genJavaData:%s ERROR not found as directory", dirJava );
+        } else {
+          CmdArgs.this.dirCreateCfgJavaData = dirJava;
+          int posClass = filePkg.sNamePath.lastIndexOf('.');
+          if(posClass <0) CmdArgs.this.errMsg("\"-genJavaData pathToDir:pkg.Class\" not correct, \".Class\" not found: %s ", filePkg.sNamePath );
+          CmdArgs.this.sPkgJava = filePkg.sNamePath.substring(0, posClass); 
+          CmdArgs.this.sClassJava = filePkg.sNamePath.substring(posClass+1); 
+          return true;
+      }}})
+    , new Argument("-log", ":D:/path/to/logfile.txt", new SetArgument() {
+      @Override public boolean setArgument(String val) throws FileNotFoundException { 
+        CmdArgs.this.fLog = new File(val) ; 
+        return CmdArgs.this.fLog.getParentFile().exists();
+      }})
     , new Argument("-dirDebug", ":D:/path/to/xmlCfg.txt in given write debug info", new SetArgument() {
       @Override public boolean setArgument(String val) throws FileNotFoundException { 
         CmdArgs.this.dirDbg = new File(val) ;  
-        FileFunctions.mkDir(CmdArgs.this.dirDbg);
+        //FileFunctions.mkDir(CmdArgs.this.dirDbg);
         return CmdArgs.this.dirDbg.exists();
       }})
     };
@@ -144,14 +176,15 @@ public class XmlJzCfgAnalyzer
     CmdArgs () {
       super.aboutInfo = "...your about info";
       super.helpInfo="obligate args: -o:...";
-      super.addArgs(this.argsXmlJzCfgAnalyzer);
+      //super.addArgs(this.argsXmlJzCfgAnalyzer);
+      for(Argument arg: this.argsXmlJzCfgAnalyzer) { addArg(arg); }
     }
 
     /**This operation checks the consistence of all operations. */
     @Override
     public boolean testConsistence(Appendable msg) throws IOException {
       boolean bOk = true;
-      if(this.fOut == null) { msg.append("-o:outfile obligate\n"); bOk = false; }
+      //if(this.fWriteXmlConfigText == null) { msg.append("-o:outfile obligate\n"); bOk = false; }
       if(!bOk) {
         super.showHelp(msg);
       }
@@ -163,6 +196,8 @@ public class XmlJzCfgAnalyzer
     
   }
 
+  
+  private CmdArgs cmdArgs;
   
   File dirDbg;
   
@@ -210,6 +245,7 @@ public class XmlJzCfgAnalyzer
   public static int amain(CmdArgs args) {
     int error = 0;
     XmlJzCfgAnalyzer main = new XmlJzCfgAnalyzer();
+    main.cmdArgs = args;
     main.setDirDebug(args.dirDbg);
     try {
       if(args.fInCfg !=null) {   //=========================== read a given cfg file to accordingly in subtree organization.
@@ -219,16 +255,22 @@ public class XmlJzCfgAnalyzer
           main.cfgGiven.writeToText(new File(args.dirDbg, "cfgGiven.read.back.txt"), main.log);  // only for test.
         }
       }
-      main.analyzeXmlStructZip(args.listfIn);
-      if(args.fdOut !=null) {
-        main.writeData(args.fdOut);
+      if(args.fWriteXmlConfigText !=null || args.fxOut !=null) {    //========vv option -analyzeXmlStruct:path/to/fWriteCfgTxt
+            
+        main.analyzeXmlStructZip(args.listfIn);
+        if(args.fdOut !=null) {
+          main.writeData(args.fdOut);
+        }
+        //JZtxtcmdTester.dataHtmlNoExc(main.data, new File("T:/datashow.html"), true);
+        if(args.fxOut !=null) {
+          main.writeCfgTemplate(args.fxOut);
+        } 
+        if(args.fWriteXmlConfigText !=null) {
+          main.cfgData.writeToText(args.fWriteXmlConfigText, main.log);
+        }
       }
-      //JZtxtcmdTester.dataHtmlNoExc(main.data, new File("T:/datashow.html"), true);
-      if(args.fxOut !=null) {
-        main.writeCfgTemplate(args.fxOut);
-      } 
-      if(args.fOut !=null) {
-        main.cfgData.writeToText(args.fOut, main.log);
+      else if(args.dirCreateCfgJavaData !=null) {
+        main.writeJavaClasses();
       }
     } catch (Exception e) {
       System.err.println("Unexpected: " + e.getMessage());
@@ -238,6 +280,10 @@ public class XmlJzCfgAnalyzer
     return error;
   }
 
+  
+  
+  
+  
   /**Creates the configuration to read any xml file to store its structure especially in {@link XmlJzCfgAnalyzer.XmlStructureNode}.
    * @return instance of XmlCfg to do so.
    */
@@ -285,8 +331,9 @@ public class XmlJzCfgAnalyzer
   XmlCfg cfgGiven;
   
   
-  public XmlJzCfgAnalyzer(){
+  public XmlJzCfgAnalyzer () {
     this.log = new LogMessageStream(null, null, System.out, System.err, false, Charset.forName("UTF-8"));
+    
   }
   
   
@@ -413,6 +460,23 @@ public class XmlJzCfgAnalyzer
       if(out !=null) {
         try { out.close(); } catch(IOException exc) { System.err.append("cannot close" + fout.getAbsolutePath());}
       }
+    }
+  }
+
+
+  private void writeJavaClasses () throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
+    GenJavaOutClass.CmdArgs genXmlJavaDataArgs = new GenJavaOutClass.CmdArgs();
+    genXmlJavaDataArgs.dirJava = this.cmdArgs.dirCreateCfgJavaData;
+    genXmlJavaDataArgs.sJavaClass = this.cmdArgs.sClassJava; //"XmlDataLOffcStyles";
+    genXmlJavaDataArgs.sJavaPkg = this.cmdArgs.sPkgJava; //"org.vishia.libOffc.styles";
+    GenXmlCfgJavaData genXmlJavaData = new GenXmlCfgJavaData(genXmlJavaDataArgs, this.log);
+    XmlCfg xmlCfgForJavaData;
+    if(this.cmdArgs.fInCfg !=null) {
+      xmlCfgForJavaData = new XmlCfg(true);
+      xmlCfgForJavaData.readCfgFile(this.cmdArgs.fInCfg, this.log);
+      genXmlJavaData.exec(xmlCfgForJavaData);
+    } else {
+      throw new IllegalArgumentException("-genJavaData:... needs also -xmlCfg:...");
     }
   }
 
