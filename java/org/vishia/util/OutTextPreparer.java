@@ -285,6 +285,10 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
+   * <li>2025-12-11: bugifx {@link #parse(Class, Map, Map)}: If this is called twice for the same script, then the {@link #cmds} are also twice
+   *   and the output is dirty. hence check, exception if it is called a second one. Repair it on calling level!
+   *   This was detected first for {@link org.vishia.xmlReader.XmlCfg#writeToText(File, LogMessage)} after the gTxt scripts was set to static,
+   *   which is intrinsically correct, but has forced this error if the operation was called twice. It is fixed there. 
    * <li>2025-12-07: remove listArgs, because there was a big bug: If a variable is declared in a script to use, but not declared to set,
    *   then this variable was missing in listArgs, and access with the faulty index from {@link #nameVariables} for listArgs.get(ix) was done.
    *   That's why now {@link #nameVariablesByIx} is created instead and filled with the names in order to the indices in {@link #nameVariables}.
@@ -2114,13 +2118,17 @@ public final class OutTextPreparer
    * @throws ParseException 
    */ 
   public void parse(Class<?> execClass, final Map<String, Object> idxConstDataArg, Map<String, OutTextPreparer> idxScript) throws ParseException {
-    ParseHelper thiz = new ParseHelper(this, execClass, idxConstDataArg, idxScript);
-    thiz.parse();
-    this.nameVariablesByIx = new String[this.nameVariables.size()];
-    for(Map.Entry<String, DataAccess.IntegerIx> e : this.nameVariables.entrySet()) {
-      int ix = e.getValue().ix;
-      String name = e.getKey();
-      this.nameVariablesByIx[ix] = name;
+    if(this.cmds.size()==0) {
+      ParseHelper thiz = new ParseHelper(this, execClass, idxConstDataArg, idxScript);
+      thiz.parse();
+      this.nameVariablesByIx = new String[this.nameVariables.size()];
+      for(Map.Entry<String, DataAccess.IntegerIx> e : this.nameVariables.entrySet()) {
+        int ix = e.getValue().ix;
+        String name = e.getKey();
+        this.nameVariablesByIx[ix] = name;
+      }
+    } else {
+      throw new IllegalArgumentException("The script was already parsed, twice call not accepted: " + this.sIdent + " Clean your software. ");
     }
   }
   

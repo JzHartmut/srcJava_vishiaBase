@@ -240,30 +240,69 @@ or since ~2022 used first for the LibreOFB tool (link:../../../fbg/html/Videos_O
 also as textual file. The last one allows more simple manually editing and is preferred.
 
 [#configXmlCreate]
-=== How to create the first version for the configuration file
+=== How to create the configuration file for given example XML files.
 
-The approach is: use simple a given comprehensive XML file and analyse it.
-The result is the configuration file for this kind of XML files.
-The used XML file should contain all possible occurrences of data. 
-But you can later repeat the generation of the XML file with other XML inputs and merge the results.
+Generally, if the structure of a given XML file, its Xschema is known, the config file for
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.html[org.vishia.xmlReader.XmlCfg]
+can be written also manually, with a little bit diligence, by knowing the XML schema definition.
+This is especially feasible in the text format.
 
+The capability of
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzCfgAnalyzer.html[org.vishia.xmlReader.XmlJzCfgAnalyzer]
+is helpfully if the Xschema of a given XML file definition is not available, or maybe too complex for a simple given XML file,
+which do not uses anyway all capabilities of the possible given XML Schema definition.
+Or vice versa, the structure of the XML file is in itself obviously, albeit extensive.
+The effort to look for a XML schema is a higher effort and seems to be unnecessary.
 
+In other words: It is a way to ignore sophisticated or not given XML Schema descriptions.
+
+The basic idea is: Read given typically XML files, look what is inside, and built a map to its structure.
+Whereas, if a background knowledge (which data are stored and necessary in the XML file) 
+it is possible to supplement manually details in the found configuration file.
+For example certain entries in the XML files are known from a description, but not yet given in example XML files,
+it can be manually supplemented.
+
+**Analyse one or a few XML files and look on its output**
+
+You can see the structure of a firstly unknown XML file also by manual view to the content in the textual XML presentation.
+But this is not so proper obviously.
+
+Call the XmlJzCfgAnalyzer either per command line, or maybe also from debugging in an Java-IDE,
+with the following cmd line example:
+
+[source,Script]
 ----
-//from source: src/test/java/org/vishia/xmlReader/test/Test_XmlJzReaderSimpleExmpl.java
-include::../../../testJava_vishiaBase/java/org/vishia/xmlReader/test/Test_XmlJzReaderSimpleExmpl.java[tag=analyzeXmlCfg_BomExmpl]
+RETDIR="$PWD"
+callPATH="$(realpath "$0")"  ## with the original used PWD to reach this shell script
+cd $(dirname $0)/..          ## currdir is the parent of where this script is located
+echo called: $callPATH
+java -cp ../../tools/vishiaBase.jar org.vishia.xmlReader.XmlJzCfgAnalyzer --@$callPATH:args
+### args: ##
+### -iXml:/home/...../src/ExmplPositionCtrlPID/odg/ExmplPositionCtrlPID.odg:styles.xml
+### -iXml:/home/...../src/docuFBcl/odt/Handling-OFB_VishiaDiagrams.odt:styles.xml
+### -dirDebug:../../build/Style-test
+### -oCfg:../../build/Style-test/styles_XmlCfg.txt
+read -p "...Press ENTER..." VAR
+cd $RETDIR
 ----
 
-The `analyzer.readXmlStruct(fXmlIn)` is the essential one. 
-It reads the XML file, looks which elements are contained,
-detects elements which are contained more as one and sum all inner elements,
-then write the extracted content. It is stored in `src/test/files/xmlReader/bom_cfg.xml`:
+This script can be found 
+on `LibreOffc/SOURCE.wrk/src/srcJava_vishiaLibreOffc/makeScripts/+createXmlConfigStyles.sh`
+in link:https://vishia.org/LibreOffc/deploy/LibreOffcZmLConv-2025-12-19.zip[] or later versions.
 
-Important: The `analyzer.readXmlStruct(fXmlIn)` should not be seen as 'Code generator'
-from given XML files to the config file, without change of the generated code
-and with currently re-generation.
-Instead, it should be seen as generation of a first start config.xml with following
-manual adaption, and maybe regeneration on changed situations with merging
-the new result with the old one.  
+* The detailed arguments are part of the shell script (in comment, below the java call) with `--@file:Label`
+which is a capability of all vishia calls from the command line.
+* `-iXml:...`: two XML example files in a zip archive are read which's internal `styles.xml` should be analysed.
+It is here the `styles.cfg` inside a LibreOffice file.
+To analyse immediately a XML file, write its path without the `":internal/path/file.xml"`. 
+This writing style is for a XML file in a zip file, which is appropriate for the Libreoffice files.
+* `-dirDebug:...` for debug outputs, see there, not necessary, for inquisitiveness
+* `-oCfg:...` output path for the XmlJzReader configuration file in text form. 
+If the extension `.xml` is given, it writes the older no more recommended XML form for configuration. 
+
+Now you can look on the content, compare this content textual with a configuration file before created (what is new),
+and save this file on the necessary position in your file tree to used with sources using the 
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html[org.vishia.xmlReader.XmlJzReader].
 
 [#ConfigTxtSyntax]
 === Syntax of the textual presentation
@@ -271,14 +310,12 @@ the new result with the old one.
 The whole textual config file is described with following syntay in ZBNF2 notation.
 See link:ZbnfParser.html#ZBNF2[]
 A text with this syntax is created on usage
-link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzCfgAnalyzer.html[org/vishia/xmlReader/XmlJzCfgAnalyzer.java].
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzCfgAnalyzer.html[org/vishia/xmlReader/XmlJzCfgAnalyzer.java],
+see chapter above.
 
-The text can be adapted afterwards and used one time also for 
-link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/GenXmlCfgJavaData.html[org/vishia/xmlReader/GenXmlCfgJavaData.java]
-as also always to set the XML parsing configuration with
-link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.html#readCfgFile(java.io.File,org.vishia.msgDispatch.LogMessage)[org/vishia/xmlReader/XmlCfg#ReadCfgFile(File, log)]
-
-
+With a cyan colour, the exact ZBNF2 syntax is shown. Because this is completely and hence not so proper to understand,
+an example for the configuration is shown in purple colour below, which contains the mentioned parts of syntax
+and illustrates the ZBNF2 syntax definition.
 
 All links in the explanation goes immediately to the appropriate element in the class 
 link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.html[org.vishia.smlReader.XmlCfg.java]
@@ -286,7 +323,7 @@ and its sub classes. This is also a documentation how and where this element are
 to use while parsing with 
 link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html[org.vishia.xmlReader.XmlJzReader.java]
 
-
+[source,ZBNF]
 ----
 XmlCfg::=XmlJzReader-Config 2024-05
 [{$$ns=xmlnsAssign: 
@@ -297,6 +334,23 @@ SUBTREE:$$subtreeNode_key <=:: node?subtreeNode ::=> :}]
 =::.
 ----
 
+[source,Script]
+----
+XmlJzReader-Config 2024-05
+NS: oooc="http://openoffice.org/2004/calc"
+NS: loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0"
+.....
+SUBTREE:loext:theme <loext:theme>
+  .....
+</loext:theme>
+SUBTREE:any:other <any:other>
+.....
+</any:other>
+.....
+<root>
+  .....
+</root>
+----
 
 * The textual presentation should start with the text literal `XmlJzReader-Config 2024-05`
 
@@ -311,6 +365,8 @@ and the name space identifier is the value in this TreeMap<String, String>
 link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.html#subtrees[subtrees]:
 A subtree node is a description of one node in XML with its sub nodes dissolved from the context. 
 It is used (called) with the `==>SUBTREE:$$node.cfgSubtreeName` in a node, see next syntax for `node::=.. ..`.
+Such subtree nodes are necessary, because some node structures are used on several positions in the XML tree,
+especially recursively. Then it is only able to describe in the dissolved form using the `SUBTREE:` definition.
 
 * link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.html#rootNode[rootNode]:
 The root node structure (configuration to parse) is now following. 
@@ -319,24 +375,31 @@ The root node structure (configuration to parse) is now following.
 
 
 The following ZBNF2 definition defines one node in XML which may have attributes, text and sub nodes.
-The syntax presentation is dispersed till the end of chapter with the closing '=::.'.
+The syntax presentation is dispersed till the end of chapter with the closing `=::.`.
 
 [source,ZBNF]
 ----
 node::= <$$node.tag> [{?attr=node.attribsForCheck: @$$attr.name==$$attr.storeInMap :}]
-... [: ==>SUBTREE:$$node.cfgSubtreeName 
+... [: ==>SUBTREE:$$node.cfgSubtreeName [?node.bList: LIST :] [: CLASS:$$node.dstClassName :]
+  [: ADD:"$$node.elementFinishPath" :]
 :|:
 ----
 
 [source,Script]
 ----
-<style:graphic-properties> =>SUBTREE:style:graphic-properties
+<style:style> =>SUBTREE:style:style LIST CLASS:style_style
+  ADD:"add_style_style(value)"
+</style:style>
 ----
+
+This is the alternative definition of a node stored as `SUBTREE`.
+Note that the opening alternative in syntax on `[: ==>SUBTREE` is closed with the `:|:` on end of this part of syntax,
+and the really closing `:]` of the both alternatives is below on `:] </$$node,tag>` in the last syntax part. 
 
 * link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#tag[$$node.tag]: The tag name of the XML node
 
 * link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#attribsForCheck[$$node.attribsForCheck]: 
-'@attrName=storePath' is written if this element is only valid for a XML node which have this attribute.
+`@attrName=identifier` is written if this element is only valid for a XML node which have this attribute with the given value.
 +
 This feature allows to process XML nodes with the same tag name, but with different values for certain attributes
 in a different kind. The data of the node are processed (stored) as different data. 
@@ -351,9 +414,20 @@ The name of the attribute which should be tested.
 The necessary attribute value to use this node description to process and store the node.
 
 * `SUBTREE:` link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#cfgSubtreeName[$$node.cfgSubtreeName]: 
-If this is given, then the description how the parsed XML node is given is found in the proper `SUBTREE:...` part.
-Then no more description is necessary here.
+If this is given, then the description how the parsed XML node should be processed is described in the proper `SUBTREE:...` part.
 
+* `LIST`, `CLASS` and `ADD` have the same meanings as for any other node, see next. 
+
+** The property
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#bList[$$node.bList]
+is regarded to the parent node how to store sub nodes, and hence cannot be defined within the `SUBTREE`.
+
+** The`CLASS` should be identically as in the `SUBTREE` defintion.
+
+** The property `ADD`
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#elementStoreInPath[$$node.elementStoreInPath]:
+need to be defined in the parent node, how to store instances of the `SUBTREE` node in the parent,
+whereas `NEW` is defined in the context of the `SUBTREE`.
 
 [source,ZBNF]
 ----
@@ -898,27 +972,35 @@ because it is used from the internal stored last usage.
 
 
 
-== How does it work
+== How does the XmlJzReader XML parser work
 
 [#ReadText]
 === Read the text
 
 A XML file is firstly a textual file. 
-To get the information the frame syntax should be detected. 
+To get the data stored in it, the basically syntax of XML is evaluated. 
 This is `<name>...</name>` for an xml element (may contain sub structures),
 `<name attrib="value"....` etc. as known. 
 It means the start and end tag should be detected and the content between should be stored.
+This is done by procedure the text using the capability of the
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartScan.html[Class org.vishia.util.StringPartScan].
 
 A XML specific problem is the replacement of specific characters. 
-You cannot use a `<` in a text content of a XML node, because the `<` means start of an inner node.
-You cannot use `"` in attributes, it is the delimiter.
+Instead a `<` in a text content of a XML node, `&lt;` is written. 
+Because the `<` means start of an inner node.
+There are some more simple replacements for the control character in the XML syntax.
 But also special character of Coding should be replaced. 
+
 The encoding of the whole XML textual file can be varied. 
-UTF-8 is a standard, but also such as ISO-8859-x or US-ASCII with the advantage of exact one byte per character. 
-Special character can be any time written as `\&#x4567;` with its known code, also decimal, here hexadecimal. 
+UTF-8 is a standard, but also such as ISO-8859-x or US-ASCII with the advantage of exact one byte per character can be used.
+Special character can be any time written as `\&#x4567;` with its known UTF-16 code, also decimal, here hexadecimal. 
 This needs a translation. 
 This is not a problem of reading the file, on reading a correct XML such characters are not faulty used.
-It is a problem on storing the data: Instead `\&lt;` a `<` should be stored. ...etc
+It is a problem on storing the data: Instead `\&lt;` a `<` should be stored. ...etc.
+
+Java uses internally UTF-16 for all character. It means all is anyway converted to UTF16, also for data processing.
+For output the data, the known rules are valid (using FileWriter or FileOutputStream, with specific encoding etc). 
+This is not related to the XML coding. 
 
 [#NodeAttrCfg]
 === Select node and attribute types in config.xml
@@ -1003,3 +1085,6 @@ Also an opened zip can be evaluated with
 link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.InputStream-java.lang.String-java.lang.Object-[XmlJzReader.readXml(InputStream, ...)]  
 
 
+== Algorithm to analyse the structure of XML files
+
+ccc  

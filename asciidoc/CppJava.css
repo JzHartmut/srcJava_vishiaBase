@@ -213,7 +213,8 @@ table.tableblock #preamble>.sectionbody>[class="paragraph"]:first-of-type p{font
 .listingblock>.content>pre>code[class="language-Java"]{background:#e0f7e0}
 .listingblock>.content>pre>code[class="language-Vhdl"]{background:#e0ffff}
 .listingblock>.content>pre>code[class="language-ZBNF"]{background:#e0ffff}
-.listingblock>.content>pre>code[class="language-Script"]{background:#ffe994}
+.listingblock>.content>pre>code[class="language-Script"]{background:#e0d0ff}
+.listingblock>.content>pre>code[class="language-Shell"]{background:#ffffa0}
 .listingblock>.content>pre>code[class="language-Filetree"]{background:#e0fff0}
 .listingblock>.content{position:relative}
 .listingblock code[data-lang]::before{display:none;content:attr(data-lang);position:absolute;font-size:.75em;top:.425rem;right:.5rem;line-height:1;text-transform:uppercase;color:inherit;opacity:.5}

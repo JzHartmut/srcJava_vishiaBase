@@ -534,7 +534,11 @@ public class XmlCfg
     );
   
   
-  
+  /**Should be also static because the {@link OutTextPreparer#parse(Class, Map, Map)} should only be called one time
+   * for the static {@link #otxCfgHead} and {@link #otxNode} on first usage. 
+   * That is only in {@link #writeToText(File, LogMessage)}. 
+   */
+  static private Map<String, OutTextPreparer> idxScript;
   
   
   
@@ -549,17 +553,23 @@ public class XmlCfg
    */
   public void writeToText (File fText, LogMessage log) {
     StringBuilder wb = new StringBuilder();
-    Map<String, OutTextPreparer> idxScript = new TreeMap<>();
-    idxScript.put(this.otxNode.sIdent, this.otxNode);      // The gtxt stuff is given hard coded in this class.
-    idxScript.put(this.otxCfgHead.sIdent, this.otxCfgHead);
-    try {                                                  // first parse the gTxt stuff
-      OutTextPreparer.parseTemplates(idxScript, this.getClass(), null, log);
-      OutTextPreparer.DataTextPreparer otdCfg = this.otxCfgHead.createArgumentDataObj();
+    if(idxScript == null) {                      //--------vv parse only on first time
+      idxScript = new TreeMap<>();
+      idxScript.put(otxNode.sIdent, otxNode);      // The gtxt stuff is given hard coded in this class.
+      idxScript.put(otxCfgHead.sIdent, otxCfgHead);
+      try {
+        OutTextPreparer.parseTemplates(idxScript, this.getClass(), null, log);
+      } catch (ParseException exc) {
+        log.writef("\nERROR internal parse exception", exc);
+      }
+    }                                            //--------^^ parse
+    try {
+      OutTextPreparer.DataTextPreparer otdCfg = otxCfgHead.createArgumentDataObj();
       otdCfg.setArgument("xmlCfg", this);
       otdCfg.setExecObj(this);
-      this.otxCfgHead.exec(wb, otdCfg);          //<<<<------ write the HEAD information with 'otxCfgHead'
+      XmlCfg.otxCfgHead.exec(wb, otdCfg);          //<<<<------ write the HEAD information with 'otxCfgHead'
       //
-      OutTextPreparer.DataTextPreparer otdNode = this.otxNode.createArgumentDataObj();
+      OutTextPreparer.DataTextPreparer otdNode = XmlCfg.otxNode.createArgumentDataObj();
       if(this.subtrees !=null) for( Map.Entry<String, XmlCfgNode> e : this.subtrees.entrySet()) {
         String nameSubtree = e.getKey();
         XmlCfgNode subtreeNode = e.getValue();   //--------vv write out all SUBTREE
@@ -567,17 +577,18 @@ public class XmlCfg
         otdNode.setArgument("indent", "");
         otdNode.setArgument("node", subtreeNode);
         otdNode.setExecObj(this);
-        this.otxNode.exec(wb, otdNode);
+        XmlCfg.otxNode.exec(wb, otdNode);
       }
       otdNode.setArgument("whatis", "");         //--------vv write out the main 
       otdNode.setArgument("indent", "");
       otdNode.setArgument("node", this.rootNode);
       otdNode.setExecObj(this);
-      this.otxNode.exec(wb, otdNode);
+      XmlCfg.otxNode.exec(wb, otdNode);
       wb.append("\n");
       FileFunctions.writeFile(wb.toString(), fText);
     } catch(Exception exc) {
-      log.writeError("ERROR writing xmlcfg", exc);
+      
+      log.writef("\nERROR writing xmlcfg", exc);
     }
     
   }

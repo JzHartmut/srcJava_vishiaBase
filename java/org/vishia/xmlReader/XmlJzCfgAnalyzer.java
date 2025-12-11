@@ -30,6 +30,7 @@ import org.vishia.util.Arguments;
 import org.vishia.util.Debugutil;
 import org.vishia.util.ExcUtil;
 import org.vishia.util.FileFunctions;
+import org.vishia.util.FileFunctions.FilePathnameExt;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions_B;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -38,8 +39,13 @@ import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
 
 
-/**This class reads any XML file and writes its structure to a XmlCfg format. 
- * With it the xmlCfg to read that file to data can be prepared.
+/**This class reads any XML file and writes its structure to a XmlCfg format
+ * or also can be used to create the Java classes for storing the {@link XmlJzReader} parse results.
+ * <ul>
+ * <li>It has a main operation to call from command line. See description on {@link https://vishia.org/Java/html/RWTrans/XmlJzReader.html}
+ *   or see documentation on {@link CmdArgs}.
+ * <li>How does the analysing of XML files work: See description on 
+ * </ul>  
  * @author Hartmut Schorrig
  *
  */
@@ -122,7 +128,7 @@ public class XmlJzCfgAnalyzer
         , new SetArgument() { @Override public boolean setArgument (String val) {
           File fIn = new File(val); CmdArgs.this.listfIn.add(new FileFunctions.FilePathnameExt(fIn, null)); return fIn.exists(); 
         } })
-    , new Argument("-iZip", ":D:/path/to/file.odx:content.xml to analyze a stored XML in a zip format"
+    , new Argument("-iXml", ":\"D:/path/to/file.xml\" or \"...zip:content.xml\" to analyze a stored XML in a zip format"
         , new SetArgument() { @Override public boolean setArgument (String val) throws FileNotFoundException {
           FileFunctions.FilePathnameExt fzip =  FileFunctions.FilePathnameExt.parseZipPath(null, val, ':');
           CmdArgs.this.listfIn.add(fzip); 
@@ -256,20 +262,11 @@ public class XmlJzCfgAnalyzer
         }
       }
       if(args.fWriteXmlConfigText !=null || args.fxOut !=null) {    //========vv option -analyzeXmlStruct:path/to/fWriteCfgTxt
-            
-        main.analyzeXmlStructZip(args.listfIn);
-        if(args.fdOut !=null) {
-          main.writeData(args.fdOut);
-        }
-        //JZtxtcmdTester.dataHtmlNoExc(main.data, new File("T:/datashow.html"), true);
-        if(args.fxOut !=null) {
-          main.writeCfgTemplate(args.fxOut);
-        } 
-        if(args.fWriteXmlConfigText !=null) {
-          main.cfgData.writeToText(args.fWriteXmlConfigText, main.log);
-        }
+        main.analyzeXml(args);    
+      } else {
+        main.cfgData = main.cfgGiven;
       }
-      else if(args.dirCreateCfgJavaData !=null) {
+      if(args.dirCreateCfgJavaData !=null && main.cfgData !=null) {
         main.writeJavaClasses();
       }
     } catch (Exception e) {
@@ -280,8 +277,6 @@ public class XmlJzCfgAnalyzer
     return error;
   }
 
-  
-  
   
   
   /**Creates the configuration to read any xml file to store its structure especially in {@link XmlJzCfgAnalyzer.XmlStructureNode}.
@@ -318,10 +313,23 @@ public class XmlJzCfgAnalyzer
   /**The common structure data of the read XML file. */
   final XmlStructureData xmlStructData = new XmlStructureData(this);
   
-  /**The tree of the structure of the read XML file. It contains the same tag element for one node only one time.
+  /**Contains for each tag as key all occurrences of nodes with this tag.
    * An element is added to this root node and then to all current nodes in {@link XmlStructureNode#addElement(String)}. */
   XmlStructureNode xmlStructTree = new XmlStructureNode(null, "root", this.xmlStructData);  //the root node for reading config
 
+  /**Contains one element for each tag name or node type.
+   * The {@link XmlStructureData.CfgSubtreeType#occurrence} of the element 
+   * contains only one instance of {@link XmlStructureNode} if the node with this tag is only found in one constellation,
+   * but maybe more as one time in the same parent.
+   * <br>
+   * If the node with this tag name is found in different constellations (with different parent nodes) 
+   * then each constellation occurrence of {@link XmlStructureNode} ia stored in {@link XmlStructureData.CfgSubtreeType#occurrence}.
+   * <br><br>
+   * {@link #checkStructTree()} checks, if the occurrences are substantial equal, (yet always),
+   * then a 'SUBTREE' is created to prevent effort in the configuration,
+   * respectively allow recursively using of a node type.
+   * 
+   */
   TreeMap<String, XmlStructureData.CfgSubtreeType> allElementTypes = new TreeMap<String, XmlStructureData.CfgSubtreeType>();
   
 
@@ -329,6 +337,8 @@ public class XmlJzCfgAnalyzer
   XmlCfg cfgData = new XmlCfg(true);
   
   XmlCfg cfgGiven;
+  
+  XmlCfg cfgGiven1;
   
   
   public XmlJzCfgAnalyzer () {
@@ -351,6 +361,96 @@ public class XmlJzCfgAnalyzer
   
   
   
+  /**Reads given XML file(s) and writes its structure as cfg.xml or cfg.txt to help creating a config for the XmlJzReader.
+   * <ul>
+   * <li>For explanation of the analyse algorithm see the called {@link #analyzeXmlFile(List)}.
+   * <li>Write the XML config is done if {@link CmdArgs#fxOut} is given, it calls {@link #writeCfgTemplate(File)}.
+   * <li>The textual configuration is written on given {@link CmdArgs#fWriteXmlConfigText}
+   *   with the capability in {@link XmlCfg}: {@link XmlCfg#writeToText(File, LogMessage)}.
+   * </ul>  
+   * @param args from main invocation, also from any other Java call with this args as super class.
+   *   <ul>
+   *   <li>uses {@link CmdArgs#listfIn} either zip with xml or xml file, more as one possible.
+   *   <li>uses {@link CmdArgs#fdOut} to write with {@link #writeData(File)} currently not used and tested.
+   *   <li>uses {@link CmdArgs#fWriteXmlConfigText} to write the content of analysed configuration to a config.txt file
+   *     usable for {@link XmlCfg#readCfgFile(File, LogMessage)} later for parsing.
+   *   <li>uses {@link CmdArgs#fxOut} to write the content of analysed configuration to a config.xml file.
+   *     This is meanwhile (2025-12) no more recommended, use the textual config presentation. 
+   *     It is usable for {@link XmlJzReader#se} later for parsing.
+   *   </li>
+   * 
+   * pathfileIn.xml pathfileOutcfg.xml 
+   */
+  void analyzeXml (CmdArgs args) throws IOException {
+    //
+    //======>>>> 
+    this.analyzeXmlFile(args.listfIn);
+    if(args.fdOut !=null) {
+      this.writeData(args.fdOut);
+    }
+    //JZtxtcmdTester.dataHtmlNoExc(this.data, new File("T:/datashow.html"), true);
+    if(args.fxOut !=null) {
+      this.writeCfgTemplate(args.fxOut);
+      this.log.writef("\nconfig XML template written to: %s", args.fxOut.getAbsolutePath());
+      log.writef("");
+    } 
+    if(args.fWriteXmlConfigText !=null) {
+      this.cfgData.writeToText(args.fWriteXmlConfigText, this.log);
+      this.log.writef("\nconfig text written to: %s", args.fWriteXmlConfigText.getAbsolutePath());
+    }
+  }
+
+
+  /**Reads any XML file and stores the structure in the returned {@link XmlCfg}.
+   * The found configuration should be writtem out after them with {@link XmlCfg#writeToText(File, LogMessage)}
+   * to use it to configure the {@link XmlJzReader#setCfg(XmlCfg)} with a proper configuration,
+   * which reads the here created textual configuration file via
+   * {@link XmlCfg#readCfgFile(File, LogMessage)} or {@link XmlCfg#readFromJar(Class, String, LogMessage)}. 
+   * Whereby, for further usage, the configuration file and also the possible created Java classes
+   * can be manual adapted before further usage.
+   * <br>
+   * It calls the following operations per node and attribute in the read XML file, 
+   * set a breakpoint there to see what's happen. 
+   * This operations are called inside {@link XmlJzReader#readXml(File, Object)}
+   * due to the set config with {@link #newCfgReadStruct()}.
+   * <ul>
+   * <li>{@link XmlStructureNode#addElement(String)} on a new node on '<tag...'
+   * <li>{@link XmlStructureNode#setAttribute(String)} on a attribute
+   * <li>{@link XmlStructureNode#addNamespace(String, String)} on a 'xmlns:...' attribute
+   * <li>{@link XmlStructureNode#setTextOccurrence()} on a text.
+   * </ul>
+   * This operations accumulate the occurrence of the given tags and attributes in 
+   * <ul>
+   * <li>{@link #xmlStructData}:  
+   * Note: renamed from readXmlStructZip(...)
+   * @param fXmlIn The file, immediately the XML file or a zip file containing the XML file.
+   * @param pathInZip null for reading immediately XML, else the path in the zip file to the XML file to read.
+   * @return
+   * @throws IOException
+   */
+  public XmlCfg analyzeXmlFile(List<FileFunctions.FilePathnameExt> fIn) throws IOException {
+    XmlJzReader xmlReader = new XmlJzReader();
+    xmlReader.setCfg(newCfgReadStruct());        //<<<<------ this is the essential one, analyse as SAX parser any node.
+    if(this.debugStopLineXmlInp >0) {
+      xmlReader.setDebugStop(this.debugStopLineXmlInp);
+    }
+    for(FileFunctions.FilePathnameExt fIn1: fIn) {
+      String sInName = fIn1.file.getName();
+      this.log.writef("\nanalyses XML for: %s", fIn1.file.getAbsolutePath());
+      if(this.dirDbg !=null) {
+        xmlReader.openXmlTestOut( new File( this.dirDbg, sInName + "-back.xml")); //fout1);
+      }
+      xmlReader.readZipXml(fIn1.file, fIn1.sNamePath, this.xmlStructTree);
+    }
+    //
+    checkStructTree();
+    // this.cfgData has now already created but yet empty subtrees. The root node is also empty.
+    //this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
+    storeInCfg(xmlReader);
+    return this.cfgData;
+  }
+
+
   /**Writes the config file for the XmlJzReader with config file.
    * @param wrCfg the output file.
    */
@@ -464,133 +564,16 @@ public class XmlJzCfgAnalyzer
   }
 
 
-  private void writeJavaClasses () throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
+  private void writeJavaClasses () throws IllegalCharsetNameException, UnsupportedCharsetException {
     GenJavaOutClass.CmdArgs genXmlJavaDataArgs = new GenJavaOutClass.CmdArgs();
     genXmlJavaDataArgs.dirJava = this.cmdArgs.dirCreateCfgJavaData;
     genXmlJavaDataArgs.sJavaClass = this.cmdArgs.sClassJava; //"XmlDataLOffcStyles";
     genXmlJavaDataArgs.sJavaPkg = this.cmdArgs.sPkgJava; //"org.vishia.libOffc.styles";
     GenXmlCfgJavaData genXmlJavaData = new GenXmlCfgJavaData(genXmlJavaDataArgs, this.log);
-    XmlCfg xmlCfgForJavaData;
-    if(this.cmdArgs.fInCfg !=null) {
-      xmlCfgForJavaData = new XmlCfg(true);
-      xmlCfgForJavaData.readCfgFile(this.cmdArgs.fInCfg, this.log);
-      genXmlJavaData.exec(xmlCfgForJavaData);
-    } else {
-      throw new IllegalArgumentException("-genJavaData:... needs also -xmlCfg:...");
-    }
+    genXmlJavaData.exec(this.cfgData);
   }
 
 
-  public void XXXreadConfigText(File fin) {
-    BufferedReader rd = null;
-    try {
-      rd = new BufferedReader(new InputStreamReader(new FileInputStream(fin), "UTF-8"));
-      String sLine;
-      boolean bSubTreeNodes = true;
-      boolean bReadNodes = false;
-      boolean bReadNamespaces = true;
-      while( (sLine = rd.readLine()) !=null) {
-        sLine = sLine.trim();                    // indentation is only for viewing
-        if(sLine.length() == 0) {}               // ignore empty line
-        else if(sLine.startsWith("== NameSpaces ==")) {
-          bReadNamespaces = true;
-        }
-        else if(sLine.startsWith("== Subtree nodes ==")) {  
-          bReadNamespaces = false;
-          bReadNodes = true;
-          bSubTreeNodes = true;
-        }
-        else if(sLine.startsWith("== The root struct ==")) { 
-          bReadNamespaces = false;
-          bReadNodes = true;
-          bSubTreeNodes = false;
-        }
-        else if(bReadNamespaces) {
-          XXXreadNameSpace(sLine);
-        }
-        else if(bReadNodes) {
-          XmlStructureNode node = XXXreadNode(rd, sLine);
-          if(bSubTreeNodes) {
-            this.xmlStructData.cfgSubtreeList.put(node.tagIdent, node);
-          } else {
-            this.xmlStructTree.putSubnode(node);
-          }
-        } else if(sLine.length() >0) {
-          System.err.println("faulty line: " + sLine);
-        }
-        
-      }
-    } catch(Exception exc) {
-      CharSequence error = ExcUtil.exceptionInfo("unexpected", exc, 0, 100);
-      System.err.append(error);
-    } finally {
-      if(rd !=null) {
-        try { rd.close(); } catch(IOException exc) { System.err.append("cannot close" + fin.getAbsolutePath());}
-      }
-    }
-  }
-  
-  
-  private void XXXreadNameSpace(String sLine) {
-    int sep = sLine.indexOf(" = ");
-    this.cfgData.xmlnsAssign.put(sLine.substring(0, sep), sLine.substring(sep+3));
-  }
-
-  
-  private XmlStructureNode XXXreadNode ( BufferedReader rd, String sLine1) throws IOException {
-    String sLine = sLine1 != null ? sLine1 : rd.readLine();
-    sLine = sLine.trim();
-    assert(sLine.startsWith("<"));
-    int posSpace = sLine.indexOf(' ');
-    String sTag = sLine.substring(1, posSpace);
-    int posSpace2 = sLine.indexOf(' ', posSpace +1);
-//    String tagIdent = sLine.substring(posSpace+1, posSpace2);
-    int posSep = sLine.indexOf('=', posSpace2+1);
-    String sSubtreenode = sLine.substring(posSpace2+1, posSep);
-    XmlStructureNode node = new XmlStructureNode(null, sTag, this.xmlStructData);
-    if(!sSubtreenode.equals("null")) {
-      node.sSubtreenode = sSubtreenode;
-    }
-    node.bText = sLine.indexOf(" TEXT") >=0;
-    node.onlySingle = sLine.indexOf(" SINGLE") >=0;
-    node.bDependencyChecked = sLine.indexOf(" DEPCHECKED") >=0;
-    while( (sLine= rd.readLine()) !=null) {
-      sLine = sLine.trim();
-      if(sLine.startsWith(">")) {                // end of node
-        break;
-      }
-      else if(sLine.startsWith("<")) {
-        XmlStructureNode subNode = XXXreadNode(rd, sLine);
-        node.putSubnode(subNode);
-      }
-      else if(sLine.startsWith("@")) {
-        int posSep2 = sLine.indexOf(" = ");
-        String sAttrNameSpaceName = sLine.substring(1, posSep2);
-        String sAttrValue = "@" + StringFunctions_B.replaceNonIdentifierChars(sAttrNameSpaceName, '-').toString();
-        node.addAttribute(sAttrNameSpaceName, sAttrValue);
-      }
-      else if(sLine.length()==0) {}
-      else {
-        System.err.println("read cfgTxt unknown: " + sLine);
-        Debugutil.stop();
-      }
-    }
-    return node;
-  }
-
-  
-  private char XXXreadAttributeOrSubnode(String sLine) {
-    
-    return 'a';
-  }
-  
-
-  private void XXXreadRootStructure(String sLine) {
-    
-  }
-  
-  
-  
   
   
   @SuppressWarnings("static-method") 
@@ -680,14 +663,14 @@ public class XmlJzCfgAnalyzer
 
   /**Reads and analyses any XML file and stores the structure in the {@link #XmlCfg}.
    * Description see {@link #analyzeXmlStructZip(File, String)}
-   * Note: compatible form calls {@link #analyzeXmlStructZip(List)}
+   * Note: compatible form calls {@link #analyzeXmlFile(List)}
    * @param fXmlIn
    * @throws IOException 
    */
   public XmlCfg analyzeXmlStruct(File fXmlIn) throws IOException {
     LinkedList<FileFunctions.FilePathnameExt> list = new LinkedList<>();
     list.add(new FileFunctions.FilePathnameExt(fXmlIn, null));
-    return analyzeXmlStructZip(list);
+    return analyzeXmlFile(list);
   }
 
   
@@ -704,7 +687,7 @@ public class XmlJzCfgAnalyzer
 
   /**Reads any XML file and stores the structure in the {@link #XmlCfg}.
    * Description see {@link #analyzeXmlStructZip(File, String)}
-   * Note: compatible form calls {@link #analyzeXmlStructZip(List)}
+   * Note: compatible form calls {@link #analyzeXmlFile(List)}
    * @param fIn zip file
    * @param sPathInZip null then fIn should be an XML file, else path of the XML file in the zip
    * @throws IOException 
@@ -712,55 +695,11 @@ public class XmlJzCfgAnalyzer
   public XmlCfg readXmlStructZip(File fIn, String sPathInZip) throws IOException {
     LinkedList<FileFunctions.FilePathnameExt> list = new LinkedList<>();
     list.add(new FileFunctions.FilePathnameExt(fIn, sPathInZip));
-    return analyzeXmlStructZip(list);
+    return analyzeXmlFile(list);
   }
 
   
   
-  /**Reads any XML file and stores the structure in the returned {@link XmlCfg}.
-   * The found configuration should be write out after them with {@link XmlCfg#writeToText(File, LogMessage)}
-   * to use it to configure the {@link XmlJzReader#setCfg(XmlCfg)} with a proper configuration,
-   * which reads the here created textual configuration file via
-   * {@link XmlCfg#readCfgFile(File, LogMessage)} or {@link XmlCfg#readFromJar(Class, String, LogMessage)}. 
-   * Whereby, for further usage, the configuration file and also the possible created Java classes
-   * can be manual adapted before further usage.
-   * <br>
-   * It calls the following operations per node and attribute in the read XML file, 
-   * set a breakpoint there to see what's happen. 
-   * This operations are called inside {@link XmlJzReader#readXml(File, Object)}
-   * due to the set config with {@link #newCfgReadStruct()}.
-   * <ul>
-   * <li>{@link XmlStructureNode#addElement(String)} on a new node on '<tag...'
-   * <li>{@link XmlStructureNode#setAttribute(String)} on a attribute
-   * <li>{@link XmlStructureNode#addNamespace(String, String)} on a 'xmlns:...' attribute
-   * <li>{@link XmlStructureNode#setTextOccurrence()} on a text.
-   * </ul> 
-   * Note: renamed from readXmlStructZip(...)
-   * @param fXmlIn The file, immediately the XML file or a zip file containing the XML file.
-   * @param pathInZip null for reading immediately XML, else the path in the zip file to the XML file to read.
-   * @return
-   * @throws IOException
-   */
-  public XmlCfg analyzeXmlStructZip(List<FileFunctions.FilePathnameExt> fIn) throws IOException {
-    XmlJzReader xmlReader = new XmlJzReader();
-    xmlReader.setCfg(newCfgReadStruct());        //<<<<------ this is the essential one, analyse as SAX parser any node.
-    if(this.debugStopLineXmlInp >0) {
-      xmlReader.setDebugStop(this.debugStopLineXmlInp);
-    }
-    for(FileFunctions.FilePathnameExt fIn1: fIn) {
-      String sInName = fIn1.file.getName();
-      if(this.dirDbg !=null) {
-        xmlReader.openXmlTestOut( new File( this.dirDbg, sInName + "-back.xml")); //fout1);
-      }
-      xmlReader.readZipXml(fIn1.file, fIn1.sNamePath, this.xmlStructTree);
-    }
-    //
-    checkStructTree();
-    //this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
-    storeInCfg(xmlReader);
-    return this.cfgData;
-  }
-
   /**Checks the read XML structure tree.
    * All the occurrences of nodes with the same tag are stored in {@link #allElementTypes}.
    * That entries knows all XmlStructNode occurrences.
@@ -773,11 +712,11 @@ public class XmlJzCfgAnalyzer
     for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.allElementTypes.values()) {
       String sTag = cfgSubtreeOccurrences.occurrence.get(0).tag;
       //if(sTag.equals("style:style")) Debugutil.stopp();
-      XmlCfg.XmlCfgNode nodeGiven = cfgGiven == null ? null : cfgGiven.subtrees.get(sTag);
+      //                                                   //vv if cfgGiven has here a subtree, use it.
+      XmlCfg.XmlCfgNode nodeGiven = this.cfgGiven == null ? null : this.cfgGiven.subtrees.get(sTag);
       if ( nodeGiven !=null   //----------------------------- the node is already found as SUBTREE in given cfg 
         || cfgSubtreeOccurrences.occurrence.size() >1) {   // or more as one occurrence 
-        if(nodeGiven !=null && cfgSubtreeOccurrences.occurrence.size() ==1)
-          Debugutil.stop();
+        if(nodeGiven !=null && cfgSubtreeOccurrences.occurrence.size() ==1) Debugutil.stopp();
         String sTagParent = null;
         boolean bCreateSubtree = false;;
         for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
@@ -935,7 +874,7 @@ public class XmlJzCfgAnalyzer
     final XmlJzCfgAnalyzer this0;
     
     /**Contains all elements with its {@link #occurrence}.
-     *
+     * Instances of this class are built to store occurrences of each tag in {@link XmlJzCfgAnalyzer#allElementTypes}
      */
     static class CfgSubtreeType {
       
@@ -1007,7 +946,7 @@ public class XmlJzCfgAnalyzer
       
    
       
-      @Override public String toString() { return "" + occurrence.size() + " * " + occurrence.get(0).toString(); }
+      @Override public String toString() { return "" + this.occurrence.size() + " * " + occurrence.get(0).toString(); }
     }
 
     
@@ -1176,6 +1115,8 @@ public class XmlJzCfgAnalyzer
      * * Compare with cfgGiven
      * * take over NEW, ADD, TEXT from cfgGiven if existing
      * * clarify what are the two more for loops.  
+     * This operation is not call yet. It was originally thought for sophisticated XML files in any automation designer. 
+     * Do not remove it, test it if similar XML files are given.
      */
     protected void checkCfgSubtree ( XmlCfg cfgGiven ) {
       // TODO for the case more as one cfgGiven subtree build a Map with occurences of the config variants.
@@ -1203,7 +1144,7 @@ public class XmlJzCfgAnalyzer
         }
       }
       Debugutil.stop();
-      for(Map.Entry<String, CfgSubtreeType2> e: allElementTypes2.entrySet()) {
+      for(Map.Entry<String, CfgSubtreeType2> e: this.allElementTypes2.entrySet()) {
         CfgSubtreeType2 cfgSubtree = e.getValue();
         processDependingCfgSubtree(cfgSubtree, 99);
       }
@@ -1430,8 +1371,8 @@ public class XmlJzCfgAnalyzer
       this.nodes.put(subNode.tag, subNode);
     }
 
-    /**Returns the instance to store the occurrence of a XML-element in a node.
-     * If more XML-elements with the same tag name are found in the same node, only one occurrence for this element tag is stored.
+    /**Returns the instance to store the occurrence of a XML-element for the given tag name.
+     * If more XML-elements with the same tag name are found in any node, only one occurrence for this element tag is stored.
      * With them maybe new occurring attributes or new occurring elements are stored. 
      * <br>Additionally via {@link XmlStructureData#addStructureNodeOccurence(XmlStructureNode)} 
      *   all elements in the whole xml file with the same tag are registered any later evaluated, if there are semantically also the same. 
@@ -1441,11 +1382,8 @@ public class XmlJzCfgAnalyzer
      */
     public XmlStructureNode addElement(String tag) { 
       //if(tag.equals("style:style")) Debugutil.stopp();
-      if(tag.contains("   "))
-        Debugutil.stop();
-      if(tag.equals("Document")) {
-        Debugutil.stop();
-      }
+      //if(tag.contains("   ")) Debugutil.stopp();
+      //if(tag.equals("Document")) Debugutil.stopp();
       if(this.nodes == null) {
         this.nodes = new TreeMap<String, XmlStructureNode>();
       }
@@ -1463,6 +1401,7 @@ public class XmlJzCfgAnalyzer
       } else { 
         //the node is known already, use it, supplement new elements and attributes.
         subNode.onlySingle = false;
+        if(subNode.parent != this) Debugutil.stopp();
       }
       if(this.nodesLocal.get(tag)!=null) { 
         subNode.onlySingle = false; //at least twice in this tree.
