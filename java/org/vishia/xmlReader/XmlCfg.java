@@ -95,6 +95,8 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2025-12-11: {@link #addSubTree(CharSequence)} and {@link #transferNamespaceAssignment(Map)} now supports
+   *   add for supplementing a given XmlCfg with new inputs by XmlJzAnalyzer. 
    * <li>2024-05-21 new: {@link #readCfgFile(File, LogMessage)}, {@link #readFromJar(Class, String, LogMessage)}, {@link #readFromText(StringPartScan, LogMessage)} 
    *   Now the representation can be better editable as normal syntactical tet. 
    * <li>2024-05-17 chg: {@link #transferNamespaceAssignment(Map)} does no more call src.clean(), instead it is called outside.
@@ -252,18 +254,26 @@ public class XmlCfg
 
   
   
-  /**Invoked from {@link XmlCfgNode#addSubTree(CharSequence)} to execute for the whole configuration.
+  /**Gets the root of a {@link #subtrees} entry or adds an new created empty subtree and returns it.
+   * <ul><li>This is invoked from {@link XmlCfgNode#addSubTree(CharSequence)} while reading a XML configuration from a text file.
+   * The subtree is part of the XmlConfig, outside of the intrinsic given XmlCfgNode element where this is called.
+   * <li>The second reason to call is in {@link XmlJzCfgAnalyzer#checkStructTree()} 
+   *   if it is detected that a subtree entry is necessary.
+   * </ul>  
+   * The name 'addSubtree' may be necessary because of symbolic reflection calling. Intrinsic it may be 'getCreateSubtree)...)'. 
    * @param name
-   * @return
+   * @return the existing subtree root node with this name or a new created node.
+   * @since 2025-12-11 look whether the node is existing, for supplement a given XmlCfg with new definitions. 
    */
-  XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
-  {
-    String sname = name.toString();
-//    if(sname.equals("text:span"))
-//      Debugutil.stop();
-    XmlCfgNode subtreeRoot = new XmlCfgNode(null, this, name); //The root for a subtree configuration structure.
+  XmlCfgNode addSubTree(CharSequence name) {
     if(this.subtrees == null) { this.subtrees = new TreeMap/*IndexMultiTable*/<String, XmlCfgNode>(/*IndexMultiTable.providerString*/); }
-    this.subtrees.put(sname, subtreeRoot);  //config-global types of subtrees
+    String sname = name.toString();
+    //if(sname.equals("text:span")) Debugutil.stopp();
+    XmlCfgNode subtreeRoot = this.subtrees.get(sname);
+    if(subtreeRoot == null) {
+      subtreeRoot = new XmlCfgNode(null, this, name); //The root for a subtree configuration structure.
+      this.subtrees.put(sname, subtreeRoot);  //config-global types of subtrees
+    }
     return subtreeRoot;
   }
   
@@ -285,9 +295,13 @@ public class XmlCfg
    * It is not systematically but often given that both alias nameSpace keys are equal.
    * @param src
    * @since 2024-05 does no more invoke src.clean()
+   * @since 2025-12-11 does no more clean {@link #xmlnsAssign}, able to add name spaces. This is used to supplement 
+   *   a given configuration with new results from {@link XmlJzCfgAnalyzer#storeInCfg(XmlJzReader)}.
    */
   void transferNamespaceAssignment(Map<String, String> src) {
-    this.xmlnsAssign = new TreeMap/*IndexMultiTable*/<String, String>();
+    if(this.xmlnsAssign == null) {
+      this.xmlnsAssign = new TreeMap<String, String>();
+    }
     for(Map.Entry<String, String > ens: src.entrySet()) {
       String nsKey = ens.getKey();
       String nsPath = ens.getValue();
@@ -480,7 +494,7 @@ public class XmlCfg
     }
     while(bOk && sp.scan("<").scanIdentifier(null, "-:").scan(">").scanOk()) {
       String sTag = sp.getLastScannedString();
-      XmlCfgNode subnode = new XmlCfgNode(null, this, sTag);
+      XmlCfgNode subnode = new XmlCfgNode(node, this, sTag);
       //if(node.tag.equals("style:style")) Debugutil.stopp();
       if(node.subnodes == null) { node.subnodes = new TreeMap<>(); }
       node.subnodes.put(sTag, subnode);
@@ -701,7 +715,7 @@ public class XmlCfg
     final XmlCfg cfg;
 
     /**Parent node, to navigate in debug, to store this node if {@link #attribsForCheck} are present. */
-    private final XmlCfgNode parent;
+    final XmlCfgNode parent;
     
     /**Reflection path either to store the content of the node
      * or also to get an instance as "sub node" to store the content.

@@ -53,6 +53,11 @@ public class XmlJzCfgAnalyzer
 {
   /**Version, License and History:
    * <ul>
+   * <li>2025-12-11 Hartmut: enhancement: Supports re-read XML files with given XmlCfg from before and supplements the configuration
+   *   with the new elements in the read XML files: 
+   *   <ul><li>{@link #checkStructTree()} recognises given subtrees in {@link #cfgGiven}.
+   *   <li>~ also offers all nodes from all trees to check whether the nodes are twice, should build a subtree. 
+   *   </ul>
    * <li>2024-05-25 Hartmut: {@link #XXXreadNode(BufferedReader, String)} etc. seems to be unnecessary.
    * <li>2024-05-25 Hartmut: Criteria to build a SUBTREE: Not if all have the same parent tag.
    *   This is only closed sensible, if all parent node occurrences or its parents have the same SUBTREE. 
@@ -709,17 +714,33 @@ public class XmlJzCfgAnalyzer
    * 
    */
   private void checkStructTree () {
+    if(this.cfgGiven !=null) {
+      this.cfgData = this.cfgGiven;
+    }
+    //                                           ==========vv build a map with all existing nodes, key is tag name
+    Map<String, XmlCfg.XmlCfgNode> idxNodesGiven = new TreeMap<>(); // to check whether tags are twice now.
+    fillNodesGivenForCheckSubtree(this.cfgGiven.rootNode, idxNodesGiven, 0); // from root below root
+    for(XmlCfg.XmlCfgNode ndSub: this.cfgGiven.subtrees.values()) {
+      fillNodesGivenForCheckSubtree(ndSub, idxNodesGiven, 0); // as also from all child nodes from subtree
+    }                                                      
     for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.allElementTypes.values()) {
       String sTag = cfgSubtreeOccurrences.occurrence.get(0).tag;
-      //if(sTag.equals("style:style")) Debugutil.stopp();
+      //if(sTag.equals("style:list-level-properties")) Debugutil.stopp();
       //                                                   //vv if cfgGiven has here a subtree, use it.
-      XmlCfg.XmlCfgNode nodeGiven = this.cfgGiven == null ? null : this.cfgGiven.subtrees.get(sTag);
-      if ( nodeGiven !=null   //----------------------------- the node is already found as SUBTREE in given cfg 
-        || cfgSubtreeOccurrences.occurrence.size() >1) {   // or more as one occurrence 
-        if(nodeGiven !=null && cfgSubtreeOccurrences.occurrence.size() ==1) Debugutil.stopp();
+      XmlCfg.XmlCfgNode ndGivenSubtree = this.cfgGiven == null ? null : this.cfgGiven.subtrees.get(sTag);
+      XmlCfg.XmlCfgNode ndGivenSingle = this.cfgGiven == null ? null : idxNodesGiven.get(sTag);
+      if ( ndGivenSubtree !=null   //------------------------ the node is already found as SUBTREE in given cfg 
+        || ndGivenSingle !=null   //------------------------- the node is also found in any tree of given cfg
+        || cfgSubtreeOccurrences.occurrence.size() >1      // or more as one occurrence 
+         ) {
         String sTagParent = null;
-        boolean bCreateSubtree = false;;
+        if(ndGivenSingle !=null) {
+          //if(cfgSubtreeOccurrences.occurrence.size() ==1) Debugutil.stopp();
+          sTagParent = ndGivenSingle.parent.tag.toString();
+        }
+        boolean bCreateSubtree = ndGivenSubtree !=null;
         for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
+          structNode.onlySingle &= (ndGivenSingle == null && ndGivenSubtree == null);
           if(sTagParent == null) { sTagParent = structNode.parent.tag; } // first initialize
           else if(!sTagParent.equals(structNode.parent.tag) ) {
             bCreateSubtree = true;
@@ -740,15 +761,48 @@ public class XmlJzCfgAnalyzer
         // then it is a node in a specific situation, do not build a subtree because the parents don't. 
         if(bCreateSubtree) {
           //Build a SUBTREE
-          this.cfgData.addSubTree(sTag);                     // creates a SUBTREE entry, then the content will be associated in this SUBTREE in #storeInCfg
+          XmlCfg.XmlCfgNode ndSub = this.cfgData.addSubTree(sTag);                     // creates a SUBTREE entry, then the content will be associated in this SUBTREE in #storeInCfg
+          if(ndGivenSubtree == null && ndGivenSingle !=null) {
+            if(ndGivenSingle.attribs !=null) {
+              ndSub.attribs = new TreeMap<>();;
+              Iterator<XmlCfg.AttribDstCheck> iterAttribs =  ndGivenSingle.attribs.values().iterator();
+              while(iterAttribs.hasNext()) {
+                XmlCfg.AttribDstCheck attr = iterAttribs.next();
+                if(!attr.bUseForCheck) {
+                  iterAttribs.remove();
+                }
+                ndSub.attribs.put(attr.name, attr);
+              }
+            }
+            ndSub.subnodes = ndGivenSingle.subnodes;
+            ndGivenSingle.subnodes = null;
+            ndGivenSingle.cfgSubtreeName = sTag;
+            ndSub.dstClassName = ndGivenSingle.dstClassName;
+            ndSub.elementCreatePath = ndGivenSingle.elementCreatePath;
+            ndSub.contentStorePath = ndGivenSingle.contentStorePath;
+          }
+          
           for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
             structNode.sSubtreenode = sTag;                // mark only the node, the content will transferred then in storeInCfg(...)
           }
         }
       }
     }
-
   }
+
+  
+  
+  private final void fillNodesGivenForCheckSubtree(XmlCfg.XmlCfgNode node, Map<String, XmlCfg.XmlCfgNode> idxNodesGiven, int recursion) {
+    if(recursion >100) return;
+    if(node.subnodes !=null) {
+      for(XmlCfg.XmlCfgNode ndChild : node.subnodes.values()) {
+        idxNodesGiven.put(ndChild.tag.toString(), ndChild);
+        fillNodesGivenForCheckSubtree(ndChild, idxNodesGiven, recursion+1);
+    } }
+  }
+  
+  
+  
   
   private void storeInCfg ( XmlJzReader xmlReader) {
     this.cfgData.transferNamespaceAssignment(xmlReader.namespaces);
@@ -789,13 +843,33 @@ public class XmlJzCfgAnalyzer
   private void storeCfgNode(XmlCfg.XmlCfgNode dst, XmlStructureNode src, boolean bRoot, int recursion) throws ParseException {
     if(recursion <=0) { assert(false); return; }
     XmlStructureNode srcx = src;
+    //if(src.tag.equals("style:list-level-properties")) Debugutil.stopp();
     //if(src.tag.equals("style:style")) Debugutil.stopp();
     dst.bList |= !src.onlySingle;
-    String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
-    assert(dst.dstClassName == null || dst.dstClassName.equals(sClass));
+    String sClass1 = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
+    String sClass = sClass1;
+    char c1 = sClass1.charAt(0);
+    if(!Character.isUpperCase(c1)) {
+      sClass = Character.toUpperCase(c1) + sClass1.substring(1);
+    }
+    assert(dst.dstClassName == null || dst.dstClassName.equals(sClass) || dst.dstClassName.equals(sClass1));
     dst.dstClassName = sClass;
     if(!bRoot || src.sSubtreenode ==null) {      // bRoot && sSubtreeNode: In a subtree root definition do not write SET or ADD.
-      if(dst.bList) {                            // write ADD:"operation" alsways in the original node, not in the subtree node
+      // Note for condition: it is any node with or without sSubtreeNode, if it is not the root.
+      StringBuilder sNewElement = new StringBuilder(20 + (src.attribs == null ? 0 : src.attribs.size() * 10));
+      sNewElement.append("new_").append(src.tagIdent).append('(');  // new creates the instance and sets the reference.
+      if(src.attribs !=null) {
+        String sep = "";
+        for(AttribRead attrib: src.attribs.values()) {     // all attribs with "@argname" are used as argument names.
+          if(attrib.value.startsWith("@")) {               // for all attributes for any node occurence.
+            sNewElement.append(sep).append(attrib.value.substring(1));
+            sep = ",";
+          }
+        }
+      }
+      sNewElement.append(')');                             // the new_...() operation can also store the new instance of the data for the node
+      dst.setNewElementPath(sNewElement.toString() );      // inside the parent node, hence should be written in the parent node.
+            if(dst.bList) {                            // write ADD:"operation" always in the original node, not in the subtree node
         String sAddPath = "add_" + src.tagIdent + "(value)";
         dst.setFinishElementPath(sAddPath);      //... because it is different how to store in the parent node, List or No List.
       } else {
@@ -808,23 +882,6 @@ public class XmlJzCfgAnalyzer
       if(src.bText) {
         dst.setContentStorePath("set_Text(text)");         // write the necessities.
       }
-      StringBuilder sNewElement = new StringBuilder(20 + (src.attribs == null ? 0 : src.attribs.size() * 10));
-      if(src.onlySingle) {
-        sNewElement.append("new_").append(src.tagIdent).append('(');  // new creates the instance and sets the reference.
-      } else {
-        sNewElement.append("new_").append(src.tagIdent).append('(');
-      }
-      if(src.attribs !=null) {
-        String sep = "";
-        for(AttribRead attrib: src.attribs.values()) {
-          if(attrib.value.startsWith("@")) {
-            sNewElement.append(sep).append(attrib.value.substring(1));
-            sep = ",";
-          }
-        }
-      }
-      sNewElement.append(')');
-      dst.setNewElementPath(sNewElement.toString() );
       //dst.setNameSpaceStorePath("!ns");
       dst.bCheckAttributeNode = false;
       //dst.attribsForCheck;
@@ -840,6 +897,7 @@ public class XmlJzCfgAnalyzer
       if(src.nodes !=null) {   //============================ Transfer all nodes
         if(dst.subnodes == null) { dst.subnodes = new TreeMap<>(); }
         for(XmlStructureNode nodez: src.nodes.values()) {
+          //if(nodez.tag.equals("text:list-style")) Debugutil.stopp();
           XmlCfg.XmlCfgNode nodeDst = dst.subnodes.get(nodez.tag);
           if(nodeDst == null) {
             nodeDst = new XmlCfg.XmlCfgNode(dst, this.cfgData, nodez.tag);
