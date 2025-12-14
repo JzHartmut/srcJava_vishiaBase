@@ -18,6 +18,7 @@ import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -188,10 +189,25 @@ public class FileFunctions {
     /**May be the path in the zip file to the file. */
     public final String sNamePath, sExt;
     
-    /**ctor with final initialisation. */
-    public FilePathnameExt(File fIn, String sContent, String sExt) { this.file = fIn; this.sNamePath = sContent; this.sExt = sExt; }
+    /**Creates an instance typically to describe a directory and the start name and the extension of the file.
+     * Used for example in {@link #newFileFromDirName(File)} or user specific.
+     * It is also possible to describe more as one file in a zip with wildcards.
+     * @param dir
+     * @param sNameStart if sExt is given, after them the wildcard symbol should be thought.
+     * @param sExt
+     */
+    public FilePathnameExt(File dir, String sNameStart, String sExt) { 
+      this.file = dir; this.sNamePath = sNameStart; this.sExt = sExt; 
+    }
     
-    public FilePathnameExt(File fIn, String sContent) { this.file = fIn; this.sNamePath = sContent; this.sExt = null; }
+    /**Creates an instance typically to describe a File wit path in zip and the zip file
+     * but also usable to describe a directory and the name of the file.
+     * @param dirOrZipfile
+     * @param sNameOrPathInZip
+     */
+    public FilePathnameExt(File dirOrZipfile, String sNameOrPathInZip) { 
+      this.file = dirOrZipfile; this.sNamePath = sNameOrPathInZip; this.sExt = null; 
+    }
     
     /**Parse one argument for a file and possible zip entry
      * @param currDir can be null, may be given for a relative path.
@@ -214,6 +230,43 @@ public class FileFunctions {
       }
       File file = newFile(currDir, sFile, false);
       return new FilePathnameExt(file, sZipPath);
+    }
+
+  
+    /**Parse one argument for possible some file given with wildcards and one possible zip entry, each the same in each file.
+     * @param add the container to add, it can be a {@link List}
+     * @param currDir can be null, may be given for a relative path.
+     * @param sArg the given argument. The zip entry is separated with 'cSep' after the 2th position.
+     *   for example "D:\path\to\*.zip:path/inZip"
+     * @param cSep separator char before path in zip, recommended use a colon ':'  
+     * @return proper ZipEntry, whereas {@link #file} is the zip file, {@link File#exists()} is not tested. 
+     *   #sNamePath is the relative path in the zip file for the entry (part after 'cSep').
+     * @throws FileNotFoundException 
+     */
+    public static int parseWildcardZipPath(Collection<FilePathnameExt> add, File currDir, String sArg, char cSep) throws FileNotFoundException {
+      int posSep = sArg.indexOf(cSep, 2);   // search ':' after pos2 to exclude clash in windows with "D:..."
+      String sFile, sZipPath;
+      if(posSep < 0 ) {
+        sZipPath = null;
+        sFile = sArg;
+      } else {
+        sZipPath = sArg.substring(posSep+1);
+        sFile = sArg.substring(0, posSep);
+      }
+      if(sFile.indexOf('*') >=0) {
+        List<File> listFiles = new LinkedList<>();
+        FileFunctions.addFileToList(currDir, sFile, listFiles);
+        for(File file: listFiles) {
+          FilePathnameExt fpe = new FilePathnameExt(file, sZipPath);
+          add.add(fpe);
+        }
+        return listFiles.size();
+      } else {
+        File file = newFile(currDir, sFile, false);
+        FilePathnameExt fpe = new FilePathnameExt(file, sZipPath);
+        add.add(fpe);
+        return 1;
+      }
     }
 
   
@@ -248,8 +301,30 @@ public class FileFunctions {
       return new FilePathnameExt(dir, s1, s2);
     }
 
+    
+    /**Creates a file from parsed {@link #parseDirWildcardName(File, String)} and a given other file.
+     * @param fOther the other file which's name without extension dedicates the name of the new file
+     * @return a new file 
+     *   with the given directory in {@link #file}
+     *   <ul><li>and a name build from {@link #sNamePath} + fother-name + {@link #sExt} if wildcard was given,
+     *   <li>or from only {@link #sNamePath} if not parsed with wildcards, or #sExt == null. 
+     *   </ul> 
+     */
+    public File newFileFromDirName(File fOther) {
+      String sNameOut;
+      if(this.sExt !=null) {
+        String sInName = fOther.getName();
+        int posExt = sInName.lastIndexOf('.');
+        sNameOut = this.sNamePath + sInName.substring(0, posExt) + this.sExt;
+      } else { 
+        sNameOut = this.sNamePath;
+      }
+      return new File(this.file, sNameOut);
+    }
+    
   }
 
+  
   
   /**This class supports the call of {@link #addFileToList(String, List)}. */
   private static class ListWrapper implements AddFileToList

@@ -13,8 +13,6 @@ import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringFunctions_B;
-import org.vishia.xmlReader.XmlCfg.AttribDstCheck;
-import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
 
 
 
@@ -27,6 +25,12 @@ public class GenXmlCfgJavaData {
   
   /**Version, history and license.
    * <ul>
+   * <li>2025-12-14: formally: use the explicit environment class for inner 'XmlCfg.XmlCfgNode' as due vishia writing style.
+   * <li> {@link WrClassXml#evaluateChildren(String, org.vishia.xmlReader.XmlCfg.XmlCfgNode, SubClassXml, boolean, int)}: 
+   *    here the additonal arguments for {@link GenJavaOutClass.WrClassJava#wrVariable(org.vishia.genJavaOutClass.GenJavaOutClass.SubClassJava, String, String, String, String, boolean, String, String, boolean, boolean, boolean, List)}
+   *    are organized.  
+   * <li> {@link WrClassXml#evaluateChildren(String, org.vishia.xmlReader.XmlCfg.XmlCfgNode, SubClassXml, boolean, int)}(): 
+   *   'childNodeUse' is maybe the subtree node, and 'childNode' is the child node before subtree is used. To support association NWE: and ADD: to the parent. 
    * <li>2024-05-09: new {@link #exec(XmlCfg)} with a given non XML read XmlCfg
    * <li>2024-05-09: Using {@link LogMessage}, MainCmd is deprecated.
    * <li>2024-05-09: {@link WrClassXml#evaluateChildren(String, XmlCfgNode, SubClassXml, boolean, int)} and also
@@ -71,7 +75,7 @@ public class GenXmlCfgJavaData {
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String sVersion = "2022-02-18";
+  public static final String sVersion = "2025-12-14";
 
   
   
@@ -80,7 +84,7 @@ public class GenXmlCfgJavaData {
   static class SubClassXml extends GenJavaOutClass.SubClassJava{
 
     
-    XmlCfgNode subItem;
+    XmlCfg.XmlCfgNode subItem;
     
     
     SubClassXml(String semantic, String className)
@@ -97,7 +101,7 @@ public class GenXmlCfgJavaData {
   protected final GenJavaOutClass genClass;
   
 
-  protected Map<String, XmlCfgNode> subtrees;
+  protected Map<String, XmlCfg.XmlCfgNode> subtrees;
   
   public GenXmlCfgJavaData(GenJavaOutClass.CmdArgs cmdArgs, LogMessage log) {
     this.cmdArgs = cmdArgs;
@@ -106,6 +110,9 @@ public class GenXmlCfgJavaData {
   }
   
   
+  /**
+   * @throws IOException
+   */
   public void exec() throws IOException {
     String fInName = this.cmdArgs.fileInput.getName();
     final XmlCfg xmlCfg;
@@ -130,7 +137,7 @@ public class GenXmlCfgJavaData {
     try {
       WrClassXml wrClassMain = this.new WrClassXml();  //the main class to write
       SubClassXml classDataRoot = new SubClassXml("root", "root");
-      XmlCfgNode rootNode = xmlCfg.rootNode;
+      XmlCfg.XmlCfgNode rootNode = xmlCfg.rootNode;
       classDataRoot.subItem = rootNode;
       String sOuterClass = this.cmdArgs.sJavaClass + ".";
       //this op fills via WrClassXml.getRegisterSubclass(...) the 'this.genClass.listCmpn'
@@ -249,7 +256,7 @@ public class GenXmlCfgJavaData {
     }
     
     
-    private SubClassXml getRegisterSubclass(String name, XmlCfgNode cfgItem) {
+    private SubClassXml getRegisterSubclass(String name, XmlCfg.XmlCfgNode cfgItem) {
       SubClassXml classData = (SubClassXml)genClass.idxRegisteredCmpn.get(name);
       if(classData == null) {
         classData = new SubClassXml(name, GenJavaOutClass.firstUppercaseIdentifier(name));
@@ -286,44 +293,65 @@ public class GenXmlCfgJavaData {
      * @param level
      * @throws IOException
      */
-    private void evaluateSubCmpn(XmlCfgNode item, boolean bList, int level) throws Exception {
+    private void evaluateSubCmpn(XmlCfg.XmlCfgNode item, boolean bList, int level) throws Exception {
       
       
     }
     
     
     
-    void evaluateChildren(String sOuterClass, XmlCfgNode cfgNode, SubClassXml classData, boolean bList, int level) throws Exception {
+    /**Prepares output for child Java class data.
+     * <ul>
+     * <li>For each {@link XmlCfg.XmlCfgNode#subnodes} a 'childNode' is gotten, 
+     *   and if this child node has is {@link XmlCfg.XmlCfgNode#cfgSubtreeName} then 'childNodeUse' is set with the subtree found. 
+     * <li>the 'childNodeUse' is used for the name and type of the child class,
+     *   but the 'childNode' without subtree usage) is used for {@link XmlCfg.XmlCfgNode#elementCreatePath}
+     *   and the {@link XmlCfg.XmlCfgNode#elementFinishPath} yet clarified. This is a property from the parent node of the defined child.  
+     * </ul>
+     * @param sOuterClass
+     * @param cfgNode
+     * @param classData
+     * @param bList
+     * @param level
+     * @throws Exception
+     */
+    void evaluateChildren(String sOuterClass, XmlCfg.XmlCfgNode cfgNode, SubClassXml classData, boolean bList, int level) throws Exception {
       System.out.println(cfgNode.tag);
 //      if(cfgNode.tag.equals("section"))
 //        Debugutil.stop();
-      if(cfgNode.attribs !=null) for(Map.Entry<String, AttribDstCheck> eattrib: cfgNode.attribs.entrySet()) {
-        AttribDstCheck attrib = eattrib.getValue();
+      if(cfgNode.attribs !=null) for(Map.Entry<String, XmlCfg.AttribDstCheck> eattrib: cfgNode.attribs.entrySet()) {
+        XmlCfg.AttribDstCheck attrib = eattrib.getValue();
         //if(attrib.daccess !=null) {
         String sName = StringFunctions_B.replaceNonIdentifierChars(attrib.name, '-').toString();
-        wrVariable(classData, null, "String", sName, attrib.daccess, "Attribute " + attrib.name, true, false, false);
+        wrVariable(classData, null, "String", sName, attrib.daccess, attrib.daccess, "Attribute " + attrib.name, true, false, false);
       }
-      if(cfgNode.subnodes !=null) for(Map.Entry<String, XmlCfgNode> eNode: cfgNode.subnodes.entrySet()) {
-        XmlCfgNode childNode = eNode.getValue();
+      if(cfgNode.contentStorePath !=null) {
+        wrVariable(classData, null, "String", "_textContent", null, cfgNode.contentStorePath, "TEXT content ", true, cfgNode.bTextMoreOccurrences, false);
+      }
+      if(cfgNode.subnodes !=null) for(Map.Entry<String, XmlCfg.XmlCfgNode> eNode: cfgNode.subnodes.entrySet()) {
+        XmlCfg.XmlCfgNode childNode = eNode.getValue();
 //        if(childNode.tag.equals("section"))
 //          Debugutil.stop();
         boolean bListChild = childNode.bList;              // the LIST property should be taken from the non subtree childNode.
-        if(childNode.cfgSubtreeName !=null) {              // If this node has the reference to SUBTREE
-          childNode = GenXmlCfgJavaData.this.subtrees.get(childNode.cfgSubtreeName); // then use the sub tree instead.
+        final XmlCfg.XmlCfgNode childNodeUse;
+        if(childNode.cfgSubtreeName !=null) {    //========vv If this node has the reference to SUBTREE
+          childNodeUse = GenXmlCfgJavaData.this.subtrees.get(childNode.cfgSubtreeName); // then use the sub tree instead.
           if(childNode == null) { log.writef("\nERROR subtree missing: %s", childNode.cfgSubtreeName ); }
+        } else {
+          childNodeUse = childNode;                        // not a subtree, use the given node.
         }
-        if(childNode == null) {
-        } else if(childNode.dstClassName !=null) {
-          String sType = GenJavaOutClass.firstUppercaseIdentifier(childNode.dstClassName);
+        if(childNodeUse == null) {
+        } else if(childNodeUse.dstClassName !=null) {
+          String sType = GenJavaOutClass.firstUppercaseIdentifier(childNodeUse.dstClassName);
           if(GenXmlCfgJavaData.this.genClass.idxStdTypes.get(sType) !=null) {
             sType += "__";  //It must not be a Standard type.
           }
-          SubClassXml metaClass = getRegisterSubclass(sType, childNode); //idxMetaClass.get(semantic1);
-          String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, sOuterClass, sType, sName, childNode.elementCreatePath, "Complex node " + childNode.tag, false, bListChild, true);  //write the create routine and access
+          SubClassXml metaClass = getRegisterSubclass(sType, childNodeUse); //idxMetaClass.get(semantic1);
+          String sName = StringFunctions_B.replaceNonIdentifierChars(childNodeUse.tag, '-').toString();
+          wrVariable(classData, sOuterClass, sType, sName, childNode.elementCreatePath, childNode.elementFinishPath, "Complex node " + childNode.tag, false, bListChild, true);  //write the create routine and access
         } else {                                 //--------vv dstClassName not given, it is a String result.
-          String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, null, "String", sName, childNode.elementCreatePath, "Simple node " + childNode.tag, true, false, false);
+          String sName = StringFunctions_B.replaceNonIdentifierChars(childNodeUse.tag, '-').toString();
+          wrVariable(classData, null, "String", sName, childNode.elementCreatePath, childNode.elementFinishPath, "Simple node " + childNodeUse.tag, true, false, false);
             
         }
       }
@@ -333,10 +361,14 @@ public class GenXmlCfgJavaData {
     
     
 
-    /**
+    /**Inserts one variable to generate which should store the parse result.
+     * For XML reading this is either an attribute to store, as also the text, as also a sub node as 'component'
+     * It is called in {@link #evaluateChildren(String, org.vishia.xmlReader.XmlCfg.XmlCfgNode, SubClassXml, boolean, int)}
      * It calls {@link org.vishia.genJavaOutClass.GenJavaOutClass.WrClassJava#wrVariable(org.vishia.genJavaOutClass.GenJavaOutClass.SubClassJava, String, String, String, String, boolean, boolean, boolean, List)} 
      * 
-     * @param classData
+     * @param classData inherited from {@link GenJavaOutClass.SubClassJava} The class where this variable is member of. 
+     *   It accesses in {@link GenJavaOutClass.WrClassJava#wrVariable(org.vishia.genJavaOutClass.GenJavaOutClass.SubClassJava, String, String, String, String, String, boolean, boolean, boolean, List)}
+     *   only the {@link SubClassJava#className} and {@link SubClassJava#sSuperItemType} 
      * @param typeNs Either null for a standard type, or the name of the environment class where all types are defined as sub type, then with trainling "."
      * @param type
      * @param varName
@@ -346,14 +378,14 @@ public class GenXmlCfgJavaData {
      * @param bCmpn
      * @throws Exception
      */
-    protected void wrVariable(SubClassXml classData, String sOuterClass, String type, String varName, DataAccess.DatapathElement storePath, String sDocu, boolean bStdType, boolean bList, boolean bCmpn
+    protected void wrVariable(SubClassXml classData, String sOuterClass, String type, String varName, DataAccess.DatapathElement createPath, DataAccess.DatapathElement finishPath, String sDocu, boolean bStdType, boolean bList, boolean bCmpn
     ) throws Exception {
       if(varName !=null && varName.length() >0) { //else: do not write, parsed without data
         if(varName.startsWith("ST"))
           Debugutil.stop();
         if(type.equals("Section_A"))
           Debugutil.stop();
-        String sTypeExist = wrClassJava.variables.get(varName);
+        String sTypeExist = this.wrClassJava.variables.get(varName);
         if(sTypeExist !=null) {
           if(! sTypeExist.equals(type)) {
             throw new IllegalArgumentException("Semantic " + varName + " with different types");
@@ -370,17 +402,19 @@ public class GenXmlCfgJavaData {
           }
           List<String> args = null;
           if(bCmpn) {
-            int nrArgs = storePath.nrArgNames();
+            int nrArgs = createPath.nrArgNames();
             if(nrArgs >0) {
               args = new LinkedList<String>();
               for(int ixArg = 0; ixArg < nrArgs; ++ixArg) {
-                String operArg = storePath.argName(ixArg);
+                String operArg = createPath.argName(ixArg);
                 args.add(GenJavaOutClass.firstLowercaseIdentifier(operArg));
               }
             }
           }
           //semantic = semantic.replace("@!", "");
-          this.wrClassJava.wrVariable(classData, varName, sOuterClass, type, type, sDocu, bStdType, bList, bCmpn, args); 
+          String sNameAcc = finishPath.ident();
+          boolean bStoreOperation = finishPath.whatisit() == '('; 
+          this.wrClassJava.wrVariable(classData, varName, sOuterClass, type, sNameAcc, bStoreOperation, type, sDocu, bStdType, bList, bCmpn, args); 
           
         }
       }
@@ -388,7 +422,7 @@ public class GenXmlCfgJavaData {
 
     private void registerCmpn(String name) {
       if(genClass.idxRegisteredCmpn.get(name) == null) {
-        XmlCfgNode cmpn = subtrees.get(name);
+        XmlCfg.XmlCfgNode cmpn = subtrees.get(name);
         if(cmpn == null) {
           throw new IllegalArgumentException("syntax component not found: " + name);
         }

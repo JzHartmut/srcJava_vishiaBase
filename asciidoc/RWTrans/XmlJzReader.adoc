@@ -268,7 +268,7 @@ You can see the structure of a firstly unknown XML file also by manual view to t
 But this is not so proper obviously.
 
 Call the XmlJzCfgAnalyzer either per command line, or maybe also from debugging in an Java-IDE,
-with the following cmd line example:
+with the following cmd line example usable as template:
 
 [source,Script]
 ----
@@ -290,8 +290,11 @@ This script can be found
 on `LibreOffc/SOURCE.wrk/src/srcJava_vishiaLibreOffc/makeScripts/+createXmlConfigStyles.sh`
 in link:https://vishia.org/LibreOffc/deploy/LibreOffcZmLConv-2025-12-19.zip[] or later versions.
 
-* The detailed arguments are part of the shell script (in comment, below the java call) with `--@file:Label`
+* The detailed arguments are part of the shell script following here in comment below.
+The java call is done with `--@file:Label`
 which is a capability of all vishia calls from the command line.
+See link:../../docuSrcJava_vishiaBase/org/vishia/util/Args.html[org.vishia.util.Args].
+
 * `-iXml:...`: two XML example files in a zip archive are read which's internal `styles.xml` should be analysed.
 It is here the `styles.cfg` inside a LibreOffice file.
 To analyse immediately a XML file, write its path without the `":internal/path/file.xml"`. 
@@ -300,9 +303,47 @@ This writing style is for a XML file in a zip file, which is appropriate for the
 * `-oCfg:...` output path for the XmlJzReader configuration file in text form. 
 If the extension `.xml` is given, it writes the older no more recommended XML form for configuration. 
 
-Now you can look on the content, compare this content textual with a configuration file before created (what is new),
+Now you can look on the content, compare this content textual with a configuration file before created 
+(what is new because of other used XML files),
 and save this file on the necessary position in your file tree to used with sources using the 
 link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html[org.vishia.xmlReader.XmlJzReader].
+
+
+**Repeated analyse of more XML files, add the content**
+
+If you have worked successfully with some XML files, but now some others come with more content,
+then first you know about the content (looking manually in the original XMLs), see that is ignored,
+look to the configuration file, and see, that till now unknown XML tags or attributes are used,
+or for example only a single node is expected yet, and a `LIST` is necessary.
+
+Then either, you can complete manually this missing entries in the configuration file.
+This may be simple possible because it is a syntactical textual file.
+
+Or alternatively, or systematically, you can use this new set of possible XML examples to enhance
+or supplement the configuration. 
+
+[source,Script]
+----
+RETDIR="$PWD"
+callPATH="$(realpath "$0")"  ## with the original used PWD to reach this shell script
+cd $(dirname $0)/..          ## currdir is the parent of where this script is located
+echo called: $callPATH
+java -cp ../../tools/vishiaBase.jar org.vishia.xmlReader.XmlJzCfgAnalyzer --@$callPATH:args
+### args: ##
+### -icfg:../../build/Style-test/styles_XmlCfg.txt
+### -iXml:/home/..../the-new-example.odg:styles.xml
+### -dirDebug:../../build/Style-test
+### -oCfg:../../build/Style-test/styles_XmlCfg-NEW.txt
+read -p "...Press ENTER..." VAR
+cd $RETDIR
+----
+
+This script reads the given configuration, reads the XML example file (more possible)
+and supplements or enhances the configuration with new detected data structures in the XML file.
+
+
+
+
 
 [#ConfigTxtSyntax]
 === Syntax of the textual presentation
@@ -326,10 +367,10 @@ link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html[org.vish
 [source,ZBNF]
 ----
 XmlCfg::=XmlJzReader-Config 2024-05
-[{$$ns=xmlnsAssign: 
-NS: $$ns="$$ns_key" :}]
-[{subtreeNode=subtrees:
-SUBTREE:$$subtreeNode_key <=:: node?subtreeNode ::=> :}]
+[{?ns=xmlnsAssign: 
+NS: $$:-$ns="??ns_key" :}]
+[{?subtreeNode=subtrees:
+SUBTREE:$$:-$subtreeNode_key <=:: node?subtreeNode ::=> :}]
 <=:: node?rootNode ::=> 
 =::.
 ----
@@ -364,7 +405,7 @@ and the name space identifier is the value in this TreeMap<String, String>
 * `SUBTREE:`
 link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.html#subtrees[subtrees]:
 A subtree node is a description of one node in XML with its sub nodes dissolved from the context. 
-It is used (called) with the `==>SUBTREE:$$node.cfgSubtreeName` in a node, see next syntax for `node::=.. ..`.
+It is used (called) with the `==>SUBTREE:$$:-$node.cfgSubtreeName` in a node, see next syntax for `node::=.. ..`.
 Such subtree nodes are necessary, because some node structures are used on several positions in the XML tree,
 especially recursively. Then it is only able to describe in the dissolved form using the `SUBTREE:` definition.
 
@@ -379,33 +420,35 @@ The syntax presentation is dispersed till the end of chapter with the closing `=
 
 [source,ZBNF]
 ----
-node::= <$$node.tag> [{?attr=node.attribsForCheck: @$$attr.name==$$attr.storeInMap :}]
-... [: ==>SUBTREE:$$node.cfgSubtreeName [?node.bList: LIST :] [: CLASS:$$node.dstClassName :]
-  [: ADD:"$$node.elementFinishPath" :]
+node::= <$$node.tag> 
+ [{?attr=node.attribsForCheck: @$$attr.name=="??attr.storeInMap" :}]
+ [?node.bList: LIST :] [: CLASS:$$node.dstClassName :]
+ [: NEW:"??node.elementStoreInPath" :]
+ [: ADD:"??node.elementFinishPath" :]
+[: ==>SUBTREE:$$:-$node.cfgSubtreeName 
+
 :|:
 ----
 
 [source,Script]
 ----
-<style:style> =>SUBTREE:style:style LIST CLASS:style_style
+<style:style> LIST CLASS:style_style
+  NEW:"new_style_style()"
   ADD:"add_style_style(value)"
+  =>SUBTREE:style:style
 </style:style>
 ----
-
-This is the alternative definition of a node stored as `SUBTREE`.
-Note that the opening alternative in syntax on `[: ==>SUBTREE` is closed with the `:|:` on end of this part of syntax,
-and the really closing `:]` of the both alternatives is below on `:] </$$node,tag>` in the last syntax part. 
 
 * link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#tag[$$node.tag]: The tag name of the XML node
 
 * link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#attribsForCheck[$$node.attribsForCheck]: 
-`@attrName=identifier` is written if this element is only valid for a XML node which have this attribute with the given value.
+`@attrName="value"` is written if this element is only valid for a XML node which have this attribute with the given value.
 +
 This feature allows to process XML nodes with the same tag name, but with different values for certain attributes
 in a different kind. The data of the node are processed (stored) as different data. 
 It is the same as the XML node would have a specific tag name.
 This situation occurs in some XML definitions. 
-Especially the destination for the data `"$$node.elementStoreInPath"` and also `CLASS:$$node.dstClassName` may be different.
+Especially the destination for the data `"??node.elementStoreInPath"` and also `CLASS:$$node.dstClassName` may be different.
 
 ** link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.AttribDstCheck.html#name[$$attr.name]:
 The name of the attribute which should be tested.
@@ -415,28 +458,37 @@ The necessary attribute value to use this node description to process and store 
 
 * `SUBTREE:` link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#cfgSubtreeName[$$node.cfgSubtreeName]: 
 If this is given, then the description how the parsed XML node should be processed is described in the proper `SUBTREE:...` part.
+This is one alternative possibility to define of a node
+which's inner structure is described in the `SUBTREE:name ...` above.
+Note that the opening alternative in syntax on `[: ==>SUBTREE` is closed with the `:|:` on end of this part of syntax,
+and the really closing `:]` of the both alternatives is below on `:] </$:-$node.tag>` in the last syntax part. 
 
-* `LIST`, `CLASS` and `ADD` have the same meanings as for any other node, see next. 
 
-** The property
+* `LIST`, `CLASS`, `NEW` and `ADD` have the same meanings as for other nodes not defined using `SUBTREE`.
+They are definitions related to the parent node where this definition is done: 
+** `LIST`: Is the node with the inner `SUBTREE` structure exisiting here one time or more as one time? Then
 link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#bList[$$node.bList]
-is regarded to the parent node how to store sub nodes, and hence cannot be defined within the `SUBTREE`.
-
-** The`CLASS` should be identically as in the `SUBTREE` defintion.
-
-** The property `ADD`
-link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#elementStoreInPath[$$node.elementStoreInPath]:
-need to be defined in the parent node, how to store instances of the `SUBTREE` node in the parent,
-whereas `NEW` is defined in the context of the `SUBTREE`.
+is given.
+** `CLASS` this is intrinsic a property of the `SUBTREE` node, but here repeated.
+** `NEW`: is intrinsic a call of the constructor defined by the `SUBTREE` node. 
+But this operation can also store the node.
+And that is a property of the including (parent) node. 
+The implementation of this operations needs to be match to the constructor of the `SUBTREE` node.
+Hence the `@attrname="attrArgument"` should be the same as in the sub tree. This is regarded by the <<#configXmlCreate>>
+** `ADD`: How to store one `SUBTREE` node need to be defined regarding to the including (parent) node.
 
 [source,ZBNF]
 ----
 ... [?node.bList: LIST :] [: CLASS:$$node.dstClassName :]
+  NEW:"new_style_style()"
+  ADD:"add_style_style(value)"
 ----
 
 [source,Script]
 ----
 <style:font-face> LIST CLASS:Style_font_face
+  NEW:"new_style_graphic_properties()"
+  ADD:"add_style_graphic_properties(value)"
 ----
 
 
@@ -455,17 +507,19 @@ If `CLASS` is not given, the result to store from XML is a String.
 
 [source,ZBNF]
 ----
-  [: NEW:"$$node.elementStoreInPath" :]
-  [: ADD:"$$node.elementFinishPath" :]
-  [: TEXT:"$$node.contentStorePath" :]
+  [: TEXT :"??node.contentStorePath" 
+    :|?node.bTextMoreOccurrences: TEXT-LIST:"??node.contentStorePath" :]
 ----
 
 [source,Script]
 ----
-  NEW:"new_style_graphic_properties()"
-  ADD:"add_style_graphic_properties(value)"
+  TEXT-LIST:"add_Text(text)"
 ----
 
+* `"??node....Path"` is an textual expression which describes the access or call of an operation 
+in the data store instance of that class, which is created and returned from the `NEW:"operation"` **of the parent node**,
+the data which are relevant to store this and all other child nodes.
+The examples are regarded to the automatic code generated classes, see <<#DataClassCreate>>
 
 * `NEW`:link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#elementStoreInPath[$$node.elementStoreInPath]:
 This is the description of reflection access to an operation in the data (user's) class 
@@ -473,8 +527,9 @@ to create the new data instance to store the data of the XML node to parse and a
 (if `LIST` is written) or to set the reference in the parent instance with it. 
 
 * `ADD`:link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#elementStoreInPath[$$node.elementStoreInPath]:
-This is the description of reflection access to an operation in the data (user's) class 
-which is called, if exits, to finish after parsing the data of this node. 
+This is the description of reflection access to an operation in the data (user's) class,
+which is called on finish parsing the data of this node. 
+The argument `value` is the internal name of the reference to the created element Object, must be used.
 The `ADD` means or supposed 'adding the data'.
 But also any post processing can be done here, for example complex process and output of the data
 for a SAX model for XML parsing. It depends on the content of this operation written by the user.
@@ -482,16 +537,21 @@ for a SAX model for XML parsing. It depends on the content of this operation wri
 * `TEXT`:link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#contentStorePath[$$node.contentStorePath]:
 This is the description of reflection access to an operation in the data (user's) class 
 to store a text in the XML node. 
-It is possible to have a container for all sub nodes where the text is one of this, as a specific sub node.
+The argument `text` is the internal name of the text part to store.
+It is possible to have a container `allNodes` for all sub nodes where the text is one of this, as a specific sub node.
 This has the advantage that the order of texts within other sub nodes is documented.
 But due to the user's decision also an only one String can be set, if only one text is expected and the order does not play a role.  
+
+* `link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.XmlCfgNode.html#bTextMoreOccurrences[ :|?node.bTextMoreOccurrences:] TEXT-LIST`
+this option means that more text elements are given in the node. They are dispersed between other child nodes.
+The correct order of text and child nodes can be stored usual in an element `allNodes`, but on user level.
 
 
 [source,ZBNF]
 ----
   [: NAMESPACE:"$$node.nameSpaceDef" :]
-  [{: $$attrib=node.attribs: @$$attr.name=" [: @$$attr.storeInMap :|: $$attr.daccess :] " :}]
-  [{: $$subnode=node.subnodes: <=::node:subnode::=> :}]
+  [{?attrib=node.attribs: @$$attr.name=[: "@$$attr.storeInMap" :|: "??attr.daccess" :] :}]
+  [{?subnode=node.subnodes: <=::node:subnode::=> :}]
 :]
 <$$node.tag> =::.
 ----
@@ -986,13 +1046,16 @@ This is done by procedure the text using the capability of the
 link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartScan.html[Class org.vishia.util.StringPartScan].
 
 A XML specific problem is the replacement of specific characters. 
-Instead a `<` in a text content of a XML node, `&lt;` is written. 
-Because the `<` means start of an inner node.
-There are some more simple replacements for the control character in the XML syntax.
+Instead a `<` in a text content of a XML node,  `\&lt;` is notated. 
+Because the `<` means start of an inner node, it would be confused.
+It means all `\&lt;` should be replaced by `<`. But how to write a `\&lt;` as text part.
+The answer is: `\&amp;lt;` is notated, because the `\&amp;` is the replacement for `&`.
+There are some more systematically replacements for the control character in the XML syntax.
 But also special character of Coding should be replaced. 
 
 The encoding of the whole XML textual file can be varied. 
-UTF-8 is a standard, but also such as ISO-8859-x or US-ASCII with the advantage of exact one byte per character can be used.
+UTF-8 is a standard, but also such as ISO-8859-x or US-ASCII with the advantage of exact one byte per character 
+is used on file level on disk.
 Special character can be any time written as `\&#x4567;` with its known UTF-16 code, also decimal, here hexadecimal. 
 This needs a translation. 
 This is not a problem of reading the file, on reading a correct XML such characters are not faulty used.
@@ -1002,16 +1065,24 @@ Java uses internally UTF-16 for all character. It means all is anyway converted 
 For output the data, the known rules are valid (using FileWriter or FileOutputStream, with specific encoding etc). 
 This is not related to the XML coding. 
 
+For binary data XML uses a CDATA region. `<![CDATA[ ... ]]>` is detected and also correct stored. 
+(TODO maybe test because it is really rarely used.)
+
+Last but not least of course `<!-- ... ..>` is detected as commented area and hence skipped.
+
+
 [#NodeAttrCfg]
-=== Select node and attribute types in config.xml
+=== Select node and attribute types in the XmlCfg
 
-If a node is detected after `<` the name of the node is read.
-Then this node name is checked whether it is specified in the given configuration file.
-If it isn't so, this node and all sub nodes are ignored. 
-The node structure from the sub nodes are detected, of course, but no data are stored for all.
+If a node is detected after `<`, the name of the node is read.
+Then this node name is checked whether it is specified in the given 
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.html[XmlCfg]
+configuration file.
+If it isn't so, this node and all sub nodes are ignored.
+The node structure from the sub nodes are correct read, but no data are stored for all.
 
-Only for nodes which are specified in the config.xml file data are stored.
-This has the advantage that sophisticated XML files can be analyzed firstly in its essential data,
+Only for nodes which are specified in the XmlCfg file, data are stored.
+This has the advantage that sophisticated XML files can be analysed firstly in its essential data,
 secondly than enhanced with more interesting data.
 This approach accepts that the data from the XML file should be evaluated knowing its meaning, not only stored.
 That is a process of getting to know the meaning of the XML data. 

@@ -630,7 +630,7 @@ public class GenZbnfJavaData
             if(semantic2.equals("value"))
               Debugutil.stop();
             
-            this.wrClassJava.wrVariable(classData, semantic2, typeNs, typeRef2, sTypeObj1, null, !bCmpn, bListVar, bCmpn, args); 
+            this.wrClassJava.wrVariable(classData, semantic2, typeNs, typeRef2, null, false, sTypeObj1, null, !bCmpn, bListVar, bCmpn, args); 
             
           }  
         }

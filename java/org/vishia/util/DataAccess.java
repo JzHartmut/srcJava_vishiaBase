@@ -3271,6 +3271,11 @@ public class DataAccess {
     public void set_whatisit(String text){ this.whatisit = text.charAt(0); }
     
 
+    /**See {@link #whatisit()}.
+     * @return the kind of the data path element
+     */
+    public char whatisit () { return this.whatisit; }
+    
     public String ident(){ return ident; }
     
     public void setIdent(String ident){ this.ident = ident; }

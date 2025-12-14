@@ -415,7 +415,7 @@ public class StringPartFromFileLines extends StringPartScan
     } 
     inpr = new InputStreamReader(input, this.charset);
     //re-read the string with the correct charset
-    if(charset.equals(Charset.forName("UTF-8"))) {
+    if(this.charset.equals(Charset.forName("UTF-8"))) {
       int ix1 = nrofFirstBytes -1;
       while( (inBuffer[ix1] & 0xc0 ) == 0x80) ix1-=1; //return to the first character of an UTF-8 sequence
       int nrofBytesForChar = StringFunctions.nrofBytesUTF8(inBuffer[ix1]);

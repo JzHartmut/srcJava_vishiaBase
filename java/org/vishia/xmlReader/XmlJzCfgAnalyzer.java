@@ -135,9 +135,8 @@ public class XmlJzCfgAnalyzer
         } })
     , new Argument("-iXml", ":\"D:/path/to/file.xml\" or \"...zip:content.xml\" to analyze a stored XML in a zip format"
         , new SetArgument() { @Override public boolean setArgument (String val) throws FileNotFoundException {
-          FileFunctions.FilePathnameExt fzip =  FileFunctions.FilePathnameExt.parseZipPath(null, val, ':');
-          CmdArgs.this.listfIn.add(fzip); 
-          return fzip.file.exists(); 
+          int files =  FileFunctions.FilePathnameExt.parseWildcardZipPath(CmdArgs.this.listfIn, null, val, ':');
+          return files >0; 
         } })
     , new Argument("-iCfg", ":D:/path/to/file.cfg a given config file to supplement or for genJavaClass"
         , new SetArgument() { @Override public boolean setArgument (String val) {
@@ -190,6 +189,7 @@ public class XmlJzCfgAnalyzer
       //super.addArgs(this.argsXmlJzCfgAnalyzer);
       for(Argument arg: this.argsXmlJzCfgAnalyzer) { addArg(arg); }
     }
+    
 
     /**This operation checks the consistence of all operations. */
     @Override
@@ -440,12 +440,17 @@ public class XmlJzCfgAnalyzer
       xmlReader.setDebugStop(this.debugStopLineXmlInp);
     }
     for(FileFunctions.FilePathnameExt fIn1: fIn) {
+      resetCtNodesInStructTree();
       String sInName = fIn1.file.getName();
       this.log.writef("\nanalyses XML for: %s", fIn1.file.getAbsolutePath());
       if(this.dirDbg !=null) {
         xmlReader.openXmlTestOut( new File( this.dirDbg, sInName + "-back.xml")); //fout1);
       }
-      xmlReader.readZipXml(fIn1.file, fIn1.sNamePath, this.xmlStructTree);
+      if(fIn1.sNamePath !=null) {
+        xmlReader.readZipXml(fIn1.file, fIn1.sNamePath, this.xmlStructTree);
+      } else {
+        xmlReader.readXml(fIn1.file, this.xmlStructTree, null);
+      }
     }
     //
     checkStructTree();
@@ -568,6 +573,26 @@ public class XmlJzCfgAnalyzer
     }
   }
 
+  
+  private void resetCtNodesInStructTree () {
+    resetCtNodesInStructTree(this.xmlStructTree, 0);
+  }
+  private void resetCtNodesInStructTree (XmlStructureNode node, int recursion) {
+    if(recursion >100) {
+      return;
+    }
+    node.ctTextInNode = 0;
+    node.ctOccurInParent = 0;
+    assert(node.sSubtreenode ==null);   // this is not used on time of call.
+    if(node.nodes !=null) for(XmlStructureNode subnode : node.nodes.values()) {
+      resetCtNodesInStructTree(subnode, recursion +1);
+    }
+  }
+  
+  
+  
+  
+  
 
   private void writeJavaClasses () throws IllegalCharsetNameException, UnsupportedCharsetException {
     GenJavaOutClass.CmdArgs genXmlJavaDataArgs = new GenJavaOutClass.CmdArgs();
@@ -633,7 +658,7 @@ public class XmlJzCfgAnalyzer
         wrCfgXmlNode.setAttribute("subtree", "xmlinput", sSubtreeName);
       } else {
         //Only one time tag type: tree inside.
-        if(structNode.nodes !=null || structNode.attribs !=null && (structNode.bText || structNode.attribs.size() >1)) {
+        if(structNode.nodes !=null || structNode.attribs !=null && (structNode.ctText>0 || structNode.attribs.size() >1)) {
           //sub nodes or more as one (attribute or text content) needs a sub class to store the content for this node. 
           String sClass = StringFunctions_B.replaceNonIdentifierChars(structNode.tagIdent, '-').toString();
           wrCfgXmlNode.setAttribute("class", "xmlinput", sClass  );
@@ -653,8 +678,10 @@ public class XmlJzCfgAnalyzer
             addWrNode(xmlNodeSub, subnode, recursion-1);
         } }
       }
-      if(structNode.bText) {
+      if(structNode.ctText ==1) {
         wrCfgXmlNode.addContent("!set_text(text)");
+      } else if(structNode.ctText >1) {
+        wrCfgXmlNode.addContent("!add_text(text)");
       }
     } else { //no attribs, no sub tree, only the text content should be stored.
       if(structNode.onlySingle) {
@@ -714,15 +741,14 @@ public class XmlJzCfgAnalyzer
    * 
    */
   private void checkStructTree () {
+    Map<String, XmlCfg.XmlCfgNode> idxNodesGiven = new TreeMap<>(); // to check whether tags are twice now.
+    //                                           ==========vv build a map with all existing nodes, key is tag name
     if(this.cfgGiven !=null) {
       this.cfgData = this.cfgGiven;
-    }
-    //                                           ==========vv build a map with all existing nodes, key is tag name
-    Map<String, XmlCfg.XmlCfgNode> idxNodesGiven = new TreeMap<>(); // to check whether tags are twice now.
-    fillNodesGivenForCheckSubtree(this.cfgGiven.rootNode, idxNodesGiven, 0); // from root below root
-    for(XmlCfg.XmlCfgNode ndSub: this.cfgGiven.subtrees.values()) {
-      fillNodesGivenForCheckSubtree(ndSub, idxNodesGiven, 0); // as also from all child nodes from subtree
-    }                                                      
+      fillNodesGivenForCheckSubtree(this.cfgGiven.rootNode, idxNodesGiven, 0); // from root below root
+      for(XmlCfg.XmlCfgNode ndSub: this.cfgGiven.subtrees.values()) {
+        fillNodesGivenForCheckSubtree(ndSub, idxNodesGiven, 0); // as also from all child nodes from subtree
+    } }                                                      
     for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.allElementTypes.values()) {
       String sTag = cfgSubtreeOccurrences.occurrence.get(0).tag;
       //if(sTag.equals("style:list-level-properties")) Debugutil.stopp();
@@ -846,6 +872,7 @@ public class XmlJzCfgAnalyzer
     //if(src.tag.equals("style:list-level-properties")) Debugutil.stopp();
     //if(src.tag.equals("style:style")) Debugutil.stopp();
     dst.bList |= !src.onlySingle;
+    dst.bTextMoreOccurrences |= src.ctText >1;
     String sClass1 = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
     String sClass = sClass1;
     char c1 = sClass1.charAt(0);
@@ -879,8 +906,10 @@ public class XmlJzCfgAnalyzer
     if(!bRoot && src.sSubtreenode !=null) {      //--------vv if bRoot then the 'sSubtreenode' is only the name of the sub tree
       dst.cfgSubtreeName = src.sSubtreenode;               // sets the reference to the subtree node to use.
     } else {                                     //--------vv SUBTREE is not given, or it is the start node of a subtree
-      if(src.bText) {
+      if(src.ctText ==1) {
         dst.setContentStorePath("set_Text(text)");         // write the necessities.
+      } else if(src.ctText >1) {
+        dst.setContentStorePath("add_Text(text)");         // write the necessities.
       }
       //dst.setNameSpaceStorePath("!ns");
       dst.bCheckAttributeNode = false;
@@ -998,7 +1027,7 @@ public class XmlJzCfgAnalyzer
             this.representative.nodes.put(key, e.getValue());
           }
         }
-        this.representative.bText |= node.bText;
+        if(this.representative.ctText < node.ctText) { this.representative.ctText = node.ctText; }
       }
       
       
@@ -1345,8 +1374,12 @@ public class XmlJzCfgAnalyzer
      * the {@link org.vishia.xmlReader.XmlCfg.XmlCfgNode} can be substituted with the subtree content with this name.*/
     String sSubtreenode;
     
-    /**Set if at least one of the occurrences has a text content.*/
-    boolean bText = false;
+    /**Counts the occurrences of text content.
+     * if this is 1, then only one text block is found in the Xml node. If {@link #nodes} remain 0, then only the text is stored there. 
+     * Then ctText should be 0 or 1. Never >1. */
+    int ctText = 0;
+    
+    int ctTextInNode;
     
     boolean XXXbDetermineWithParent = false;
     
@@ -1360,6 +1393,7 @@ public class XmlJzCfgAnalyzer
      */
     boolean onlySingle = true;
     
+    int ctOccurInParent = 0;
     
     /**Only for test whether or not a node is found twice. If twice, {@link #onlySingle} is set to false for this node. */
     Map<String, String> nodesLocal;
@@ -1450,7 +1484,7 @@ public class XmlJzCfgAnalyzer
       }
       //Note: this is a node inside the yet read XML tree, see this.parent
       //      this.xmlStructData is the access to common data from the cfgAnalyzer.
-      XmlStructureNode subNode = (XmlStructureNode)this.nodes.get(tag); //use existent one with same tag to strore further content.
+      XmlStructureNode subNode = this.nodes.get(tag); //use existent one with same tag to store further content.
       if(subNode == null) {
         //if(tag.equals("style:style")) Debugutil.stopp();
         subNode = new XmlStructureNode(this, tag, this.xmlStructData); 
@@ -1458,11 +1492,15 @@ public class XmlJzCfgAnalyzer
         this.xmlStructData.addStructureNodeOccurence(subNode); //it helps to find subtrees, register each node type
       } else { 
         //the node is known already, use it, supplement new elements and attributes.
-        subNode.onlySingle = false;
         if(subNode.parent != this) Debugutil.stopp();
       }
-      if(this.nodesLocal.get(tag)!=null) { 
-        subNode.onlySingle = false; //at least twice in this tree.
+      subNode.ctOccurInParent +=1;
+      if(subNode.ctOccurInParent >1) {
+        subNode.onlySingle = false;
+      }
+      if(this.nodesLocal.get(tag)!=null) {
+        Debugutil.stop();
+//        subNode.onlySingle = false; //at least twice in this tree.
       }
       this.nodesLocal.put(tag, tag); //to detect whether it occurs a second one
       subNode.nodesLocal = null;
@@ -1494,14 +1532,18 @@ public class XmlJzCfgAnalyzer
 
     
     
-    public void setTextOccurrence() { this.bText = true; }
+    public void setTextOccurrence() { 
+      this.ctTextInNode += 1;
+      if(this.ctText < this.ctTextInNode) { this.ctText = ctTextInNode; }  // set max for all read files.
+    }
    
     
     
     void writeNodeData ( Appendable out, int indent) throws IOException {
       ApplMain.outIndent(out, indent);
       out.append('<').append(this.tag).append(' ').append(this.tagIdent).append(' ').append(this.sSubtreenode).append(' ');
-      if(this.bText) { out.append(" TEXT "); }
+      if(this.ctText ==1) { out.append(" TEXT "); }
+      else if(this.ctText >1) { out.append(" TEXT LIST "); }
       if(this.bDependencyChecked) { out.append(" DEPCHECKED "); }
       if(this.onlySingle) { out.append(" SINGLE "); }
       out.append('\n');

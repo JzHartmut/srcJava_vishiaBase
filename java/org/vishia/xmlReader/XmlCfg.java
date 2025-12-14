@@ -95,6 +95,12 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2025-12-14: Now the textual syntax is changed but held compatible, see ...adoc
+   * <li>{@link #readFromTextNode(XmlCfgNode, StringPartScan, LogMessage)}(...) read compatible, more variants.
+   * <li>{@link #otxNode}: First write attributes necessary for NEW, then NEW and ADD, 
+   *   then only "=>SUBTREE" in the better explainable order. 
+   *   {@link XmlCfgNode#attribsForCheck} correct filled, and new {@link XmlCfgNode#attribsArg} and {@link XmlCfgNode#attribsSet}
+   *   set in {@link XmlCfgNode#addAttribStorePath(String, String)} and used for {@link #otxNode} pattern for write 
    * <li>2025-12-11: {@link #addSubTree(CharSequence)} and {@link #transferNamespaceAssignment(Map)} now supports
    *   add for supplementing a given XmlCfg with new inputs by XmlJzAnalyzer. 
    * <li>2024-05-21 new: {@link #readCfgFile(File, LogMessage)}, {@link #readFromJar(Class, String, LogMessage)}, {@link #readFromText(StringPartScan, LogMessage)} 
@@ -156,7 +162,7 @@ public class XmlCfg
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2024-05-22";
+  public static final String version = "2024-25-12";
 
 
   /**Assignment between nameSpace-value and nameSpace-alias gotten from the xmlns:ns="value" declaration in the read cfg.XML file. 
@@ -176,6 +182,15 @@ public class XmlCfg
   
   Map<String, DataAccess.IntegerIx> attribNameVale;
   
+  /**Control for {@link #writeToText(File, LogMessage)} for the head of the text file. */
+  private static final OutTextPreparer otxCfgHead = new OutTextPreparer("cfgHead", "xmlCfg", 
+      "XmlJzReader-Config 2024-05" 
+    + "<:if:xmlCfg.xmlnsAssign><:for:ns:xmlCfg.xmlnsAssign>"
+    + "<:n>NS: <&ns>=\"<&ns_key>\""
+    + "<.for><.if>"
+      );
+
+
   protected final boolean readFromText;
   
   
@@ -436,70 +451,94 @@ public class XmlCfg
   }
   
   
+  /**Read the configuration from the given text in StringPartScan already prepared.
+   * It is called recursively also for inner nodes.
+   * First call is in {@link #readFromText(StringPartScan, LogMessage)} for the while file.
+   * @param node
+   * @param sp
+   * @param log
+   * @return
+   */
   private boolean readFromTextNode(XmlCfgNode node, StringPartScan sp, LogMessage log) {
     boolean bOk = true;
     String sElementStorePath = null, sElementFinishPath = null, sTextStorePath = null, sNamespaceStorePath = null;
     if(sp.scan("=>SUBTREE:").scanToAnyChar(" \n\r", '\"', '\"', '\\').scanOk()) {
-      node.cfgSubtreeName = sp.getLastScannedString();
-    }
+      node.cfgSubtreeName = sp.getLastScannedString();     // this is meanwhile intrinsic deprecated,
+    }                                                      // write =>SUBTREE after LIST, NEW, ADD
     if(sp.scan("LIST").scanOk()) {
       node.bList = true;
     }
     if(sp.scan("CLASS:").scanIdentifier().scanOk()) {
       node.dstClassName = sp.getLastScannedString();
     }
-    if(sp.scan("NEW:").scanLiteral("\"\"\\", 9999).scanOk()) {
-      sElementStorePath = sp.getLastScannedString();
-    }
-    if(sp.scan("ADD:").scanLiteral("\"\"\\", 9999).scanOk()) {
-      sElementFinishPath = sp.getLastScannedString();
-    }
-    if(sp.scan("TEXT:").scanLiteral("\"\"\\", 9999).scanOk()) {
-      sTextStorePath = sp.getLastScannedString();
-    }
-    if(sp.scan("NAMESPACE:").scanLiteral("\"\"\\", 9999).scanOk()) {
-      sNamespaceStorePath = sp.getLastScannedString();
-    }
+    //                                         //---------- @attr="identificationValue"
     while(sp.scan("@").scanIdentifier(null, "-:").scan("=").scanLiteral("\"\"\\", 9999).scanOk()) {
       String sAttrStorePath = sp.getLastScannedString();
       String sAttrNsName = sp.getLastScannedString();
-      try{ node.addAttribStorePath(sAttrNsName, sAttrStorePath);
+      try{                                                 // store attributes for CHECK and for NEW arguments. 
+        node.addAttribStorePath(sAttrNsName, sAttrStorePath);  // checks "CHECK", builds a DataAccess.DatapathElement
       } catch(ParseException exc) {
         log.writeError("ERROR readCfgFromText, Exception ", exc);
       }
     }
-    if(sElementStorePath !=null) {
-      try{ node.setNewElementPath(sElementStorePath);
+    if(sp.scan("NEW:").scanLiteral("\"\"\\", 9999).scanOk()) {
+      sElementStorePath = sp.getLastScannedString();
+      try{ 
+        node.setNewElementPath(sElementStorePath);         // builds a DataAccess.DatapathElement
       } catch(ParseException exc) {
         log.writeError("ERROR readCfgFromText, Exception setNewElementStorePath " + sElementStorePath, exc);
       }
     }
-    if(sElementFinishPath !=null) {
-      try{ node.setFinishElementPath(sElementFinishPath);
+    if(sp.scan("ADD:").scanLiteral("\"\"\\", 9999).scanOk()) {
+      sElementFinishPath = sp.getLastScannedString();
+      try{ node.setFinishElementPath(sElementFinishPath);  // builds a DataAccess.DatapathElement
       } catch(ParseException exc) {
         log.writeError("ERROR readCfgFromText, Exception setFinishElementStorePath " + sElementFinishPath, exc);
       }
     }
-    if(sTextStorePath !=null) {
-      try{ node.setContentStorePath(sTextStorePath);
-      } catch(ParseException exc) {
-        log.writeError("ERROR readCfgFromText, Exception setContentStorePath " + sTextStorePath, exc);
+    if(sp.scan("=>SUBTREE:").scanToAnyChar(" \n\r", '\"', '\"', '\\').scanOk()) {
+      node.cfgSubtreeName = sp.getLastScannedString();
+    } else if(node.cfgSubtreeName !=null) {    // subtree already set, do not read node definitions.
+    } else {
+      if(sp.scan("NAMESPACE:").scanLiteral("\"\"\\", 9999).scanOk()) {
+        sNamespaceStorePath = sp.getLastScannedString();
+        try{ 
+          node.setNameSpaceStorePath(sNamespaceStorePath);
+        } catch(ParseException exc) {
+          log.writeError("ERROR readCfgFromText, Exception setNameSpaceStorePath " + sNamespaceStorePath, exc);
+        }
       }
-    }
-    if(sNamespaceStorePath !=null) {
-      try{ node.setNameSpaceStorePath(sNamespaceStorePath);
-      } catch(ParseException exc) {
-        log.writeError("ERROR readCfgFromText, Exception setNameSpaceStorePath " + sNamespaceStorePath, exc);
+      //                                         //---------- @attr="set_attr(value)"
+      while(sp.scan("@").scanIdentifier(null, "-:").scan("=").scanLiteral("\"\"\\", 9999).scanOk()) {
+        String sAttrStorePath = sp.getLastScannedString();
+        String sAttrNsName = sp.getLastScannedString();
+        try{ node.addAttribStorePath(sAttrNsName, sAttrStorePath);  // checks "CHECK", builds a DataAccess.DatapathElement
+        } catch(ParseException exc) {
+          log.writeError("ERROR readCfgFromText, Exception ", exc);
+        }
       }
-    }
-    while(bOk && sp.scan("<").scanIdentifier(null, "-:").scan(">").scanOk()) {
-      String sTag = sp.getLastScannedString();
-      XmlCfgNode subnode = new XmlCfgNode(node, this, sTag);
-      //if(node.tag.equals("style:style")) Debugutil.stopp();
-      if(node.subnodes == null) { node.subnodes = new TreeMap<>(); }
-      node.subnodes.put(sTag, subnode);
-      bOk &= readFromTextNode(subnode, sp, log);
-    }
+      if(sp.scan("TEXT:").scanLiteral("\"\"\\", 9999).scanOk()) {
+        sTextStorePath = sp.getLastScannedString();
+      } else if(sp.scan("TEXT-LIST:").scanLiteral("\"\"\\", 9999).scanOk()) {
+        sTextStorePath = sp.getLastScannedString();
+        node.bTextMoreOccurrences = true;
+      }
+      if(sTextStorePath !=null) {
+        try{ 
+          node.setContentStorePath(sTextStorePath);       // builds a DataAccess.DatapathElement
+        } catch(ParseException exc) {
+          log.writeError("ERROR readCfgFromText, Exception setContentStorePath " + sTextStorePath, exc);
+        }
+      }
+      while(bOk && sp.scan("<").scanIdentifier(null, "-:").scan(">").scanOk()) {
+        String sTag = sp.getLastScannedString();
+        XmlCfgNode subnode = new XmlCfgNode(node, this, sTag);
+        //if(node.tag.equals("style:style")) Debugutil.stopp();
+        if(node.subnodes == null) { node.subnodes = new TreeMap<>(); }
+        node.subnodes.put(sTag, subnode);
+        bOk &= readFromTextNode(subnode, sp, log);
+      }
+    } // else if =>SUBTREE
     if(sp.scan("</").scanIdentifier(null, "-:").scan(">").scanOk()) {
       String sTagEnd = sp.getLastScannedString();
       if(!node.tag.equals(sTagEnd)) {
@@ -515,16 +554,6 @@ public class XmlCfg
   
   
   
-  /**Control for {@link #writeToText(File, LogMessage)} for the head of the text file. */
-  private static final OutTextPreparer otxCfgHead = new OutTextPreparer("cfgHead", "xmlCfg", 
-      "XmlJzReader-Config 2024-05" 
-    + "<:if:xmlCfg.xmlnsAssign><:for:ns:xmlCfg.xmlnsAssign>"
-    + "<:n>NS: <&ns>=\"<&ns_key>\""
-    + "<.for><.if>"
-      );
-  
-
-  
   /**Control for writing a Node. 
    * <ul><li>whatis := "SUBTREE" or empty.
    * <li>indent := spaces from left.
@@ -533,16 +562,19 @@ public class XmlCfg
    * */
   private static final OutTextPreparer otxNode = new OutTextPreparer("node", "whatis, indent, node", 
       "<:n><&indent><&whatis><:<><&node.tag><:>>" 
-    + "<:if:node.attribsForCheck> <:for:attr:node.attribsForCheck> @<&attr.name>==\"<&attr.storeInMap>\"<.for><:n><&indent><.if>"  
-    + "<:if:node.cfgSubtreeName> =>SUBTREE:<&node.cfgSubtreeName><.if>"
     + "<:if:node.bList> LIST<.if>"
     + "<:if:node.dstClassName> CLASS:<&node.dstClassName><.if>"
+    + "<:if:node.attribsForCheck><:n><&indent>  <:for:attr:node.attribsForCheck> @<&attr.name>==\"CHECK\"<.for><:n><.if>"  
+    + "<:if:node.attribsForCheck><:n><&indent>  <:for:attr:node.attribsArg> @<&attr.name>==\"@<&attr.storeInMap>\"<.for><:n><&indent><.if>"  
     + "<:if:node.elementCreatePath><:n><&indent>  NEW:\"<:exec:wrDataAccess(OUT, node.elementCreatePath)>\"<.if>"
     + "<:if:node.elementFinishPath><:n><&indent>  ADD:\"<:exec:wrDataAccess(OUT, node.elementFinishPath)>\"<.if>"
-    + "<:if:node.contentStorePath><:n><&indent>  TEXT:\"<:exec:wrDataAccess(OUT, node.contentStorePath)>\"<.if>"
-    + "<:if:node.nameSpaceDef><:n><&indent>  NAMESPACE:\"<&node.nameSpaceDef>\"<.if>"
-    + "<:if:node.attribs><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=\"<:if:attr.storeInMap>@<&attr.storeInMap><.if><:if:attr.daccess><&attr.daccess.writeAccessString(OUT)><.if>\"<.for><.if>"  
-    + "<:if:node.subnodes><:for:subnode:node.subnodes><:exec:writeSubNode(OUT, indent, subnode)><.for><.if>"  
+    + "<:if:node.cfgSubtreeName><:n><&indent>  =>SUBTREE:<&node.cfgSubtreeName>"
+    + "<:else>"
+    +   "<:if:node.nameSpaceDef><:n><&indent>  NAMESPACE:\"<&node.nameSpaceDef>\"<.if>"
+    +   "<:if:node.attribsSet><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=\"<:if:attr.storeInMap>@<&attr.storeInMap><.if><:if:attr.daccess><&attr.daccess.writeAccessString(OUT)><.if>\"<.for><.if>"  
+    +   "<:if:node.contentStorePath><:n><&indent>  TEXT<:if:node.bTextMoreOccurrences>-LIST<.if>:\"<:exec:wrDataAccess(OUT, node.contentStorePath)>\"<.if>"
+    +   "<:if:node.subnodes><:for:subnode:node.subnodes><:exec:writeSubNode(OUT, indent, subnode)><.for><.if>"
+    + "<.if>"  //=>SUBTREE or definition here.
     + "<:n><&indent><:<>/<&node.tag><:>>" 
     //<:n>"
     );
@@ -559,8 +591,15 @@ public class XmlCfg
   
   /**Writes the content of the config to a text file which can be later read with {@link #readCfgFile(File, LogMessage)}
    * or with {@link #readFromJar(Class, String, LogMessage)}.
-   * This operation is especially used after {@link XmlJzCfgAnalyzer#analyzeXmlStruct(File)} or {@link XmlJzCfgAnalyzer#analyzeXmlStructZip(File, String)}
+   * This operation is used especially after {@link XmlJzCfgAnalyzer#analyzeXmlStruct(File)} or {@link XmlJzCfgAnalyzer#analyzeXmlStructZip(File, String)}
    * to write out the result.
+   * <ul>
+   * <li>Uses {@link #otxCfgHead} for the head of the text, with the subtree definitioons and the &ltroot>....&lt/root>
+   * <li>Uses {@link #otxNode} for all node contents,
+   * <li>Translates this script to executable commands on first usage (it is static).
+   *   Translation is done if {@link #idxScript} is set.
+   * <li>{@link #otxNode} will be called recursively for all child nodes in the {@link #otxNode} script itself:
+   * </ul>
    * @param fText destination.
    * @param log
    * @since 2024-05-17
@@ -719,8 +758,11 @@ public class XmlCfg
     
     /**Reflection path either to store the content of the node
      * or also to get an instance as "sub node" to store the content.
-     * <br>
-     * <br>
+     * <br><br>
+     * It is noted in the immediately child node, not in the maybe associated subtree ( if {@link #cfgSubtreeName} is set),
+     * because the subtree defines the kind of node, and not the occurrence in the parent.
+     * Because this operation can call different ctor, and store already the new created node, it is a stuff of the parent node.
+     * <br><br>
      * The {@link DataAccess.DatapathElement#args} contains the arguments for new_...(...). 
      * This comes from the textual given expression. This values are necessary to store in the created class, but final. 
      */
@@ -728,13 +770,18 @@ public class XmlCfg
     
     /**Reflection path of usual an operation which is called on end of the node. 
      * This is on <code>&lt;/tag></code> or also on <code>/></code> if the node has not further sub nodes.
+     * <br><br>
+     * It is noted in the immediately child node, not in the maybe associated subtree ( if {@link #cfgSubtreeName} is set),
+     * because the subtree defines the kind of node, and not the occurrence in the parent.
+     * <br><br>
      * This operation can be sensible, if the data for the node should be post-prepared if all information inside the node are available.
      * This element can be null if #elementCreatePath already adds the element.
      */
     DataAccess.DatapathElement elementFinishPath;
     
-    /**true then this element is stored with more as one instance. 
-     * 
+    /**true then this node as child is stored with more as one instance. 
+     * It is noted in the immediately child node, not in the maybe associated subtree ( if {@link #cfgSubtreeName} is set),
+     * because the subtree defines the kind of node, and not the occurrence in the parent.
      */
     boolean bList;
     
@@ -754,13 +801,27 @@ public class XmlCfg
      */
     boolean bStoreAttribsInNewContent;
     
-    /**If not null, contains attribute names which's name and value are used to build the key to found the proper xml noce in the config file.
+    /**If not null, contains attribute names which's name and value are used to build the key to found the proper xml node in the config file.
      * Firstly all attributes should be checked whether their names are contained here.
      */
-    private Map/*IndexMultiTable*/<String, AttribDstCheck> attribsForCheck;
+    Map<String, AttribDstCheck> attribsForCheck;
+    
+    /**All attributes which's values are use to call the ctor of the instance to store the data.
+     * They are the attributes designated with @attr="@nameArg".
+     * The 'nameArg' is stored in {@link AttribDstCheck#storeInMap}.
+     */
+    Map<String, AttribDstCheck> attribsArg;
+    
+    /**All attributes which's values are set via the {@link AttribDstCheck#daccess}
+     * to the data instance of the node.
+     * They are the attributes designated with @attr="set_Name(value)".
+     */
+    Map<String, AttribDstCheck> attribsSet;
+    
     
     /**Key (attribute name with xmlns:name) and reflection path to store the attribute value.
-     * Attributes of the read input which are not found here are not stored.
+     * This map contains all attributes, also which are stored in the other idx, 
+     * because the {@link XmlJzReader} searches only here.
      */
     Map /*IndexMultiTable*/<String, AttribDstCheck> attribs;
     
@@ -783,6 +844,20 @@ public class XmlCfg
     /**Reflection path to store the content as String. If null than the content won't be stored. */
     DataAccess.DatapathElement contentStorePath;
   
+    
+    /**True if there is more as one occurrence of text inside other nodes.
+     * <br><br>
+     * Notes:
+     * If only one occurrence is given, the text can usual stored in a simple String. 
+     * That does not inform where the text content inside the child nodes are arranged.
+     * If the text occurs more as one, it is stored usual in a List&lt;String>.
+     * But also then it is not possible to inform where the text is arranged between other child nodes.
+     * The only one possibility ot inform about the correct order is a maybe existing 'nodesAll'.
+     * But this is a part of the storing classes, which's operation is called via reflection
+     * with {@link #contentStorePath}. Ot is not clarified here in the XML configuration.
+     */
+    boolean bTextMoreOccurrences;
+    
     final CharSequence tag;
     
     /**Name of the class where the data are stored.
@@ -862,6 +937,20 @@ public class XmlCfg
     
     
     /**This method is invoked from the xml configuration reader to create a new attribute entry for the found attribute.
+     * <ul>
+     * <li>An instance of {@link AttribDstCheck} is created.
+     * <li>If 'dstPath' == "CHECK" then this is an attribute which's value is used to select the child node configuration.
+     *   It is stored in {@link #attribsForCheck}.
+     * <li>If 'dstPath' starts with "@..." then this is an attribute which's value is used as argument 
+     *   to create the instance to store the child node data, used as argument with the name after '@'.
+     *   This name is stored in {@link AttribDstCheck#storeInMap}.
+     *   It is stored in {@link #attribsArg}.
+     * <li>Else 'dstPath' is used as refection access to store the value in the destination instance for the node.
+     *   It is usual an operation. The variable 'value' should be used their to access the attribute value.
+     *   It is stored in {@link #attribsSet}.
+     * <li>All attributes are stored in {@link #attribs}, this is used in {@link XmlJzReader} to detect usage of the attributes.
+     *   The other specific container where the attributes are also stored are used to write out and access the confiuration.   
+     * </ul>
      * @param key ns:name of the found attribute in the config.xml 
      * @param dstPath datapath which is found as value in the config.xml. The datapath is used for the user.xml to store the attribute value.
      * @throws ParseException 
@@ -916,8 +1005,9 @@ public class XmlCfg
         if(StringFunctions.equals(sPath, "CHECK")) {
           //use the attribute value as key for select the config and output, it is the primary config node
           dstPath = null;
-          dPathAccess = new AttribDstCheck(key, true);
-          this.attribs.put(key,  dPathAccess); //create if not exists
+          dPathAccess = new AttribDstCheck(key, true);     // the dPathAccess.daccess remains ==null
+          this.attribsForCheck.put(key, dPathAccess);
+          this.attribs.put(key,  dPathAccess);             // dpathAccess.bUseForCheck = true;
           this.bCheckAttributeNode = true;       
         }
         else  {
@@ -932,9 +1022,13 @@ public class XmlCfg
         } else {
           if(dstPath.startsWith("@")) {       //store the attribute value in the attribute map to use later to store in user area.
             dPathAccess.storeInMap = dstPath.substring(1);
+            if(this.attribsArg == null) { this.attribsArg = new TreeMap<>(); }
+            this.attribsArg.put(key, dPathAccess);
           } else {
             StringPartScan sp = new StringPartScan(dstPath);
             dPathAccess.daccess = new DataAccess.DatapathElement(sp, this.allArgNames, null);
+            if(this.attribsSet == null) { this.attribsSet = new TreeMap<>(); }
+            this.attribsSet.put(key, dPathAccess);
             this.bStoreAttribsInNewContent = true;  
           }
         }

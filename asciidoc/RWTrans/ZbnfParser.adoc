@@ -89,10 +89,12 @@ date=2025-12-06
 The syntax definition as found in 2007 is described in
 link:../../../docuZBNF/sfZbnfMain_en.html[ZBNF syntax description]
 
-* The basic idea in that time was, the control characters for the syntax should be immediately and simple given.
+* The basic idea in that time was, the control characters for the syntax itself should be immediately and simple given.
+It is `[ ] { } < > ?` for option, repetition, a syntax morphem sometimes written with `?`.
 * The constant texts should be immediately and simple given, not with 'text' as in EBNF.
 * If text character clashes with syntax control character, the backslash is used to transcript.
-* meta-morphems are written in '<...>' with its specific syntax.
+Means `\[` is a `[` in text etc.
+* meta-morphems are written in `<...>` with its specific syntax.
 
 With this schema an optional repetition of an identifier is written as:
 
@@ -123,11 +125,11 @@ Is it well readable in a syntax documentation: NO, it's bad.
 Is it unique able to interpret by the parser: YES, it is.
 
 That's why for documentation another writing style was used in the past.
-One is: colored syntax: The syntax control characters are presented in another background color.
+One is: coloured syntax: The syntax control characters are presented in another background colour.
 This is possible for a textual documentation with styles (for example in LibreOffice, or in Word).
 The transcription of literal text is then not necessary, it's better readable.
 
-For plain text, another approach is used:
+For plain text, another approach is used, since 2025-12 first time:
 
 * The syntax control characters are not simple, a specific string is used.
 hence, they are obviously, predestined.
@@ -149,7 +151,31 @@ compare it with
 
 should be better readable.
 
+The writing rules are: All syntax control characters itself are longer. Then it is not clashing
+with similar textual characters, except really special cases.
 And now the writing rules:
+
+* Simple place holder: `semantic` can always written as `identifier.ident`, with one or more dot between,
+but only in the form as a Java (C/++) identifier possible with dots. 
+`...` in the following explanation means also such a dot separated identifier.
+** `pass:[$$]semantic` instead `<$?semantic>` for a simple identifier. 
+Here the visual disturbing `< >` are omitted. The `$$` is the control string to detect it as non constant literal.
+The semantic need to be an identifier.
+** `pass:[$$$-:$]semantic` instead `<$-$:?semantic>` accept also special character in the identifier,
+here also the `$` itself as the `:` and `-`. 
+The rule is: After the `pass:[$$]` some non identifier character are these additional characters. 
+The first `$` immediately is accepted also as additional character. 
+But the last character of this possible additional characters must be one `$`. 
+The following `semantic` starts anyway with an identifier character, so it is unique.
+** `pass:[##]semantic` instead `<#?semantic>` for a number.
+** `pass:[##f#]semantic` instead `<#f?semantic>` for a the number variants.
+
+* Instead `<syntax?semantic>` with the specific syntax:
+** `pass:[<=::] syntax?semantic pass:[::=>]` instead `<syntax?semantic>`. The semantic is similar the identifier to store the data.
+** All other `<...?semmantic>` variants are similar build with simimlar rules (yet TODO how and describe).
+
+
+
 
 * Syntax control characters:
 ** All control strings have a space before and behind, which is not a constant string literal, 
@@ -157,6 +183,7 @@ does not allow white spaces here. Write a secondary space to enforce white space
 Secondly on inner side there is a colon. The basic syntax control character (sequence) is the same.
 ** `ALTERNATIVE1 :|: ALTERNATIVE2` instead `ALTERNATIVE1|ALTERNATIVE2`
 ** `[: OPTION :]` instead `[OPTION]`
+** `[?...: OPTION :]` instead `[<?...>OPTION]`, an option with the condition notated.
 ** `[: OPTION :|: OPTION2 :]` instead `[OPTION|OPTION2]` the choice option
 ** `[: OPTION :|: OPTION2 :|]` instead `[OPTION|OPTION2|]` the choice option which can be omitted.
 ** `[|: OPTION :|: OPTION2 :]` instead `[|OPTION|OPTION2]` the choice option which can be omitted with first test after.
@@ -165,25 +192,23 @@ Secondly on inner side there is a colon. The basic syntax control character (seq
 ** `[>: IT IS EXPECTED :]` instead `[>IT IS EXPECTED]` the 'expected' test.
 ** `{: REPETITION :}` instead `{REPETITION}`
 ** `{: REPETITION :?: REPEAT :}` instead `{REPETITION?REPEAT}`
+** `{?name=...: REPETITION $$name.part :]` instead `{<?...> REPETITION <$?part>` 
+repetition which should create or use a specified data access.
 ** `[{: OPTIONAL REPETITION :}]` instead `[{OPTIONAL REPETITION}]`
 ** `[{: OPTIONAL REPETITION :?: REPEAT :}]` instead `[{OPTIONAL REPETITION?REPEAT}]`
 ** `=::.` instead `.`, the end of the syntax item definition.
 
-* Instead `<syntax?semantic>` with the specific syntax:
-** `pass:[<=::] syntax?semantic pass:[::=>]` instead `<syntax?semantic>`. The semantic is similar the identifier to store the data.
-** `pass:[$$]semantic` instead `<$?semantic>` for a simple identifier. 
-Here the visual disturbing `< >` are omitted. The `$$` is the control string to detect it as non constant literal.
-The semantic need to be an identifier.
-** `pass:[$$-$$]semantic` instead `<$-$?semantic>` accept also special character in the identifier
-** `pass:[##]semantic` instead `<#?semantic>` for a number.
-** All other `<...?semmantic>` variants are similar build with simimlar rules (yet TODO how and describe).
 
 * Definition how to store
-** `[{itemName=containerName: $$itemName.element :}]` instead
+** As always shown above, if `{: ...` is written, `{:?...: ...` can be written 
+whereas between `?` and `:` the semantic of the syntax expression is written, 
+or in other words the variable where the content is stored, if the variable is representing the syntax.
+** `[{?itemName=containerName: $$itemName.element :}]` instead
 +
-`[<?containerName>{<$?element>}]`
+`[{<?containerName><$?element>}]`
 The ZBNF syntax do not need the `itemName` because it is implicitly: If `container` is a container name,
-a LinkedList or Map in Java, then an instance of the element class of the container is created to store.
+a LinkedList or Map in Java, then an instance of the element class of the container is created to store,
+or thought in other direction, the element of the container holds the data.
 But it is more obviously when the item has a name used here.
 The `itenName` can also be used for a gTxt script: 
 link:gTxtOutputter.html[gTxtOutputter, OutTextPreparer].

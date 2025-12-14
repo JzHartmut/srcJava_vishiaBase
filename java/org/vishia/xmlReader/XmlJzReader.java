@@ -468,7 +468,7 @@ public class XmlJzReader
    * <ul>
    * <li>First the tag is parsed, then all attributes using {@link #parseAttributes(StringPartScan, String, org.vishia.xmlReader.XmlCfg.XmlCfgNode, List[], List[])}.
    *   This parses stores only the values of the attributes in , and evaluate the CHECK attributes.
-   *   The attributes are stored in a List<AttribToStore> attribsToStore and namespacesToStore.
+   *   The attributes are stored in a List&lt;AttribToStore> attribsToStore and namespacesToStore.
    * <li>Then the correct sub node in cfg is searched, maybe depending on attribute CHECK values.
    * <li>With the cfgSubNode it is detected whether a SUBTREE node should be used.
    * <li>All attributes which are stored in attribsToStore are now completed with the maybe SUBTREE given information.
