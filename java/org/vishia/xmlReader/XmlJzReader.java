@@ -611,7 +611,7 @@ public class XmlJzReader
     if(subCfgNode ==null) {
       Debugutil.stop();
     }
-    final Object subOutput;
+    final Object subOutput;            //==================vv new subOutput, write content
     if(this.bUseNonSemanticDataStore) {
       final Map<String,String> attribs;
       if(attribsToStore[0] ==null) { attribs = null;

@@ -53,6 +53,9 @@ public class XmlJzCfgAnalyzer
 {
   /**Version, License and History:
    * <ul>
+   * <li>2025-12-15 Hartmut: bugfix of new stuff. New: {@link XmlStructureNode#finishElement(XmlStructureNode)}, 
+   *   set the {@link XmlStructureNode#ctTextInNode} =0 on new call of {@link XmlStructureNode#addElement(String)}
+   *   Now the  {@link XmlStructureNode#ctText}, 'TEXT-LIST' detection is correct. 
    * <li>2025-12-11 Hartmut: enhancement: Supports re-read XML files with given XmlCfg from before and supplements the configuration
    *   with the new elements in the read XML files: 
    *   <ul><li>{@link #checkStructTree()} recognises given subtrees in {@link #cfgGiven}.
@@ -95,7 +98,7 @@ public class XmlJzCfgAnalyzer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2018-08-15";
+  public static final String version = "2025-12-15";
 
   
 
@@ -298,6 +301,7 @@ public class XmlJzCfgAnalyzer
     try {
       //On any element the 'addElement(tag)' is invoked via Reflection. 
       rootNode.setNewElementPath("!addElement(tag)");  //executed in the data destination instance.
+      rootNode.setFinishElementPath("!finishElement(value)"); 
       rootNode.addAttribStorePath("?", "!setAttribute(name)"); 
       rootNode.setNameSpaceStorePath("!addNamespace(name, value)");
       rootNode.setContentStorePath("!setTextOccurrence()");
@@ -1469,6 +1473,9 @@ public class XmlJzCfgAnalyzer
      * <br>Additionally via {@link XmlStructureData#addStructureNodeOccurence(XmlStructureNode)} 
      *   all elements in the whole xml file with the same tag are registered any later evaluated, if there are semantically also the same. 
      * <br>This operation is invoked via reflection from {@link XmlJzCfgAnalyzer#newCfgReadStruct()}
+     * <br><br>
+     * This operation is called via reflection in {@link XmlJzReader#parseElement(org.vishia.util.StringPartScan, Object, org.vishia.xmlReader.XmlCfg.XmlCfgNode, int)}
+     * because the operation {@link XmlJzCfgAnalyzer#newCfgReadStruct()} enters it in {@link XmlCfg.XmlCfgNode#elementCreatePath}. 
      * @param tag
      * @return
      */
@@ -1494,6 +1501,7 @@ public class XmlJzCfgAnalyzer
         //the node is known already, use it, supplement new elements and attributes.
         if(subNode.parent != this) Debugutil.stopp();
       }
+      subNode.ctTextInNode = 0;                            // ctText occurrences in Node set to 0 to count newly.
       subNode.ctOccurInParent +=1;
       if(subNode.ctOccurInParent >1) {
         subNode.onlySingle = false;
@@ -1505,6 +1513,19 @@ public class XmlJzCfgAnalyzer
       this.nodesLocal.put(tag, tag); //to detect whether it occurs a second one
       subNode.nodesLocal = null;
       return subNode; 
+    }
+    
+
+    /**
+    * <br><br>
+    * This operation is called via reflection in {@link XmlJzReader#finishElement(Object, Object, org.vishia.util.DataAccess.DatapathElement)
+    * because the operation {@link XmlJzCfgAnalyzer#newCfgReadStruct()} enters it in {@link XmlCfg.XmlCfgNode#elementFinishPath}. 
+    */
+    public void finishElement(XmlStructureNode node) { 
+      if(node.ctText < node.ctTextInNode) {
+        node.ctText = node.ctTextInNode;                   // gather the maximum of ctText in this node tag instnace.
+      }
+      Debugutil.stop();
     }
     
     
@@ -1533,6 +1554,9 @@ public class XmlJzCfgAnalyzer
     
     
     public void setTextOccurrence() { 
+      if(this.tag.equals("it") && ctTextInNode >0){
+        Debugutil.stop();
+      }
       this.ctTextInNode += 1;
       if(this.ctText < this.ctTextInNode) { this.ctText = ctTextInNode; }  // set max for all read files.
     }
