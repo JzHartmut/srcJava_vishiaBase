@@ -653,8 +653,8 @@ public class XmlJzReader
             }
     } } } }
       
-    if(subOutput == null) Debugutil.stopp();
-    
+    //if(subOutput == null) Debugutil.stopp();
+    // if the subOutput is null, parse result is not stored, because the sub node is ignored.
     //
     //check content.
     //
@@ -671,10 +671,15 @@ public class XmlJzReader
       boolean bEndOfElement = false;
       do { //================================================ Loop to parse content and <subElement...> till </ 
         inp.readNextContent(this.sizeBuffer/2);
+        
         if( inp.getCurrent(2).toString().startsWith(" <"))
           Debugutil.stop();
         char cc = inp.getCurrentChar();
-        if("\n\r<".indexOf(cc)<0) {    //-------------------- after> not immediately <tag or newline, 
+        if("\n\r".indexOf(cc)>=0) {            //---------- immediately newline is given, then the text starts in the next line.
+          inp.seekNoWhitespace();                        // newline and space after are part of beautification. 
+        }
+        cc = inp.getCurrentChar();
+        if(cc != '<') {                //-------------------- not the end of node 
           StringBuilder contentBuffer = new StringBuilder(100);  // them it is content, maybe only a space or such.
           parseContent(inp, contentBuffer);                // add the content between some tags to the content Buffer.
           if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
@@ -1312,7 +1317,8 @@ public class XmlJzReader
     //classLoader.getResource("slx.cfg.xml");
     InputStream xmlCfgStream = clazz.getResourceAsStream(pathInJarFromClazz);
     if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
-    XmlCfg cfg = new XmlCfg(false);
+    XmlCfg cfg = new XmlCfg();
+    cfg.readFromText = false;
     readXml(xmlCfgStream, pathMsg, cfg.rootNode, this.cfgCfg);
     xmlCfgStream.close();
     cfg.transferNamespaceAssignment(this.namespaces);
@@ -1341,7 +1347,7 @@ public class XmlJzReader
     //classLoader.getResource("slx.cfg.xml");
 //    InputStream xmlCfgStream = clazz.getResourceAsStream(pathInJarFromClazz);
 //    if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
-    XmlCfg cfg = new XmlCfg(true);
+    XmlCfg cfg = new XmlCfg();
     cfg.readFromJar(clazz, pathInJarFromClazz, this.log);
 //    xmlCfgStream.close();
 //    cfg.transferNamespaceAssignment(this.namespaces);

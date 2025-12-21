@@ -121,7 +121,7 @@ public class GenXmlCfgJavaData {
       xmlReader.readCfg(this.cmdArgs.fileInput);
       xmlCfg = xmlReader.cfg;
     } else {
-      xmlCfg = new XmlCfg(true);
+      xmlCfg = new XmlCfg();
       xmlCfg.readCfgFile(this.cmdArgs.fileInput, this.log);
     }
     exec(xmlCfg);

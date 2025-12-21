@@ -53,6 +53,7 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2025-12-11 Helper class FilepathnameExt 
    * <li>2023-03-15 Hartmut new {@link FilePathnameExt}, new {@link #newFile(File, String, boolean)}
    * <li>2023-03-15 Hartmut bugfix {@link #addFilesWithBasePath(File, String, List)} used in {@link org.vishia.cmd.JZtxtcmdFileset}:
    *   If the basepath is given with 'basepath/:' or especially './:' then this should be admissible. Without fix, the first character of local path was missing. 
@@ -164,7 +165,7 @@ public class FileFunctions {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2023-08-07";
+  public final static String sVersion = "2025-12-21";
 
   public interface AddFileToList
   {
@@ -272,12 +273,24 @@ public class FileFunctions {
   
     /**Parse one argument for a file as directory and the parts of a file name for a file to create.
      * @param currDir can be null, may be given for a relative path
-     * @param sArg the given argument. It cab have the form "path/to/name*.ext"
-     *   with absolute or relative path, see {@link FileFunctions#absolutePath(String, File)}.
-     * @return proper instance whereas {@link #file} is the directory of the given path. file. {@link File#exists()} is not tested.
-     *   <br>#sNamePath is the name till '*' or the whole name, it is "" if "path/to/*.ext" is given. 
+     * @param sArg the given argument. Possible: "path/to/name*.ext"
+     *   <ul><li>If it contains a '/', a directory part, then this directory part is evaluated
+     *     using {@link FileFunctions#newFile(File, String, boolean)} with the 'currDir' as first argument.
+     *     With that return value {@link #file} is set as resulting current dir
+     *     from this argument and the 'currdir' argument. 
+     *     Note that it is possible using environment variables for that, 
+     *     and "~/..." for home and "/tmp/..." also for the Windows-%TMP% dir. 
+     *   <li>If 'sArg' does not contain a directory part, the returned {@link #file} is set with the given 'currDir',
+     *     means null if null is given for 'currDir'.
+     *   <li>If 'sArg' contains a '*' after a possible '/', then {@link #sNamePath} is set with the file name before '*'
+     *     and {@link #sExt} is set with teh part after '*'.
+     *   <li>If 'sArg' does not contain a '*' then {@link #sExt} := null and {@link #sNamePath} := sArg.   
+     *   </ul>
+     * @return proper instance whereas {@link #file} is the directory of the given path or remain null. 
+     *   {@link File#exists()} is not tested.
+     *   <br>{@link #sNamePath} is the name till '*' or the whole name, it is "" if "path/to/*.ext" is given. 
      *   It is also "" if sArg is given with ending slash or backslash.
-     *   <br>sExt is the part after the * or null if a * is not given.  
+     *   <br>{@link #sExt} is the part after the * or null if a * is not given.  
      * @throws FileNotFoundException can occur if the absolute directory is created.
      */
     public static FilePathnameExt parseDirWildcardName(File currDir, String sArg) throws FileNotFoundException {
@@ -287,7 +300,7 @@ public class FileFunctions {
       if(posDir >0) {
         dir = newFile(currDir, sArg.substring(0, posDir), false);
       } else {
-        dir = currDir == null ? new File(".").getAbsoluteFile(): currDir;
+        dir = currDir;
       }
       int posWildcard = sArg2.indexOf('*', posDir+1);   // search ':' after pos2 to exclude clash in windows with "D:..."
       String s1,s2;
@@ -319,8 +332,12 @@ public class FileFunctions {
       } else { 
         sNameOut = this.sNamePath;
       }
-      return new File(this.file, sNameOut);
+      File dir = this.file != null ? this.file : fOther.getParentFile(); 
+      return new File(dir, sNameOut);
     }
+    
+    
+    @Override public String toString() { return this.file.getPath() + ":" + this.sNamePath + (this.sExt == null ? "" : "*" + this.sExt); }
     
   }
 
@@ -328,9 +345,12 @@ public class FileFunctions {
   
   /**This class supports the call of {@link #addFileToList(String, List)}. */
   private static class ListWrapper implements AddFileToList
-  { private final List<File> files;
+  { 
+    private final List<File> files;
+    
     public ListWrapper(List<File> files){ this.files = files; }
-    public void add(File file){ files.add(file); }
+    
+    @Override public void add(File file){ this.files.add(file); }
   };
 
   

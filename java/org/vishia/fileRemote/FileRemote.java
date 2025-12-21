@@ -234,6 +234,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2025-12-18 {@link #moveTo(FileRemote, EventWithDst)} 
    * <li>2024-02-12 The {@link #cmdRemote(org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, String, int, int, int, FileRemoteCmdEventData, EventWithDst)}
    *   has now beside the String selectFilter the int bMaskSel. This CAN be used (is not yet) for selection via bits (TODO test may be run),
    *   but the importance yet used is the bit {@link FileMark#ignoreSymbolicLinks}. This was the reason of change. 
@@ -431,7 +432,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2023-06-17";
+  public static final String version = "2025-12-18";
 
   public final static int modeCopyReadOnlyMask = 0x00f
   , modeCopyReadOnlyNever = 0x1, modeCopyReadOnlyOverwrite = 0x3, modeCopyReadOnlyAks = 0;
@@ -1366,14 +1367,40 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
+  /**Starts the execution of copy in another thread.
+   * See {@link FileRemote#copyChecked(String, String, int, org.vishia.fileRemote.FileRemote.CallbackEvent)}.
+   * Hint: Set breakpoint to {@link #execCmd(org.vishia.fileRemote.FileRemoteCmdEventData, EventWithDst)}
+   * to stop in the execution thread.
+   */
   public String copyTo(FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
     co.setCmdChgFileRemote(this, FileRemoteCmdEventData.Cmd.copyFile, dst, null, 0);
-    return this.device.cmd(evBack ==null, co, evBack);
+    boolean bWait = (evBack ==null);
+    String sError = this.device.cmd(bWait, co, evBack);
+    return sError;
     //this.device.copyFile(this, dst, evBack);    
+  }
+
+
+
+  
+  /**Starts the execution of copy in another thread.
+   * See {@link FileRemote#copyChecked(String, String, int, org.vishia.fileRemote.FileRemote.CallbackEvent)}.
+   * Hint: Set breakpoint to {@link FileAccessorLocalJava7#execCmd(org.vishia.fileRemote.FileRemoteCmdEventData, EventWithDst)}
+   * to stop in the execution thread.
+   */
+  public String moveTo(FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    FileRemoteCmdEventData co = new FileRemoteCmdEventData();
+    co.setCmdChgFileRemote(this, FileRemoteCmdEventData.Cmd.moveFile, dst, null, 0);
+    boolean bWait = (evBack ==null);
+    String sError = this.device.cmd(bWait, co, evBack);
+    return sError;
   }
 
 

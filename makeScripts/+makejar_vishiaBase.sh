@@ -7,7 +7,7 @@ echo currdir $PWD
 ## Determines the name of some files marked with the date.
 ## If it not set, the current date will be used. This is usual proper, to prevent confusion.
 export VERSIONSTAMP="$(date -I)"
-export VERSIONSTAMP_MINISYS=""
+export VERSIONSTAMP_GETWEBF=""
 
 ## Determines the timestamp of the files in the jar. The timestamp determines the MD5 check code. 
 ## Do not change the timestamp on repeated build, and check the checksum and content of jar.
@@ -18,8 +18,8 @@ export VERSIONSTAMP_MINISYS=""
 ## if it is assumed that the sources are unchanged.
 ## Only then a comparison of MD5 is possible. 
 ## The comparison byte by byte inside the jar (zip) file is always possible.
-export TIMEinJAR="2025-11-02+00:00"
-export TIMEinJAR_MINISYS="2025-08-01+00:00"
+export TIMEinJAR="2025-12-20+00:00"
+export TIMEinJAR_GETWEBF="2025-08-01+00:00"
 
 ## This directory contains some basic scripts. Should be exists
 export MAKEBASEDIR="src/srcJava_vishiaBase/makeScripts"
@@ -63,19 +63,19 @@ echo
 echo
 
 
-echo ====== build minisys: =============================================================
+echo ====== build GetWebfile: =============================================================
 #==============
-export TIMEinJAR=$TIMEinJAR_MINISYS
+export TIMEinJAR=$TIMEinJAR_GETWEBF
 
 ## Determine the name of some files and directories with the component's name:
-export VERSIONSTAMP="$VERSION_MINISYS"
-export DSTNAME="vishiaMinisys"
+export VERSIONSTAMP="$VERSION_GETWEBF"
+export DSTNAME="vishiaGetWebfile"
 
 ## Determines the sources for this component to create a jar
 SRCDIRNAME="src/srcJava_vishiaBase"
 export SRC_ALL=""                            ## use all sources from here
 export SRC_ALL2=""                           ## use all sources also from here
-export FILE1SRC="@$SRCDIRNAME/makeScripts/minisys.files" #files to compile contained in this file
+export FILE1SRC="@$SRCDIRNAME/makeScripts/GetWebfile.files" #files to compile contained in this file
 export SRCPATH="$SRCDIRNAME/java";           ## search path for depending sources if FILE1SRC is given
 
 # Determines search path for compiled sources (in jar) for this component. 
@@ -83,7 +83,7 @@ export SRCPATH="$SRCDIRNAME/java";           ## search path for depending source
 unset CLASSPATH
 
 ## Determines the mainfist file for the jar
-export MANIFEST=$SRCDIRNAME/makeScripts/minisys.manifest
+export MANIFEST=$SRCDIRNAME/makeScripts/GetWebfile.manifest
 
 # Determines resource files to store in the jar
 export RESOURCEFILES=""

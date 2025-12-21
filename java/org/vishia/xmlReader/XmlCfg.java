@@ -191,18 +191,28 @@ public class XmlCfg
       );
 
 
-  protected final boolean readFromText;
+  protected boolean readFromText;
   
   
-  public XmlCfg(boolean readFromText) {
+  /**
+   * @param readFromText
+   * @deprecated use {@link #XmlCfg()}.
+   */
+  @Deprecated public XmlCfg(boolean readFromText) {
     this.readFromText = readFromText;
   }
   
-  /**Creates the configuration to read a config.xml file.
+  /**Constructor for empty instance.
+   * Use {@link #readCfgFile(File, LogMessage)} or adequate to set a configuration.
+   */
+  public XmlCfg() {
+  }
+  
+  /**Creates the configuration to read a config.xml file from XML.
    * @return instance
    */
   static XmlCfg newCfgCfg()
-  { XmlCfg cfgCfg = new XmlCfg(false);
+  { XmlCfg cfgCfg = new XmlCfg();
     try {
       cfgCfg.rootNode = new XmlCfg.XmlCfgNode(null, cfgCfg, null);  //The rootnode of the cfg is only formalistic.
       
@@ -418,6 +428,7 @@ public class XmlCfg
   public boolean readFromText(StringPartScan sp, LogMessage log) {
     assert(this.readFromText);
     boolean bOk = true;
+    this.readFromText = true;
     sp.setIgnoreWhitespaces(true);
     if(!sp.scanStart().scan("XmlJzReader-Config 2024-05").scanOk()) {
       log.writeError("ERROR readCfgFromText, faulty head: %s", sp.getCurrent(30));

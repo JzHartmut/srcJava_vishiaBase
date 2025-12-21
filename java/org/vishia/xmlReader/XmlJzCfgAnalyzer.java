@@ -352,7 +352,6 @@ public class XmlJzCfgAnalyzer
   
   public XmlJzCfgAnalyzer () {
     this.log = new LogMessageStream(null, null, System.out, System.err, false, Charset.forName("UTF-8"));
-    
   }
   
   
@@ -455,6 +454,9 @@ public class XmlJzCfgAnalyzer
       } else {
         xmlReader.readXml(fIn1.file, this.xmlStructTree, null);
       }
+    }
+    for(XmlStructureNode ndRoot :  this.xmlStructTree.nodes.values()) {
+      ndRoot.onlySingle = false;  // support parsing more as one file, more roots.
     }
     //
     checkStructTree();

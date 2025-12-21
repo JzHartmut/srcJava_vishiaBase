@@ -21,6 +21,39 @@ import java.security.NoSuchAlgorithmException;
 public class GetWebfile {
   
   
+  /**Version, history and license.
+   * <ul>
+   * <li>2025-12-18 output improved 
+   * <li>2020-03-15 improved
+   * <li>2020-03-17 created
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public final static String version = "2025-12-21";
+  
   public static void main(String[] args) {
     int exitcode = smain(args);
     System.exit(exitcode);
@@ -49,7 +82,7 @@ public class GetWebfile {
       System.out.println(" ?MD5= or ?!MD5= in line and file exists, then calculate and output the MD5 from the existing file");
       System.out.println("exitcode 0: all ok, 1: one or more files already exist 2: hash faulty 5: parameter error");
       System.out.println(" Note: Use slash instead backslash on windows for file name too!");
-      System.out.println(" Made by Hartmut Schorrig, www.vishia.org, 2020-03-15, LPGL-License");
+      System.out.println(" Made by Hartmut Schorrig, www.vishia.org, 2020-03-15/2025-12-21, LPGL-License");
     } else {
       String src = args[0];   //The URL
       
@@ -170,7 +203,7 @@ public class GetWebfile {
     if(!bDstExists || bCheck) {  //do nothing if there is already a file with the same name.
       InputStream sin = null;
       FileOutputStream sout = null;
-      MessageDigest md = null;
+      MessageDigest md = null;                   // MD5 calculator
       if(md5 !=null || bCheck) {
         try {
           md = MessageDigest.getInstance("MD5");
@@ -182,16 +215,22 @@ public class GetWebfile {
       int zbytesSum = 0; 
       try {
         if(bDstExists) {
+          System.out.print("check MD5 from: " + dst.getPath() + "  (" + dst.getAbsolutePath() + ")\n  ");
           sin = new FileInputStream(dst); //check dst
         } else {
-          System.out.print("copy to: " + dst.getAbsolutePath() + " : from URL: " + src + " ... ");
+          System.out.print("copy from URL: " + src + "\n  to: " + dst.getPath() + "  (" + dst.getAbsolutePath() + ")\n  ");
           sout = new FileOutputStream(dst);
           URL url = new URL(src);
           sin = url.openStream();
         }
         //The dst file name is anytime the second argument. 
         //If this ends with a / then it is a directory.
-        byte[] buffer = new byte[16384];  //16 k Buffer
+        // Read possible in 256 k Portions, but lesser adequate sin capability (Inet: 8k seen).
+        // but write a dot after each 64k
+        int zBuffer = 0x10000;
+        byte[] buffer = new byte[zBuffer];  //256 k Buffer
+        int ctBytesDot = zBuffer;
+        int ctShowDot = 0;
         int zbytes;
         do {
           zbytes = sin.read(buffer);  //read from web or read from file if exists
@@ -200,28 +239,35 @@ public class GetWebfile {
               sout.write(buffer, 0, zbytes);
             }
             zbytesSum += zbytes;
-            if(md !=null) {
+            if(md !=null) {                      // MD5 calculation while loading
               md.update(buffer, 0, zbytes);
             }
           }
+          if((ctBytesDot -= zbytes) <0) {
+            ctShowDot +=1;
+            System.out.print(".");
+            ctBytesDot += zBuffer;
+          }
         } while(zbytes >0);
+        if(ctShowDot >32) { System.out.print("\n  : "); }  // newline if the line would be longer than 92 chars.
+        else { System.out.print(": "); }
       }
       catch(IOException exc) {
-        if(sin == null) System.err.println("cannot open URL:" + src);
-        else if(sout == null) System.err.println("cannot create file:" + dst.getAbsolutePath());
-        else System.err.println("exception: " + exc.getMessage());
+        if(sin == null) System.err.println("\n ERROR cannot open URL:" + src);
+        else if(sout == null) System.err.println("\n  ERROR cannot create file:" + dst.getAbsolutePath());
+        else System.err.println("\n  EXCEPTION: " + exc.getMessage());
         exitcode = 4;
       }
       if(sin !=null) { 
         try{ sin.close(); }
-        catch(IOException exc) { System.err.println("unexpected exception on close URL"); }
+        catch(IOException exc) { System.err.println("\n  ERROR unexpected exception on close URL"); }
       }
       if(sout !=null) { 
         try{ sout.close(); }
-        catch(IOException exc) { System.err.println("unexpected exception on close file"); }
+        catch(IOException exc) { System.err.println("\n  ERROR unexpected exception on close file"); }
       }
       if(md !=null) {
-        byte[] md5code = md.digest();
+        byte[] md5code = md.digest();            // Complete MD5
         
         StringBuilder md5read = new StringBuilder();
         for(byte md5b: md5code) {
@@ -231,22 +277,22 @@ public class GetWebfile {
           } else if(md5h.length() ==1) {
             md5read.append('0');
           }
-          md5read.append(md5h);
+          md5read.append(md5h);                  // presentation of the MD5
         }
         boolean bMD5ok = true;
         int ix = 0;
         if(md5read.length() !=32) {
-          System.err.println("internal MD5 algorithm faulty, not 16 byte");
+          System.err.println("\n  ERROR internal MD5 algorithm faulty, not 16 byte");
           exitcode = 5;
         } else {
           if(md5.length() !=32) {
             bMD5ok = false;
             if(!bDstExists) {
-              System.err.println("faulty length for -md5:, should be 32, detect: " +md5.length());
+              System.err.println("\n  ERROR faulty length for -md5:, should be 32, detect: " +md5.length());
               exitcode = 5;
             } 
           } else {
-            for(ix = 0; ix < 32; ++ix) {
+            for(ix = 0; ix < 32; ++ix) {         // check any byte of MD5
               if(md5read.charAt(ix) != md5.charAt(ix)) {
                 bMD5ok = false;
                 break;
@@ -254,22 +300,24 @@ public class GetWebfile {
             }
           }
         }
-        if(bDstExists && bCheck) {
-          System.out.print("MD5=" + md5read + (bMD5ok ? " ok: " : " faulty: ") + dst.getAbsolutePath() + " ... ");
+        System.out.print("read " + Integer.toString(zbytesSum) + " bytes");
+        if(bCheck) {
+          System.out.println(", MD5=" + md5read + (bMD5ok ? " ok: " : " faulty: "));
         }
         else if(!bMD5ok) {
           if(bStrict) {
-            System.err.println("-md5: faulty at position " + ix);
+            System.err.println("  -md5: faulty at position " + ix);
             exitcode = 2;
             boolean bok = dst.delete();
             if(!bok) {
-              System.err.println("pay attention: file cannot be deleted: " + dst.getAbsolutePath());
+              System.err.println("  pay attention: file cannot be deleted: " + dst.getAbsolutePath());
             }
           } else {
-            System.out.print(" faulty MD5, read MD5=" + md5read + "  ");
+            System.out.print("  faulty MD5, read MD5=" + md5read + "  ");
           }
         }
-        System.out.println(Integer.toString(zbytesSum) + " bytes");
+      } else {
+        System.out.println("read " + Integer.toString(zbytesSum) + " bytes without check sum");
       }
     }
     return exitcode;
