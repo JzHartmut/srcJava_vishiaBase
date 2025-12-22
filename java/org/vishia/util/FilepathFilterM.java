@@ -36,7 +36,7 @@ import java.util.List;
  */
 public class FilepathFilterM implements ToStringBuilder {
 
-//  * Note: The {@link java.io.FilenameFilter} is better as the {@link java.io.FileFilter}
+//  * Note: The {@link java.io.FilenameFilter} is better than the {@link java.io.FileFilter}
 //  *   because the {@link java.io.File#list(FilenameFilter)} builds a File instance only if the name is tested positively.
 //  *   In opposite the {@link java.io.File#list(FileFilter)} builds a File instance anytime before the test. 
 //  *   The difference may be marginal.But {@link java.io.File#list(FileFilter)} produces some more instances in the heap,
@@ -45,6 +45,11 @@ public class FilepathFilterM implements ToStringBuilder {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2025-12-21 Hartmut bugfix "Directory" has had the effect of "Directory*", now correct. 
+   *   Fixed in {@link #checkRecursive(String, boolean, int[])} if only {@link #sBegin} is given, and {@link #bNoWildcard},
+   *   then the length of the input should be equal {@link #zBegin}, or here tested, compare with 'posEnd' which is the length. 
+   * <li>2025-12-05 Hartmut more commented and elaborately tested what about variants in [..|..],
+   *   necessary (tested for) arguments of the file list for git commit. 
    * <li>2025-11-02 Hartmut {@link #checkRecursive(String, boolean, int[])};
    *   bugfix the last only file entry was used to accept a directory with this name.
    *   Now test in {@link #checkRecursive(String, boolean, int[])} whether it is the last entry and not dir or vice versa,
