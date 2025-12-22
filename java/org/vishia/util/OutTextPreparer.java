@@ -47,7 +47,7 @@ import org.vishia.util.Java4C.ConstRef;
  * in the following forms (example, text file via readTemplate...(): 
  * <pre>
  * 
- * <:otx: otxExample : data, placeholder, NEWLINE==nli >
+ * <:otx: otxExample : data, placeholder, NEWLINE:--:nli >
  * Output plain text with <&placeholder.value>
  * <:if:data.cond>conditional output<:else>other variant<.if>
  * <:for:var:data.container>element = <&var_key>: <&var><:if:var_next>, <.if><.for>
@@ -88,14 +88,26 @@ try {
  *   You can reuse this instance with {@link #exec(Appendable, DataTextPreparer)} invocations one after another in the same thread.
  * </ul>
  * The instance of the {@link DataTextPreparer} must be matching to the OutputTextPreparer
- * because internally only integer numbers are used for access.
+ * because internally only integer indices are used for access.
  * <br> 
  * To assign data to the named arguments use the {@link DataTextPreparer#setArgument(String, Object)} 
  * or also {@link DataTextPreparer#setArgument(int, Object)} with given numeric index of the arguments).
  * That are your user data which can be accessed via <code><&arg1....></code> in your pattern. 
  * Compare it with the arguments of a printf, but with the difference that the possibilities to use the arguments
  * are some more powerful, not only for numbers and date. 
- * 
+ * <ul>
+ * <li>If the argument '<b>NEWLINE</b>' is given, then following characters till an identifier, or till ',' or '>' 
+ *   can (should) be used to mark the beginning of a new line. (Also '&lt;:n>' is possible, 
+ *   sensible inside an <code>&lt;:if...> ... &lt;:n>...&lt;.if></code>).
+ * <li>Then a line break in the script is not outputted, the spaces before line break and after line break
+ *   are skipped as 'white spaces'. 
+ *   This allows a more free design of the script.
+ * <li>The possible variable after the NEWLINE is used if given to write out the newline character sequence.
+ *   It can be contain especially a determined indentation, should be start with <code>"\n    "</code>
+ *   Or maybe also <code>"\r   "</code> if desired.
+ * <li>The free choice of the newline determining character sequence in the script allows proper readability
+ *   and preventing conflicts with necessary text sequences.  -    
+ * </ul>
  * <br>
  * <br>
  * <b>General to text and placeholder</b><br>
@@ -181,6 +193,12 @@ try {
  * With <code>&lt;&...:%format></code> an access to a number can be formatted due to the capabilities of java.util.Formatter.
  * For example output a value as hexadecimal presentation write <code>&lt;&access.to.value:%04x></code>.
  * If formatting is not possible an error text from the thrown FormatterException is output. 
+ * <br>
+ * <br>
+ * <b>Tabulator, set to a column position</b><br>
+ * &lt;:tab:##?POSITION> inserts so many spaces as necessary to realize the given position in the line.
+ * If the line is longer then the requested position then one space is inserted.
+ * '##?POSITION' means a simple positive number. 
  * <br>
  * <br>
  * <b>Control statements</b><br>
@@ -285,7 +303,10 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
-   * <li>2025-12-11: bugifx {@link #parse(Class, Map, Map)}: If this is called twice for the same script, then the {@link #cmds} are also twice
+   * <li>2025-12-22: NEWLINE-::_name, Now the newline string can have any character except ',' and identfier.
+   *   Hence more possibilities. 
+   * <li>2025-12-21: capability of &lt;:tab:20> 
+   * <li>2025-12-11: bugfix {@link #parse(Class, Map, Map)}: If this is called twice for the same script, then the {@link #cmds} are also twice
    *   and the output is dirty. hence check, exception if it is called a second one. Repair it on calling level!
    *   This was detected first for {@link org.vishia.xmlReader.XmlCfg#writeToText(File, LogMessage)} after the gTxt scripts was set to static,
    *   which is intrinsically correct, but has forced this error if the operation was called twice. It is fixed there. 
@@ -306,7 +327,7 @@ public final class OutTextPreparer
    * <li>2024-05-18 {@link ForCmd#ixEntryKey}, {@link #execFor(Appendable, ForCmd, int, Object, DataTextPreparer)}: 
    *   Now the &lt;:for:var.... creates also a var_key for the key value. 
    * <li>2024-05-17 {@link DataTextPreparer#DataTextPreparer(OutTextPreparer)}: now checks whether the OutTextPreparer is initialized, 
-   *   prevent construction (thows) if not. This is if {@link OutTextPreparer#cmds} are empty.
+   *   prevent construction (throws) if not. This is if {@link OutTextPreparer#cmds} are empty.
    *   This prevents faulty instances if the {@link DataTextPreparer} is built to early, with a non initialized {@link OutTextPreparer}. 
    * <li>2024-03-22 ##Comment: All spaces before are also removed as space for comment. If ##comment start on a new line, the whole line is ignored.
    *   It is in {@link #readTemplateList(InputStream, String, Object, Map)}. 
@@ -403,7 +424,7 @@ public final class OutTextPreparer
   
   
   /**This class is used to write out the generated text.
-   * It supports line count and debug view of the text.
+   * It supports line count, position in line and debug view of the text.
    * <ul>
    * <li>If one of the ctor is called with a StringBuilder as {@link Appendable}, as the output,
    *   then the field {@link #sb} is also set. It is only a second link, not immediately used for OutText preparation.
@@ -412,9 +433,11 @@ public final class OutTextPreparer
    *   but necessary as definition before. But this is outside of OutText preparation. 
    *   The operation {@link #add(WriteDst)} allows adding a generated text to the current output, 
    *   the source to add needs the StringBuilder output.
-   * <li>All {@link #append(CharSequence)} operations looks for '\n' inside the output text.
+   * <li>All 'append(...)' operations looks for '\n' inside the output text.
    *   Any found new line character increments the {@link #lineCt()}.
    *   The {@link #lineCt()} can be used to output the line number. 
+   * <li>Any found new line sets {@link #linePos} to 0, other character increments it.
+   * <li>
    * <li>If {@link #OutTextPreparer(Appendable, int, int)} is used, an extra StringBuilder is created.
    *   then all {@link #append(CharSequence)} operations appends only to {@link #wr},
    *   buf if {@link #finishAppend()} is called, it writes out the content to {@link #wrDst},
@@ -432,7 +455,7 @@ public final class OutTextPreparer
      */
     private final Appendable wrDst;
     
-    /**This is always the destination for all {@link #append(char)}, {@link #append(CharSequence)}, {@link #append(int)},
+    /**This is always the used destination reference for all {@link #append(char)}, {@link #append(CharSequence)}, {@link #append(int)},
      * {@link #append(CharSequence, int, int)} and {@link #add(WriteDst)}.
      * It is either a StringBuilder if {@link #OutTextPreparer(Appendable, int, int)} is called,
      * or it is any other Appendable.
@@ -452,7 +475,13 @@ public final class OutTextPreparer
     /**Counts the '\n' inside appended texts. */
     private int lineCt;
     
+    /**Stores the initial given value for lineCt. 
+     * Used only in {@link #add(WriteDst)} to build the corrent number of lines.
+     */
     private final int lineStart;
+    
+    /**Current position (column) in the current line.*/
+    private int linePos;
     
     /**If true, then the next any {@link #append(char)} cleans first the {@link #wr} as StringBuilder
      * and sets this flag to false. 
@@ -462,7 +491,15 @@ public final class OutTextPreparer
      */
     private boolean bSbClean;
     
-    /**Constructs a new output destination to write the generated text.
+    /**Constructs a new output destination to write the generated text without an additional StringBuilder.
+     * The given 'wr' is immediately used for output. 
+     * <ul>
+     * <li>{@link #wrDst} is set to null, not used-
+     * <li>{@link #wr}, the immediately used output is set to given 'wr' argument.
+     * <li>{@link #sb} is only set if 'wr' is a StringBuilder, to view the same via this reference.
+     *   If 'wr' is not a StringBuilder, 'sb' = null, no view of written text in debug possible.
+     * <li>#lineCt and #lineStart are set with 'lineStart' but maybe non exactly used.
+     * </ul>  
      * @param wr may be also an instance of {@link StringBuilder}, then {@link #sb} is set also.
      * @param lineStart number of this first line. It is important for immediately instances.
      * The lineCt starts from 1 for the first line.
@@ -478,6 +515,16 @@ public final class OutTextPreparer
 
     /**Constructs a new output destination to write the generated text using a temporary used StringBuilder
      * for any {@link OutTextPreparer#exec(Appendable, DataTextPreparer) }.
+     * <ul>
+     * <li>{@link #wrDst} is set to the given wrDst argument, the originally output.-
+     * <li>{@link #wr} is created as temporary used StringBuilder, to write first all into.
+     *   It means on debug-output the output is seen here, but not immediately in the given 'wrDst'.
+     *   <br>
+     *   The content is primary written to here, and with 
+     * <li>{@link #sb} is only set if 'wrDst' is a StringBuilder, to view the same via this reference.
+     *   If 'wrDst' is not a StringBuilder, 'sb' = null, no view of written text in debug possible.
+     * <li>#lineCt and #lineStart are set with 'lineStart'.
+     * </ul>  
      * @param wrDst may be also an instance of {@link StringBuilder}, then {@link #sb} is set also.
      * @param lineStart number of this first line. It is important for immediately instances.
      * The lineCt starts from 1 for the first line.
@@ -540,8 +587,12 @@ public final class OutTextPreparer
      * @throws IOException
      */
     public WriteDst append(int val) throws IOException {
-      if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
-      this.wr.append(Integer.toString(val));
+      if(this.bSbClean && this.wr instanceof StringBuilder) { // bSbClean is set in finishAppend(...)
+        ((StringBuilder)this.wr).setLength(0); this.bSbClean = false;
+      } 
+      String sInteger = Integer.toString(val);
+      this.linePos += sInteger.length();
+      this.wr.append(sInteger);                  // appends to the output wr
       return this;
     }
     
@@ -551,13 +602,17 @@ public final class OutTextPreparer
       return append(csq, 0, csq.length());
     }
 
-    /**Standard append operation see {@link Appendable#append(CharSequence, int, int)} */
+    /**Standard append operation see {@link Appendable#append(CharSequence, int, int)} 
+     * The implementation calls {@link #append(char)} for {@link #wr},
+     * but checks \n to count {@link #lineCt()} and {@link #linePos}.
+     */
     @Override public WriteDst append ( CharSequence csq, int start, int end ) throws IOException {
       if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
       for(int ix = start; ix < end; ++ix) {
-        char cc = csq.charAt(ix);
-        if(cc =='\n') { this.lineCt +=1; }
-        this.wr.append(cc);
+        char cc = csq.charAt(ix);                          // append char by char to check \n and count linePos 
+        if(cc=='\n') { this.lineCt +=1; this.linePos = 0; }
+        else { this.linePos +=1; }
+        this.wr.append(cc);                      // append to the output wr
       }
       //this.wr.append(csq, start, end);  //TODO test calculation time.
       return this;
@@ -566,10 +621,25 @@ public final class OutTextPreparer
     /**Standard append operation see {@link Appendable#append(char)} */
     @Override public WriteDst append ( char c ) throws IOException {
       if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
-      if(c=='\n') { this.lineCt +=1; }
+      if(c=='\n') { this.lineCt +=1; this.linePos = 0; }
+      else { this.linePos +=1; }
       this.wr.append(c);
       return this;
     }
+    
+    
+    final static String spaces = "                    ";
+    
+    public void setLinePos(int linePos) throws IOException {
+      int nrSpaces = linePos - this.linePos;
+      if(nrSpaces <=0) {
+        nrSpaces = 1;
+      }
+      this.linePos += nrSpaces;
+      while(nrSpaces >= spaces.length()) { this.wr.append(spaces); nrSpaces -=spaces.length(); }
+      if(nrSpaces >0) { this.wr.append(spaces.substring(0, nrSpaces)); }
+    }
+    
     
     /**Close() if any of {@link #wrDst} or {@link #wr} is a {@link Closeable},
      * especially a File {@link Writer}
@@ -755,7 +825,7 @@ public final class OutTextPreparer
     call('C', "call"),
     exec('E', "exec"),
     debug('D', "debug"),
-    pos('p', "pos")
+    tab('p', "tab")
     ;
     ECmd(char cmd, String sCmd){
       this.cmd = cmd; this.sCmd = sCmd;
@@ -773,10 +843,14 @@ public final class OutTextPreparer
   
   static class Cmd extends CalculatorExpr.Operand{
     
+    /**Index of this command in the {@link OutTextPreparer#cmds}
+     */
     public final int ixCmd;
     
+    /**Stores the line and column where the command is found in the given source gTxt.*/
     public final int[] linecol;
     
+    /**The enum value, which command is it.  */
     public final ECmd cmd;
     
     /**If necessary it is the offset skipped over the ctrl sequence. */
@@ -1018,7 +1092,16 @@ public final class OutTextPreparer
     }
   }
 
-  
+  static class TabCmd extends Cmd {
+    
+    public TabCmd( int ixCmd, int[] linecol, int linePos ) {
+      super(ixCmd, linecol, ECmd.tab, null);
+      this.linePos = linePos;
+    }
+
+    final int linePos;
+    
+  }
   
   static class CmdString extends Cmd {
     public CmdString ( int ixCmd, int[] linecol, String str)
@@ -2047,10 +2130,14 @@ public final class OutTextPreparer
       if(sVariable.equals("NEWLINE")) {
         char cLineoutStart = sp.getCurrentChar();
         long pos = sp.getCurrentPosition();
-        sp.seekNoChar("" + cLineoutStart);
-        long pos2 = sp.getCurrentPosition();
-        this.nLineoutStart = (int)(pos2 - pos);
-        this.sLineoutStart = sp.getCharSequenceRange(pos, pos2).toString();
+        sp.lentoIdentifier(",", null).len0end();           // till identifier or next ',' or end if no identifier follows
+        this.sLineoutStart = sp.getCurrent().toString();
+        this.nLineoutStart = sLineoutStart.length();
+        sp.fromEnd();
+//        sp.seekNoChar("" + cLineoutStart);
+//        long pos2 = sp.getCurrentPosition();
+//        this.nLineoutStart = (int)(pos2 - pos);
+//        this.sLineoutStart = sp.getCharSequenceRange(pos, pos2).toString();
         if(sp.scanStart().scanIdentifier().scanOk()) {
           String sVariableLineIndent = sp.getLastScannedString();
           this.ixVarLineoutStart = listvarValues.size();
@@ -2426,6 +2513,13 @@ public final class OutTextPreparer
         parseCall(this.otx.pattern, this.pos0, this.pos1, this.sp, this.execClass, this.idxConstData,this. idxScript);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
+      else if(this.sp.scan(":tab:").scanInteger().scan(">").scanOk()) {
+        long linePos = this.sp.getLastScannedIntegerNumber();
+        //====>
+        Cmd cmd = new TabCmd(this.otx.cmds.size(), this.sp.getlineCol(), (int)linePos);
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, cmd);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }  
       else if(this.sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
         String cmpString = this.sp.getLastScannedString().toString();
         String debugVar = this.sp.getLastScannedString().toString();
@@ -3049,15 +3143,18 @@ public final class OutTextPreparer
             } 
           } break;
           case call: {
-            Object data = dataForCmd(cmd, args, wrCt);
-            if(data == null) {
-              wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ": variable not found, not given??>");
-            }
-            if(!(data instanceof OutTextPreparer)) {
-              wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ":  variable is not an OutTextPreparer ??>");
-            } else {
-              execCall(wrCt, (CallCmd)cmd, args, (OutTextPreparer)data);
-            } 
+              Object data = dataForCmd(cmd, args, wrCt);
+              if(data == null) {
+                  wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ": variable not found, not given??>");
+              }
+              if(!(data instanceof OutTextPreparer)) {
+                  wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ":  variable is not an OutTextPreparer ??>");
+              } else {
+                  execCall(wrCt, (CallCmd)cmd, args, (OutTextPreparer)data);
+              } 
+          } break;
+          case tab: {
+              wrCt.setLinePos(((TabCmd)cmd).linePos);
           } break;
           case debug: {
             if(((DebugCmd)cmd).cmpString ==null || dataForCmd(cmd, args, wrCt).toString().equals(((DebugCmd)cmd).cmpString)){

@@ -18,8 +18,8 @@ export VERSIONSTAMP_GETWEBF=""
 ## if it is assumed that the sources are unchanged.
 ## Only then a comparison of MD5 is possible. 
 ## The comparison byte by byte inside the jar (zip) file is always possible.
-export TIMEinJAR="2025-12-20+00:00"
-export TIMEinJAR_GETWEBF="2025-08-01+00:00"
+export TIMEinJAR="2025-12-22+00:00"
+export TIMEinJAR_GETWEBF="2025-12-21+00:00"
 
 ## This directory contains some basic scripts. Should be exists
 export MAKEBASEDIR="src/srcJava_vishiaBase/makeScripts"

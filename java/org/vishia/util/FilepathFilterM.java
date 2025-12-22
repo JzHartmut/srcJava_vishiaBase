@@ -625,13 +625,19 @@ public class FilepathFilterM implements ToStringBuilder {
     }                                            //--------^^ check end, posStartEnd is set.
     //
     if(this.sContain !=null) {                   //--------vv _J_
-      if(! name.substring(posEndBegin[0], posStartEnd).contains(this.sContain)) {
-        return null;                                    // does non contains *contain*
-      }
+        if(! name.substring(posEndBegin[0], posStartEnd).contains(this.sContain)) {
+            return null;                                    // does non contains *contain*
+        } else {
+            return nextf;
+        }
     } else if(!this.bNoWildcard) {
-      posEndBegin[0] = zName;    // the rest is wildcard
+        posEndBegin[0] = zName;    // the rest is wildcard
+        return nextf;
+    } else if(posEndBegin[0] < posEnd) {         //--------vv bNoWildcard is set, then posEndBegin[0] == posEnd ?
+        return null;                                       // if lesser, then it is false.
+    } else {
+        return nextf;                                         // all has matched
     }
-    return nextf;                                         // all has matched
   }
   
   
