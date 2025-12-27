@@ -132,7 +132,7 @@ public class FileCluster
   /**Gets the existing file instance with this path from the FileCluster or creates and registers a new one.
    * <br><br>
    * If the file is not existing on the file system it is created anyway because the file may be a new candidate.
-   * Form the java.io.File, the path is not checked against the file system.
+   * From the java.io.File, the path is not checked against the file system.
    * <ul>
    * <li>The file is not registered in the index in this class if it is found as children of a registered directory.
    * <li>The parent of the file is created and registered too because the returned file should have a parent.

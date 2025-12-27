@@ -55,4 +55,4 @@ echo you should copy or compare and copy the doc to the destination
 echo and/or zip the doc, shipment and unzip it on the destination.
 echo it should be manually done.
 
-
+pause

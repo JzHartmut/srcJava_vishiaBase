@@ -115,7 +115,7 @@ public class FileMark extends SelectMask
   public static final int cmpContentNotEqual = 0x08000000;
 
   /**mask of all bits for comparison one file. */
-  public static final int mCmpFile =           0x0fc00000;
+  public static final int mCmpFile =           0x3fc00000;
 
   
 

@@ -953,6 +953,32 @@ private static final void throwSubSeqFaulty(int from, int to)
   }
 
 
+  /**Sets the endposition of the part of string to the first char which is an identifier start char
+   * or one of the given additonal chars.
+   * @see lentoIdentifier().
+   * @java2c=return-this.
+   * @param additionalChars CharSequence of additinal chars there are also accept
+   *        as identifier chars. 
+   */
+  public final StringPart lentoStartIdentifierOrChar(CharSequence additionalStartChars)
+  { this.endLast = this.end;
+    this.end = this.begin;
+    if(this.end >= this.endMax){ this.bFound = false; }
+    else
+    { char cc = this.content.charAt(this.end);
+      while(  this.end < this.endMax 
+          && !(  (cc = this.content.charAt(this.end)) == '_' 
+              || (cc >= 'A' && cc <='Z') 
+              || (cc >= 'a' && cc <='z') 
+              || (additionalStartChars != null && StringFunctions.indexOf(additionalStartChars,cc)>=0)
+           )  )
+      { this.end +=1; }
+      this.bFound = (this.end > this.begin);
+    }
+    return this;
+  }
+
+
   /** Sets the end position of the part of string to the end of the number which is beginning on start.
    *  If the part starts not with an admissible char, the end is set to the start position 
    *  and this.bFound is set to false.

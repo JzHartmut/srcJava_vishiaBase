@@ -1,10 +1,9 @@
 2025-08-09 14:53:08  x     +buildTimestamps.sh                      ::           .254  1130920915 
 2023-04-13 11:08:12  x  H  .git                                     ::           . 72 -1237754712 
-2025-12-22 19:40:08  x  H  .gitCommit                               ::           . 21  2108712713 
+2025-12-27 21:23:27  x  H  .gitCommit                               ::           .606  2084733962 
 2022-05-11 00:09:17  x  H  .gitCommit_tillcurr                      ::          2.695  0194683831 
 2025-11-02 00:09:30  x  H  .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x  H  .gitignore                               ::           . 49  0026385455 
-2025-12-12 20:43:24  x     Untitled-1                               ::           .459  0849595933 
 2024-10-15 13:34:10  x     _pushGithub.sh                           ::           .650  1596878560 
 2020-03-25 23:58:56  x     _push_Q.sh                               ::           .144  2119690358 
 
@@ -176,9 +175,9 @@
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
 2025-11-02 12:57:59  x     FileAccessorLocalJava7.java              ::         76.807 -1408888824 
-2024-04-08 18:01:55  x     FileCallbackLocalCmp.java                ::         23.691  0437789410 
+2025-12-27 21:12:07  x     FileCallbackLocalCmp.java                ::         23.689  0974428395 
 2024-02-18 19:03:03  x     FileCallbackLocalCopy.java               ::          8.521  1096038750 
-2023-07-24 19:37:36  x     FileCallbackLocalDelete.java             ::          4.665 -0575631861 
+2025-12-26 16:49:29  x     FileCallbackLocalDelete.java             ::          4.683  0164019025 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java#        ::         53.782 -1885457407 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
@@ -186,9 +185,9 @@
 
 ============================== java/org/vishia/fileRemote/ =========================================
 2023-07-24 20:50:29  x     FileAccessZip.java                       ::         17.511 -2066156768 
-2025-12-13 17:01:33  x     FileCluster.java                         ::         19.757  1505912156 
-2024-02-22 23:00:13  x     FileMark.java                            ::         11.522  1453524361 
-2025-12-21 14:38:22  x     FileRemote.java                          ::        144.223  0870635095 
+2025-12-26 19:02:59  x     FileCluster.java                         ::         19.757  1920159731 
+2025-12-27 20:06:25  x     FileMark.java                            ::         11.522 -2064041088 
+2025-12-26 16:48:38  x     FileRemote.java                          ::        144.230 -1124747195 
 2025-12-19 18:45:37  x     FileRemoteAccessor.java                  ::         14.944 -0556793629 
 2023-07-19 09:42:23  x     FileRemoteCallbackCopyDispersedFiles.java ::          2.957 -0268023324 
 2023-07-19 09:47:52  x     FileRemoteCallbackSearch.java            ::         10.632  0519511827 
@@ -348,7 +347,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2025-12-22 18:57:44  x     OutTextPreparer.java                     ::        179.234 -0359699365 
+2025-12-26 15:47:43  x     OutTextPreparer.java                     ::        179.239 -0731410117 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -376,7 +375,7 @@
 2025-08-16 12:08:15  x     StringFunctions.java                     ::         70.822  0783038366 
 2023-02-05 22:17:06  x     StringFunctions_B.java                   ::         18.615 -0708190660 
 2025-08-09 13:55:02  x     StringFunctions_C.java                   ::         39.177  1967273493 
-2025-12-11 00:13:34  x     StringPart.java                          ::        140.511 -1832547734 
+2025-12-26 15:47:07  x     StringPart.java                          ::        141.487 -1332774955 
 2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2025-12-14 13:22:41  x     StringPartFromFileLines.java             ::         29.028  1279309305 
@@ -403,7 +402,7 @@
 ============================== java/org/vishia/xmlReader/ ==========================================
 2025-12-19 23:50:05  x     GenXmlCfgJavaData.java                   ::         23.286  1292353468 
 2024-05-26 22:22:54  x     XmlAddData_ifc.java                      ::           .483 -1572965563 
-2025-12-19 23:53:09  x     XmlCfg.java                              ::         68.860  1697594350 
+2025-12-26 13:52:53  x     XmlCfg.java                              ::         68.434  1620075840 
 2025-09-15 12:22:32  x     XmlDataNode.java                         ::         13.285 -1974562545 
 2025-12-15 20:36:46  x     XmlJzCfgAnalyzer.java                    ::         71.504  2118667642 
 2025-12-19 23:48:48  x     XmlJzReader.java                         ::         68.442 -1467395393 
@@ -452,7 +451,7 @@
 2025-09-05 13:12:55  x     +genjavadoc.sh                           ::           .469 -1595391470 
 2025-12-22 19:11:19  x     +makejar_vishiaBase.sh                   ::          3.979 -0368277781 
 2023-08-07 23:44:02  x     -deployJar.sh                            ::          2.815 -1570269268 
-2025-10-11 22:09:02  x     -genjavadocbase.sh                       ::          2.437 -0717601631 
+2025-12-22 20:53:01  x     -genjavadocbase.sh                       ::          2.442 -1237164212 
 2025-12-20 23:51:42  x     -makejar-coreScript.sh                   ::          9.709 -0249253075 
 2025-12-20 23:28:15  x     GetWebfile.files                         ::           . 63 -0385087271 
 2025-12-20 23:35:45  x     GetWebfile.manifest                      ::           . 64 -1200874701 

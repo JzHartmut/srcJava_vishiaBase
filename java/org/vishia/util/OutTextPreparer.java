@@ -2130,7 +2130,7 @@ public final class OutTextPreparer
       if(sVariable.equals("NEWLINE")) {
         char cLineoutStart = sp.getCurrentChar();
         long pos = sp.getCurrentPosition();
-        sp.lentoIdentifier(",", null).len0end();           // till identifier or next ',' or end if no identifier follows
+        sp.lentoStartIdentifierOrChar(",").len0end();           // till identifier or next ',' or end if no identifier follows
         this.sLineoutStart = sp.getCurrent().toString();
         this.nLineoutStart = sLineoutStart.length();
         sp.fromEnd();

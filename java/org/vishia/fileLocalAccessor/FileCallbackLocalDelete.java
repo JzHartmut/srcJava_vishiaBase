@@ -86,7 +86,7 @@ public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
   @Override public Result finishedParentNode ( FileRemote dirRemote, Object oPath, Object oWalkInfo ) {
     FileRemoteWalker.WalkInfo walkInfo = (FileRemoteWalker.WalkInfo) oWalkInfo;
     FilepathFilterM filter = walkInfo.fileFilter;
-    if(filter.selAllDirEntries() && filter.selAllFilesInDir()) {
+    if(filter == null || filter.selAllDirEntries() && filter.selAllFilesInDir()) {
       try{ 
         Path path = (Path)oPath;                           // The FileLocalAccessor offers the java.nio.file.Path
         Files.delete(path); 

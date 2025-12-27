@@ -2077,19 +2077,20 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Deletes a file maybe in a remote device. This is a send-only routine without feedback,
-   * because the calling thread should not be waiting for success.
+  /**Deletes a file maybe in a remote device. This is a send-only routine without return info,
+   * because the calling thread should not wait for success.
    * The success is notified with invocation of the 
-   * {@link EventCmdPingPongType#callback}.{@link EventConsumer#processEvent(EventCmdPingPongType)} method. 
-   * @param backEvent The event for success. If null, delete in the same thread in the local file system. 
+   * {@link EventWithDst} evBack
+   * @param evBack The event for success.If null then executes in the same thread.  
    */
   public void delete(EventWithDst<FileRemoteProgressEvData,?> evBack){
     if(device == null){
       device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    FileRemoteCmdEventData co = new FileRemoteCmdEventData();
+    FileRemoteCmdEventData co = new FileRemoteCmdEventData();  // walkDelete
     co.setCmdChgFileRemote(this, FileRemoteCmdEventData.Cmd.delete, null, null, 0);
-    this.device.cmd(evBack ==null, co, evBack);
+    boolean bWait = evBack ==null;                         // true then executes in the same thread.
+    this.device.cmd(bWait, co, evBack);
   }
   
   

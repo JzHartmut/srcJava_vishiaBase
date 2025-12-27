@@ -426,7 +426,7 @@ public class XmlCfg
    * @return true if all ok, false if any syntax error.
    */
   public boolean readFromText(StringPartScan sp, LogMessage log) {
-    assert(this.readFromText);
+    this.readFromText = true;
     boolean bOk = true;
     this.readFromText = true;
     sp.setIgnoreWhitespaces(true);
@@ -472,45 +472,44 @@ public class XmlCfg
    */
   private boolean readFromTextNode(XmlCfgNode node, StringPartScan sp, LogMessage log) {
     boolean bOk = true;
+    //if(node.tag.equals("text:p")) Debugutil.stopp();
     String sElementStorePath = null, sElementFinishPath = null, sTextStorePath = null, sNamespaceStorePath = null;
-    if(sp.scan("=>SUBTREE:").scanToAnyChar(" \n\r", '\"', '\"', '\\').scanOk()) {
-      node.cfgSubtreeName = sp.getLastScannedString();     // this is meanwhile intrinsic deprecated,
-    }                                                      // write =>SUBTREE after LIST, NEW, ADD
-    if(sp.scan("LIST").scanOk()) {
-      node.bList = true;
-    }
-    if(sp.scan("CLASS:").scanIdentifier().scanOk()) {
-      node.dstClassName = sp.getLastScannedString();
-    }
-    //                                         //---------- @attr="identificationValue"
-    while(sp.scan("@").scanIdentifier(null, "-:").scan("=").scanLiteral("\"\"\\", 9999).scanOk()) {
-      String sAttrStorePath = sp.getLastScannedString();
-      String sAttrNsName = sp.getLastScannedString();
-      try{                                                 // store attributes for CHECK and for NEW arguments. 
-        node.addAttribStorePath(sAttrNsName, sAttrStorePath);  // checks "CHECK", builds a DataAccess.DatapathElement
-      } catch(ParseException exc) {
-        log.writeError("ERROR readCfgFromText, Exception ", exc);
+    char cNext;                        //==================vv read content till <subtag> or </tag>
+    while( (cNext = sp.scanSkipSpace().getCurrentChar()) != '<') {         
+      if(sp.scan("=>SUBTREE:").scanToAnyChar(" \n\r", '\"', '\"', '\\').scanOk()) {
+        node.cfgSubtreeName = sp.getLastScannedString();     // this is meanwhile intrinsic deprecated,
+      }                                                      // write =>SUBTREE after LIST, NEW, ADD
+      if(sp.scan("LIST").scanOk()) {
+        node.bList = true;
       }
-    }
-    if(sp.scan("NEW:").scanLiteral("\"\"\\", 9999).scanOk()) {
-      sElementStorePath = sp.getLastScannedString();
-      try{ 
-        node.setNewElementPath(sElementStorePath);         // builds a DataAccess.DatapathElement
-      } catch(ParseException exc) {
-        log.writeError("ERROR readCfgFromText, Exception setNewElementStorePath " + sElementStorePath, exc);
+      if(sp.scan("CLASS:").scanIdentifier().scanOk()) {
+        node.dstClassName = sp.getLastScannedString();
       }
-    }
-    if(sp.scan("ADD:").scanLiteral("\"\"\\", 9999).scanOk()) {
-      sElementFinishPath = sp.getLastScannedString();
-      try{ node.setFinishElementPath(sElementFinishPath);  // builds a DataAccess.DatapathElement
-      } catch(ParseException exc) {
-        log.writeError("ERROR readCfgFromText, Exception setFinishElementStorePath " + sElementFinishPath, exc);
+      //                                         //---------- @attr="identificationValue"
+      if(sp.scan("@").scanIdentifier(null, "-:").scan("=").scanLiteral("\"\"\\", 9999).scanOk()) {
+        String sAttrStorePath = sp.getLastScannedString();
+        String sAttrNsName = sp.getLastScannedString();
+        try{                                                 // store attributes for CHECK and for NEW arguments. 
+          node.addAttribStorePath(sAttrNsName, sAttrStorePath);  // checks "CHECK", builds a DataAccess.DatapathElement
+        } catch(ParseException exc) {
+          log.writeError("ERROR readCfgFromText, Exception ", exc);
+        }
       }
-    }
-    if(sp.scan("=>SUBTREE:").scanToAnyChar(" \n\r", '\"', '\"', '\\').scanOk()) {
-      node.cfgSubtreeName = sp.getLastScannedString();
-    } else if(node.cfgSubtreeName !=null) {    // subtree already set, do not read node definitions.
-    } else {
+      if(sp.scan("NEW:").scanLiteral("\"\"\\", 9999).scanOk()) {
+        sElementStorePath = sp.getLastScannedString();
+        try{ 
+          node.setNewElementPath(sElementStorePath);         // builds a DataAccess.DatapathElement
+        } catch(ParseException exc) {
+          log.writeError("ERROR readCfgFromText, Exception setNewElementStorePath " + sElementStorePath, exc);
+        }
+      }
+      if(sp.scan("ADD:").scanLiteral("\"\"\\", 9999).scanOk()) {
+        sElementFinishPath = sp.getLastScannedString();
+        try{ node.setFinishElementPath(sElementFinishPath);  // builds a DataAccess.DatapathElement
+        } catch(ParseException exc) {
+          log.writeError("ERROR readCfgFromText, Exception setFinishElementStorePath " + sElementFinishPath, exc);
+        }
+      }
       if(sp.scan("NAMESPACE:").scanLiteral("\"\"\\", 9999).scanOk()) {
         sNamespaceStorePath = sp.getLastScannedString();
         try{ 
@@ -519,44 +518,36 @@ public class XmlCfg
           log.writeError("ERROR readCfgFromText, Exception setNameSpaceStorePath " + sNamespaceStorePath, exc);
         }
       }
-      //                                         //---------- @attr="set_attr(value)"
-      while(sp.scan("@").scanIdentifier(null, "-:").scan("=").scanLiteral("\"\"\\", 9999).scanOk()) {
-        String sAttrStorePath = sp.getLastScannedString();
-        String sAttrNsName = sp.getLastScannedString();
-        try{ node.addAttribStorePath(sAttrNsName, sAttrStorePath);  // checks "CHECK", builds a DataAccess.DatapathElement
-        } catch(ParseException exc) {
-          log.writeError("ERROR readCfgFromText, Exception ", exc);
+      if(sp.scan("TEXT:").scanOk()) {
+        if(sp.scan("-LIST:").scanOk()) {
+          node.bTextMoreOccurrences = true;
+        }
+        if(sp.scanLiteral("\"\"\\", 9999).scanOk()) {
+          sTextStorePath = sp.getLastScannedString();
+          try{ 
+            node.setContentStorePath(sTextStorePath);       // builds a DataAccess.DatapathElement
+          } catch(ParseException exc) {
+            log.writeError("ERROR readCfgFromText, Exception setContentStorePath " + sTextStorePath, exc);
+          }
         }
       }
-      if(sp.scan("TEXT:").scanLiteral("\"\"\\", 9999).scanOk()) {
-        sTextStorePath = sp.getLastScannedString();
-      } else if(sp.scan("TEXT-LIST:").scanLiteral("\"\"\\", 9999).scanOk()) {
-        sTextStorePath = sp.getLastScannedString();
-        node.bTextMoreOccurrences = true;
-      }
-      if(sTextStorePath !=null) {
-        try{ 
-          node.setContentStorePath(sTextStorePath);       // builds a DataAccess.DatapathElement
-        } catch(ParseException exc) {
-          log.writeError("ERROR readCfgFromText, Exception setContentStorePath " + sTextStorePath, exc);
-        }
-      }
-      while(bOk && sp.scan("<").scanIdentifier(null, "-:").scan(">").scanOk()) {
-        String sTag = sp.getLastScannedString();
-        XmlCfgNode subnode = new XmlCfgNode(node, this, sTag);
-        //if(node.tag.equals("style:style")) Debugutil.stopp();
-        if(node.subnodes == null) { node.subnodes = new TreeMap<>(); }
-        node.subnodes.put(sTag, subnode);
-        bOk &= readFromTextNode(subnode, sp, log);
-      }
-    } // else if =>SUBTREE
+    } // while                         //==================^^ read content till <subtag> or </tag>
+    //                                 //==================vv check sub tag
+    while(bOk && sp.scan("<").scanIdentifier(null, "-:").scan(">").scanOk()) {
+      String sTag = sp.getLastScannedString();
+      XmlCfgNode subnode = new XmlCfgNode(node, this, sTag);
+      //if(node.tag.equals("style:style")) Debugutil.stopp();
+      if(node.subnodes == null) { node.subnodes = new TreeMap<>(); }
+      node.subnodes.put(sTag, subnode);
+      bOk &= readFromTextNode(subnode, sp, log);
+    }
     if(sp.scan("</").scanIdentifier(null, "-:").scan(">").scanOk()) {
       String sTagEnd = sp.getLastScannedString();
       if(!node.tag.equals(sTagEnd)) {
-        log.writeError("ERROR readCfgFromText: faulty </%s> for node %s", sTagEnd, node.tag);
+        log.writeError("ERROR XmlCfg.readFromTextNode(): faulty </%s> for node %s", sTagEnd, node.tag);
       }
     } else {
-      log.writeError("ERROR readCfgFromText: missing </end:tag>", sp.getCurrentPart(30));
+      log.writeError("ERROR XmlCfg.readFromTextNode(): missing </end:tag>", sp.getCurrentPart(30));
       bOk = false;
     }
     return bOk;

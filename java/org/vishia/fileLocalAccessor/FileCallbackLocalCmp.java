@@ -259,8 +259,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     CharSequence path = FileSystem.normalizePath(file.getAbsolutePath());
     CharSequence localPath = path.subSequence(zBasePath1+1, path.length());
     //System.out.println("FileRemoteCallbackCmp - file; " + localPath);
-    if(StringFunctions.compare(localPath, "functionBlocks/AngleBlocks_FB.h")==0)
-      Assert.stop();
+    if(StringFunctions.compare(localPath, "functionBlocks/AngleBlocks_FB.h")==0) Debugutil.stopp();
     FileRemote file2 = dir2.child(localPath);
     if(!file2.exists()){
       if(callbackUser !=null) {
