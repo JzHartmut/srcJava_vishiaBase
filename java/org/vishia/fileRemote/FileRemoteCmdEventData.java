@@ -151,7 +151,7 @@ public class FileRemoteCmdEventData  implements Payload {
 
   public SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback () { return this.callback; }
   
-  public void setCallback (FileRemoteWalkerCallback callback) { this.callback = callback; }
+  public void setCallback (SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback) { this.callback = callback; }
   
   public int markSet () { return this.markSet; }
   

@@ -19,6 +19,7 @@ import org.vishia.util.Debugutil;
 import org.vishia.util.FileCompare;
 import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
+import org.vishia.util.SortedTreeWalkerCallback;
 import org.vishia.util.StringFunctions;
 
 /**This class supports comparison of files in a tree. It is a callback class for the File Walker.
@@ -118,49 +119,6 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   
   private final CompareCtrl cmpCtrl = new CompareCtrl();
 
-  /**The given start directories for both trees. */
-  private final FileRemote dir1Base, dir2Base;
-  
-  /**The given current directories set in {@link #offerParentNode(FileRemote, Object, Object)},
-   * used in {@link #offerLeafNode(FileRemote, Object)}, 
-   * set to null in {@link #offerLeafNode(FileRemote, Object)} for both trees. */
-  private FileRemote dir1Curr, dir2Curr;
-  
-  /**Only stored for debug, set in ctor*/
-  private final String basepath1;
-  
-  /**Length of the base path given with ctor dir1, to build the relative path
-   * from dir2 with the same substring startet here.
-   */
-  private final int zBasePath1;
-  
-  /**Event instance for user callback. */
-  private final EventWithDst<FileRemoteProgressEvData,?> evBack;  //FileRemote.CallbackEvent evCallback;
-  
-  private final FileRemoteProgressEvData progress;
-  
-  /**Event to walk through the second tree.
-   * 
-   */
-  //private final FileRemoteWalkerEvent evWalker2;
-  
-  private final FileRemoteWalkerCallback callbackUser;
-  
-  /**one of the bits
-   * <br> {@link FileCompare#onlyTimestamp} = {@value FileCompare#onlyTimestamp}
-   * <br> {@link FileCompare#withoutLineend} = {@value FileCompare#withoutLineend}
-   * <br> {@link FileCompare#withoutEndlineComment} = {@value FileCompare#withoutEndlineComment}
-   * <br> {@link FileCompare#withoutComment} = {@value FileCompare#withoutComment}
-   * used for the comparison itself.
-   */
-  int mode;
-  
-  /**Files with a lesser difference in time (2 sec) are seen as equal in time stamp.*/
-  long minDiffTimestamp = 2000; 
-  
- 
-  boolean aborted = false;
-  
   /**Constructs an instance to execute a comparison of directory trees.
    * since 2024-02: If cmpMode has set the bit {@link FileCompare#onlyTimestamp} then full content comparison is not done. 
    * The comparison is very more faster (seen 10 times). 
@@ -175,15 +133,10 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
    *   
    */
   public FileCallbackLocalCmp(FileRemote dir1, FileRemote dir2, int cmpMode, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
+    super(dir1, dir2, cmpMode, callbackUser, evBack);
+    
     //this.evCallback = evCallback;
     //this.evWalker2 = new FileRemoteWalkerEvent("", dir2.device(), null, null, 0);
-    this.evBack = evBack;
-    this.progress = evBack == null ? null : evBack.data();
-    this.callbackUser = callbackUser;
-    this.dir1Base = dir1; this.dir2Base = dir2;
-    this.mode = cmpMode;
-    this.basepath1 = FileFunctions.normalizePath(dir1.getAbsolutePath()).toString();
-    this.zBasePath1 = this.basepath1.length();
     //} catch(Exception exc){
     //  dir1 = null; //does not exists.
     //}
@@ -565,7 +518,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
    * in the dir1. A new dir is searched in the dir2 tree, then the children in 1 level are marked. 
    * 
    */
-  final FileRemoteWalkerCallback XXXcallbackMarkSecondAlone = new FileRemoteWalkerCallback()
+  final SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> XXXcallbackMarkSecondAlone = new SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData>()
   {
 
     @Override

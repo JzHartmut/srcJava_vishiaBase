@@ -12,8 +12,9 @@ import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.util.Debugutil;
+import org.vishia.util.SortedTreeWalkerCallback;
 
-public class FileCallbackLocalMove  extends FileRemoteWalkerCallback {
+public class FileCallbackLocalMove  implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> { //extends FileRemoteWalkerCallback {
 
   
   /**Version, history and license.

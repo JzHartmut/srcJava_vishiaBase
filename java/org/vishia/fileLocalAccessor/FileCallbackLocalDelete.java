@@ -11,8 +11,9 @@ import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalker;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.util.FilepathFilterM;
+import org.vishia.util.SortedTreeWalkerCallback;
 
-public class FileCallbackLocalDelete extends FileRemoteWalkerCallback{
+public class FileCallbackLocalDelete implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> { //extends FileRemoteWalkerCallback{
 
   /**Version, history and license.
    * <ul>

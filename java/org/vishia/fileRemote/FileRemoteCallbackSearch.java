@@ -15,7 +15,7 @@ import org.vishia.util.SortedTreeWalkerCallback;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.SortedTreeWalkerCallback.Result;
 
-public class FileRemoteCallbackSearch extends FileRemoteWalkerCallback {
+public class FileRemoteCallbackSearch implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> { //extends FileRemoteWalkerCallback {
   static final public String sVersion = "2016-12-27";
   
   class CompareCtrl {

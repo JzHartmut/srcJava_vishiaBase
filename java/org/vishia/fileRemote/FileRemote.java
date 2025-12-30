@@ -1308,7 +1308,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    */
   //tag::refreshAndMark[]
   public void refreshAndMark ( boolean bWait, int depth, int setMark, int setMarkDir, String sMaskSelection, int markSelection
-      , FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+      , SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }

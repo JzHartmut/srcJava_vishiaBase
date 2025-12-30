@@ -2,6 +2,7 @@ package org.vishia.fileRemote;
 
 import org.vishia.event.EventWithDst;
 import org.vishia.event.Payload;
+import org.vishia.util.SortedTreeWalkerCallback;
 
 /**This callback operations are used to copy files from walking to the FileRemote instances
  * using {@link FileRemote#walkLocal(org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, int, int, String, int, int, FileRemoteWalkerCallback, FileRemoteCmdEventData, int, org.vishia.event.EventWithDst)}
@@ -12,7 +13,7 @@ import org.vishia.event.Payload;
  * @author hartmut
  *
  */
-public class FileRemoteWalkerCallbackCopy  extends FileRemoteWalkerCallback {
+public class FileRemoteWalkerCallbackCopy  implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> { //extends FileRemoteWalkerCallback {
 
   final FileRemoteProgressEventConsumer evConsumer;
   

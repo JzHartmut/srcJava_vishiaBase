@@ -1,6 +1,7 @@
 package org.vishia.fileRemote;
 
 import org.vishia.fileRemote.FileRemoteCmdEventData;
+import org.vishia.util.SortedTreeWalkerCallback;
 
 /**This callback worker works together with {@link FileRemoteWalker} to handle some selected files in a tree.
  * The tree starts with the directory on {@link #start(FileRemote, FileRemoteCmdEventData)} which is the not copied src root dir
@@ -8,8 +9,8 @@ import org.vishia.fileRemote.FileRemoteCmdEventData;
  * @author hartmut
  *
  */
-public class FileRemoteCallbackCopyDispersedFiles extends FileRemoteWalkerCallback
-{
+public class FileRemoteCallbackCopyDispersedFiles implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> { //extends FileRemoteWalkerCallback
+
   
   /**Version, history and license.
    * <ul>

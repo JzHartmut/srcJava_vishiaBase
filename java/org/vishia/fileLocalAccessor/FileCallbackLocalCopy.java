@@ -17,6 +17,7 @@ import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.util.FileFunctions;
+import org.vishia.util.SortedTreeWalkerCallback;
 
 
 /**This class contains the callback operations used for 
@@ -26,8 +27,8 @@ import org.vishia.util.FileFunctions;
  * @author Hartmut Schorrig
  *
  */
-public class FileCallbackLocalCopy extends FileRemoteWalkerCallback
-{
+public class FileCallbackLocalCopy implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> { //extends FileRemoteWalkerCallback
+
   /**Version, history and license.
    * <ul>
    * <li>2024-02-17 After copy adjust date and length of the new copied FileRemote. Important for next comparison without extra refresh. 

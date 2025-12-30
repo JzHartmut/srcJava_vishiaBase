@@ -1,5 +1,6 @@
 package org.vishia.fileRemote;
 
+import org.vishia.util.SortedTreeWalkerCallback;
 
 /**This callback operations are used to delete files from walking to the FileRemote instances
  * using {@link FileRemote#walkLocal(org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, int, int, String, int, int, FileRemoteWalkerCallback, FileRemoteCmdEventData, int, org.vishia.event.EventWithDst)}
@@ -10,7 +11,7 @@ package org.vishia.fileRemote;
  * @author hartmut
  *
  */
-public class FileRemoteWalkerCallbackDelete extends FileRemoteWalkerCallback {
+public class FileRemoteWalkerCallbackDelete implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> { //extends FileRemoteWalkerCallback {
 
   final FileRemoteProgressEventConsumer evConsumer;
 
