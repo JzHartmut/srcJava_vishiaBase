@@ -126,7 +126,12 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
    * set to null in {@link #offerLeafNode(FileRemote, Object)} for both trees. */
   private FileRemote dir1Curr, dir2Curr;
   
+  /**Only stored for debug, set in ctor*/
   private final String basepath1;
+  
+  /**Length of the base path given with ctor dir1, to build the relative path
+   * from dir2 with the same substring startet here.
+   */
   private final int zBasePath1;
   
   /**Event instance for user callback. */
@@ -222,15 +227,14 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     FileRemote dir2sub;
     CharSequence path = FileFunctions.normalizePath(dir.getAbsolutePath());
     if(path.length() <= this.zBasePath1){
-      dir2sub = this.dir2Base;
+      dir2sub = this.dir2Base;                             // the first offerParentNode with dir as same as dir2Base
       //it should be file == dir1, but there is a second instance of the start directory.
       //System.err.println("FileRemoteCallbackCmp - faulty FileRemote; " + path);
       //return Result.cont;
     } else {
       //Build dir2sub with the local path from dir1:
       CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
-      if(StringFunctions.equals(localPath, "functionBlocks"))
-        Debugutil.stop();
+      //if(StringFunctions.equals(localPath, "functionBlocks")) Debugutil.stopp();
       //System.out.println("FileRemoteCallbackCmp - dir; " + localPath);
       dir2sub = this.dir2Base.subdir(localPath);
     }
@@ -277,7 +281,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
     CharSequence name = file.getName();
     //System.out.println("FileRemoteCallbackCmp - file; " + localPath);
-    if(StringFunctions.compare(localPath, "asciidoc/CppJava.css")==0) Debugutil.stopp();
+    //if(StringFunctions.compare(localPath, "asciidoc/CppJava.css")==0) Debugutil.stopp();
     FileRemote file2 = this.dir2Curr.getChild(name);    //this.dir2Base.child(localPath);
     if(file2 == null ) { //|| !file2.exists()) {           // if it is removed in the time between refresh and yet, it is not exists()
       if(this.callbackUser !=null) {

@@ -16,6 +16,7 @@ import org.vishia.fileRemote.FileRemoteAccessor;
 import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
+import org.vishia.util.FileFunctions;
 
 
 /**This class contains the callback operations used for 
@@ -70,11 +71,23 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
   static final public String sVersion = "2024-02-17";
   
   
+  private final FileRemote dirDstBase;
+  
 
   /**This dirDst will be updated on each {@link #offerParentNode(FileRemote, Object, Object)} 
    * and {@link #finishedParentNode(FileRemote, Object, Object)}.
    */
   private FileRemote dirDst;
+  
+  /**Only stored for debug, set in ctor*/
+  private final String basepathSrc;
+  
+  /**Length of the base path given with ctor dir1, to build the relative path
+   * from dir2 with the same substring startet here.
+   */
+  private final int zBasePathSrc;
+  
+
   
 //  private boolean first;
   
@@ -102,11 +115,13 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
    * @param callbackUser usual null, possible as callback after move of one file.
    * @param evBack The back event for progress and finish.
    */
-  public FileCallbackLocalCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
+  public FileCallbackLocalCopy(FileRemote dirSrc, FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     this.evBack = evBack;
     this.progress = evBack.data();
     this.callbackUser = callbackUser;
-    this.dirDst = dirDstStart;
+    this.basepathSrc = FileFunctions.normalizePath(dirSrc.getAbsolutePath()).toString();
+    this.zBasePathSrc = this.basepathSrc.length();
+    this.dirDstBase = dirDstStart;
   }
   
   
@@ -116,16 +131,24 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
   
   
   @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object filter) {
-//    if(this.first){
-//      this.first = false;  //first level: don't change dirDst. It matches to the first source dir.
-//    } else {
-      String name = dir.getName();
-      this.dirDst = FileRemote.getDir(this.dirDst.getPathChars() + "/" + name);
+    CharSequence path = FileFunctions.normalizePath(dir.getAbsolutePath());
+    if(path.length() <= this.zBasePathSrc){
+      // first entry, dirDst is set already.
+      this.dirDst = this.dirDstBase;
+    } else {
+      //Build dir2sub with the local path from dir1:
+      CharSequence localPath = path.subSequence(this.zBasePathSrc+1, path.length());
+      //if(StringFunctions.equals(localPath, "functionBlocks")) Debugutil.stopp();
+      //System.out.println("FileRemoteCallbackCmp - dir; " + localPath);
+      this.dirDst = this.dirDstBase.subdir(localPath);
+//
+//      String name = dir.getName();
+//      this.dirDst = FileRemote.getDir(this.dirDst.getPathChars() + "/" + name);
       this.dirDst.mkdir();
       if(this.progress !=null) {
         this.progress.currDir = dir;
       }
-//    }
+    }
     return Result.cont;
   }
   

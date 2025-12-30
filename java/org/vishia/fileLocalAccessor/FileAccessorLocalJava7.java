@@ -744,7 +744,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       break;
     case walkCopyDirTree:
       assert(co.callback() == null);
-      co.setCallback(new FileCallbackLocalCopy(co.filedst(), null, evBack));  //evCallback);
+      co.setCallback(new FileCallbackLocalCopy(co.filesrc(), co.filedst(), null, evBack));  //evCallback);
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, evBack , false); 
       break;
     case walkMoveDirTree:
@@ -1119,7 +1119,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
       options.add(FileVisitOption.FOLLOW_LINKS);
       //======>>>>                ----------------- call of the java.nio-walker
-      //==========                ----------------- set breakpoints in visitFile etc. in the following class
+      //==========                ----------------- set breakpoints in visitFile etc. in the following class WalkFileTreeVisitor
       java.nio.file.Files.walkFileTree(co.filesrc().path(), options, depth1, visitor);  
       if(visitor.timeOrderProgress !=null ) { visitor.timeOrderProgress.deactivate(); }
     } catch(IOException exc){
