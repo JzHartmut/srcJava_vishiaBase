@@ -27,7 +27,7 @@ import org.vishia.util.SortedTreeWalkerCallback;
  * @author Hartmut Schorrig
  *
  */
-public class FileCallbackLocalCopy implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> { //extends FileRemoteWalkerCallback
+public class FileCallbackLocalCopy extends FileRemoteWalkerCallback {
 
   /**Version, history and license.
    * <ul>
@@ -72,44 +72,8 @@ public class FileCallbackLocalCopy implements SortedTreeWalkerCallback<FileRemot
   static final public String sVersion = "2024-02-17";
   
   
-  private final FileRemote dirDstBase;
-  
-
-  /**This dirDst will be updated on each {@link #offerParentNode(FileRemote, Object, Object)} 
-   * and {@link #finishedParentNode(FileRemote, Object, Object)}.
-   */
-  private FileRemote dirDst;
-  
-  /**Only stored for debug, set in ctor*/
-  private final String basepathSrc;
-  
-  /**Length of the base path given with ctor dir1, to build the relative path
-   * from dir2 with the same substring startet here.
-   */
-  private final int zBasePathSrc;
-  
-
-  
-//  private boolean first;
-  
-  //private final String basepath1;
-  //private final int zBasePath1;
-  
-  /**Event instance for user callback. */
-  private final EventWithDst<FileRemoteProgressEvData,?> evBack;
-  
-  
-  private final FileRemoteProgressEvData progress;
-  
-  private final FileRemoteWalkerCallback callbackUser;
-  
-  int mode;
-  
-  //byte[] buffer = new byte[16384]; 
-  
   byte[] buffer = new byte[16384];
   
-  boolean aborted = false;
   
   /**Constructs an instance to execute copy of files in a directory trees.
    * @param dirDstStart Destination directory due to the given first FileRemote source directory on start walking.
@@ -117,12 +81,7 @@ public class FileCallbackLocalCopy implements SortedTreeWalkerCallback<FileRemot
    * @param evBack The back event for progress and finish.
    */
   public FileCallbackLocalCopy(FileRemote dirSrc, FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
-    this.evBack = evBack;
-    this.progress = evBack.data();
-    this.callbackUser = callbackUser;
-    this.basepathSrc = FileFunctions.normalizePath(dirSrc.getAbsolutePath()).toString();
-    this.zBasePathSrc = this.basepathSrc.length();
-    this.dirDstBase = dirDstStart;
+    super(dirSrc, dirDstStart, callbackUser, evBack);
   }
   
   
@@ -132,31 +91,15 @@ public class FileCallbackLocalCopy implements SortedTreeWalkerCallback<FileRemot
   
   
   @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object filter) {
-    CharSequence path = FileFunctions.normalizePath(dir.getAbsolutePath());
-    if(path.length() <= this.zBasePathSrc){
-      // first entry, dirDst is set already.
-      this.dirDst = this.dirDstBase;
-    } else {
-      //Build dir2sub with the local path from dir1:
-      CharSequence localPath = path.subSequence(this.zBasePathSrc+1, path.length());
-      //if(StringFunctions.equals(localPath, "functionBlocks")) Debugutil.stopp();
-      //System.out.println("FileRemoteCallbackCmp - dir; " + localPath);
-      this.dirDst = this.dirDstBase.subdir(localPath);
-//
-//      String name = dir.getName();
-//      this.dirDst = FileRemote.getDir(this.dirDst.getPathChars() + "/" + name);
-      this.dirDst.mkdir();
-      if(this.progress !=null) {
-        this.progress.currDir = dir;
-      }
-    }
+    super.prepareDirs(dir, true);
+    this.dir2Curr.mkdir();   // should exists on physic, create if not exists.
     return Result.cont;
   }
   
   /**Checks whether all files are compared or whether there are alone files.
    */
   @Override public Result finishedParentNode(FileRemote file, Object oPath, Object oWalkInfo){
-    this.dirDst = this.dirDst.getParentFile();
+    super.restoreDirs();
     return Result.cont;      
   }
   
@@ -167,7 +110,7 @@ public class FileCallbackLocalCopy implements SortedTreeWalkerCallback<FileRemot
    */
   @Override public Result offerLeafNode(FileRemote file, Object info) {
 //    int repeat = 5;
-    FileRemote fileDst = this.dirDst.child(file.getName());
+    FileRemote fileDst = super.getFile2(file, true);
     Path pathSrc = file.path();
     Path pathDst = fileDst.path();
     InputStream inp = null;

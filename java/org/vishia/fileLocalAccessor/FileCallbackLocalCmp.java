@@ -119,6 +119,16 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   
   private final CompareCtrl cmpCtrl = new CompareCtrl();
 
+  /**one of the bits
+   * <br> {@link FileCompare#onlyTimestamp} = {@value FileCompare#onlyTimestamp}
+   * <br> {@link FileCompare#withoutLineend} = {@value FileCompare#withoutLineend}
+   * <br> {@link FileCompare#withoutEndlineComment} = {@value FileCompare#withoutEndlineComment}
+   * <br> {@link FileCompare#withoutComment} = {@value FileCompare#withoutComment}
+   * used for the comparison itself.
+   */
+  protected int mode;
+  
+
   /**Constructs an instance to execute a comparison of directory trees.
    * since 2024-02: If cmpMode has set the bit {@link FileCompare#onlyTimestamp} then full content comparison is not done. 
    * The comparison is very more faster (seen 10 times). 
@@ -133,8 +143,9 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
    *   
    */
   public FileCallbackLocalCmp(FileRemote dir1, FileRemote dir2, int cmpMode, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
-    super(dir1, dir2, cmpMode, callbackUser, evBack);
-    
+    super(dir1, dir2, callbackUser, evBack);
+    this.mode = cmpMode;
+
     //this.evCallback = evCallback;
     //this.evWalker2 = new FileRemoteWalkerEvent("", dir2.device(), null, null, 0);
     //} catch(Exception exc){
@@ -176,39 +187,24 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   @Override public Result offerParentNode(FileRemote dir, Object oPath, Object oWalkInfo){
     //if(dir == this.dir1Base) Debugutil.stopp();  //{ return Result.cont; } //the first entry
     //else {
-    this.dir1Curr = dir;
-    FileRemote dir2sub;
-    CharSequence path = FileFunctions.normalizePath(dir.getAbsolutePath());
-    if(path.length() <= this.zBasePath1){
-      dir2sub = this.dir2Base;                             // the first offerParentNode with dir as same as dir2Base
-      //it should be file == dir1, but there is a second instance of the start directory.
-      //System.err.println("FileRemoteCallbackCmp - faulty FileRemote; " + path);
-      //return Result.cont;
-    } else {
-      //Build dir2sub with the local path from dir1:
-      CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
-      //if(StringFunctions.equals(localPath, "functionBlocks")) Debugutil.stopp();
-      //System.out.println("FileRemoteCallbackCmp - dir; " + localPath);
-      dir2sub = this.dir2Base.subdir(localPath);
-    }
-    if(!dir2sub.exists()){
+    super.prepareDirs(dir, false);
+    if(this.dir2Curr !=null && !this.dir2Curr.exists()){
       dir.setMarked(FileMark.cmpAlone);
       dir.mark().setMarkParent(FileMark.cmpMissingFiles, false);
       //System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());
       return Result.skipSubtree;  //if it is a directory, but do not skip it, enter to detect all files intern are cmpAlone. Mark it!        
     } else {
       //-------------------------------------------------vv second directory to compare found, refresh it first.
-      this.dir2Curr = dir2sub;
-      dir2sub.refreshPropertiesAndChildren(true, null);    // refresh the second side, in this thread. first side is refreshed in the calling WalkFileTreeVisitor      
+      this.dir2Curr.refreshPropertiesAndChildren(true, null);    // refresh the second side, in this thread. first side is refreshed in the calling WalkFileTreeVisitor      
       //reportFileRemoteDir(new File("/tmp/RAMd/FcmdCmp_" + dir2sub.getName() + ".txt"), dir2sub);  // DEBUG only
       //                                       //--------vv but yet not clarified whether all sub file/dir:
-      FileMark mark2 = dir2sub.mark();
+      FileMark mark2 = this.dir2Curr.mark();
       if( mark2==null || (mark2.getMark() & FileMark.cmpAlone) ==0) {  //mark only with cmpAlone if not marked already with.
         // mark all files and sub dir with cmpAlone because elsewhere they are not marked with cmpAlone because never found. 
-        dir2sub.walkLocal(null, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, 0, null, null, 0, null);
+        this.dir2Curr.walkLocal(null, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, 0, null, null, 0, null);
         // an all found and used for comparision children, cmpAlone is reseted.
       }
-      dir2sub.resetMarked(FileMark.cmpAlone);            // hence set cmpAlone for all sub file/dir, but reset for this.
+      this.dir2Curr.resetMarked(FileMark.cmpAlone);            // hence set cmpAlone for all sub file/dir, but reset for this.
       //System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
       //waitfor
       //dir2sub.refreshPropertiesAndChildren(null);        
@@ -220,8 +216,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   /**Checks whether all files are compared or whether there are alone files.
    */
   @Override public Result finishedParentNode(FileRemote file, Object data, Object oWalkInfo) {
-    this.dir1Curr = this.dir1Curr.getParentFile();
-    this.dir2Curr = this.dir2Curr.getParentFile();
+    super.restoreDirs();
     return Result.cont;      
   }
   
@@ -230,12 +225,10 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
    *
    */
   @Override public Result offerLeafNode(FileRemote file, Object info) {
-    CharSequence path = FileFunctions.normalizePath(file.getAbsolutePath());
-    CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
-    CharSequence name = file.getName();
-    //System.out.println("FileRemoteCallbackCmp - file; " + localPath);
+//    CharSequence path = FileFunctions.normalizePath(file.getAbsolutePath());
+//    CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
     //if(StringFunctions.compare(localPath, "asciidoc/CppJava.css")==0) Debugutil.stopp();
-    FileRemote file2 = this.dir2Curr.getChild(name);    //this.dir2Base.child(localPath);
+    FileRemote file2 = super.getFile2(file, false);
     if(file2 == null ) { //|| !file2.exists()) {           // if it is removed in the time between refresh and yet, it is not exists()
       if(this.callbackUser !=null) {
         this.callbackUser.offerLeafNode(file, objCmpAlone);  ////
@@ -281,10 +274,6 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
 
   
   
-  @Override public boolean shouldAborted(){
-    return this.aborted;
-  }
-
   
   /**Compare two files.
    * @param file1
@@ -497,61 +486,6 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   
   
   
-  @Override public void finished(FileRemote startDir)
-  {
-    if(this.evBack !=null) {
-      this.progress.done(null, null); 
-      //progress.show(FileRemote.CallbackCmd.done, null);
-    }
-    /*
-    if(evCallback !=null && evCallback.occupyRecall(500, null, true) !=0){
-      evCallback.sendEvent(FileRemote.CallbackCmd.done);
-    }
-    */
-  }
-
-
-  
-  /**Callback to mark all files of the second directory as 'alone' on open directory.
-   * If the files are found in the first directory after them, there are marked as 'equal' or 'non equal' then, and this selection
-   * will be removed. This callback will be used in the routine {@link #offerParentNode(FileRemote)} on any directory
-   * in the dir1. A new dir is searched in the dir2 tree, then the children in 1 level are marked. 
-   * 
-   */
-  final SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> XXXcallbackMarkSecondAlone = new SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData>()
-  {
-
-    @Override
-    public void finished(FileRemote startDir)
-    { }
-
-    @Override
-    public Result finishedParentNode(FileRemote file, Object data, Object oWalkInfo)
-    { return Result.cont; }
-
-    @Override
-    public Result offerParentNode(FileRemote file, Object data, Object filter)
-    { return Result.cont; }
-
-    @Override
-    public Result offerLeafNode(FileRemote file, Object info)
-    { 
-      //1412 
-      file.setMarked(FileMark.cmpAlone);   //yet unknown whether the 2. file exists, will be reseted if necessary.
-      return Result.cont;
-    }
-
-    @Override
-    public void start(FileRemote startDir, FileRemoteCmdEventData co)
-    { }
-    
-    @Override public boolean shouldAborted(){
-      return false;
-    }
-
-    
-  };
-
   
   
   
