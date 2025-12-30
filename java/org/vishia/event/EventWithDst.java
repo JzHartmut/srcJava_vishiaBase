@@ -830,7 +830,7 @@ public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends 
   public int processEvent() {
     int retProcess = 0;  //check doNotRelinquish, relinquishes it in case of exception too!
     //System.out.println(LogMessage.timeCurr("processEvent:") + this.name);
-    try{
+    try{  //======>>>>
       retProcess = this.evDst.processEvent(this);  //may set bit doNotRelinquish
     } catch(Exception exc) {
       CharSequence excMsg = ExcUtil.exceptionInfo("EventThread.applyEvent exception", exc, 0, 50);

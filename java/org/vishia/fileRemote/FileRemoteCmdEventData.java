@@ -251,7 +251,10 @@ public class FileRemoteCmdEventData  implements Payload {
     /**walk through the file tree for refreshing the selected files with really file system information.
      * For a remote device it presumes that the back event is given and received for any file.*/
     walkRefresh,
+    /**walk through two file trees with given select masks, copy with overwrite selected files and resets the mark.*/
     walkCopyDirTree,
+    /**walk through two file trees with given select masks, copy with overwrite selected files and resets the mark.*/
+    walkMoveDirTree,
     /**walk through two file trees with given select masks, compare the files and mark due to comparison result.*/
     walkCompare,
     /**Abort the currently action. */

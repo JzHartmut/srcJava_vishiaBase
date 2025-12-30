@@ -78,41 +78,33 @@ else mkdir jars; export DSTJARDIR="jars"                      ## fallback is: ja
 fi
 export DSTJARDIR=$(realpath "$DSTJARDIR")
 
-echo pwd=$(PWD)
-echo VERSIONSTAMP = $VERSIONSTAMP  ## determine suffix of output file names
-echo TIMEinJAR = $TIMEinJAR  ## determine timestamp in jar
-echo DSTNAME = $DSTNAME  ## output file names
-echo BUILD_TMP = $BUILD_TMP  ## root for all temporary outputs
-echo SRC_ALL = $SRC_ALL      ## gather all *.java there
-echo SRC_ALL2 = $SRC_ALL2  ## gather all *.java there - optional
-echo SRCPATH = $SRCPATH  - search path sources for javac
-echo FILE1SRC = $FILE1SRC  ## alternatively: argument files for javac
-echo RESOURCEFILES = $RESOURCEFILES  ## additional files in jar
-echo CLASSPATH = $CLASSPATH - search path jars for javac
-echo Classpath_vishiaBase = $Classpath_vishiaBase  - jar file for jar/zip generation
-echo TMPJAVAC =  $TMPJAVAC  - temporary files while compilation
-echo JARFILE = $JARFILE  - generated jar    
-echo MD5FILE = $MD5FILE  - generated MD5 text file
-echo SRCZIPFILE = $SRCZIPFILE - generated sozrce.zip file
-echo DSTJARDIR = $DSTJARDIR
-
+echo PWD=$PWD >$TMPJAVAC/javac.log
+echo VERSIONSTAMP = $VERSIONSTAMP >>$TMPJAVAC/javac.log  ## determine suffix of output file names
+echo TIMEinJAR = $TIMEinJAR >>$TMPJAVAC/javac.log  ## determine timestamp in jar
+echo DSTNAME = $DSTNAME >>$TMPJAVAC/javac.log  ## output file names
+echo BUILD_TMP = $BUILD_TMP >>$TMPJAVAC/javac.log  ## root for all temporary outputs
+echo SRC_ALL = $SRC_ALL >>$TMPJAVAC/javac.log      ## gather all *.java there
+echo SRC_ALL2 = $SRC_ALL2 >>$TMPJAVAC/javac.log  ## gather all *.java there - optional
+echo SRCPATH = $SRCPATH >>$TMPJAVAC/javac.log  - search path sources for javac
+echo FILE1SRC = $FILE1SRC >>$TMPJAVAC/javac.log  ## alternatively: argument files for javac
+echo RESOURCEFILES = $RESOURCEFILES >>$TMPJAVAC/javac.log  ## additional files in jar
+echo CLASSPATH = $CLASSPATH - search path jars for javac >>$TMPJAVAC/javac.log
+echo Classpath_vishiaBase = $Classpath_vishiaBase  - jar file for jar/zip generation >>$TMPJAVAC/javac.log
+echo TMPJAVAC =  $TMPJAVAC  - temporary files while compilation >>$TMPJAVAC/javac.log
+echo JARFILE = $JARFILE  - generated jar >>$TMPJAVAC/javac.log
+echo MD5FILE = $MD5FILE  - generated MD5 text file >>$TMPJAVAC/javac.log
+echo SRCZIPFILE = $SRCZIPFILE - generated sozrce.zip file >>$TMPJAVAC/javac.log
+echo DSTJARDIR = $DSTJARDIR >>$TMPJAVAC/javac.log
+##====== javac =============================================================
 if test "$JAVAC_HOME" = ""; then
   ##  export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
-  echo "include $(dirname $0)/JAVAC_HOME.sh:" 
+  echo "include $(dirname $0)/JAVAC_HOME.sh:"  >>$TMPJAVAC/javac.log
   . $(dirname $0)/JAVAC_HOME.sh
-  echo JAVAC_HOME=$JAVAC_HOME
-  pause
+  echo JAVAC_HOME=$JAVAC_HOME >>$TMPJAVAC/javac.log
 fi  
-echo JAVAC_HOME = $JAVAC_HOME
+echo JAVAC_HOME = $JAVAC_HOME >>$TMPJAVAC/javac.log
 ##regards an empty JAVAC_HOME, then javac should be able as command in the path:
 if test "$JAVAC_HOME" = ""; then export JAVAC="javac"; else export JAVAC="$JAVAC_HOME/bin/javac"; fi
-#xx echo JAVAC = $JAVAC                                                                                       
-#xx echo Output to: $JARFILE
-#xx echo ====== gen src.zip ================================================================
-
-##Automatic build a zip file if SRC_ALL and maybe additionally SRC_ALL2 is given.
-##SRC_ALL refers to the java package path root directory,
-##but the source.zip should contain the parent folder which is srcJava_xyz/org/... 
 if ! test "$SRC_ALL" = ""; then
   echo source-set all files = $SRC_ALL
   find $SRC_ALL -name "*.java" > $TMPJAVAC/sources.txt
@@ -128,12 +120,14 @@ fi
 #xx echo pwd=$(pwd)
 ##echo ls /tmp
 ##ls /tmp
-echo
-echo ====== javac ================================================
-echo $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
-whereis $JAVAC
-$JAVAC -version
-$JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
+echo >>$TMPJAVAC/javac.log
+echo ====== javac ================================================ >>$TMPJAVAC/javac.log
+if ! test "$SRCPATH" == ""; then export SRCPATH="-sourcepath $SRCPATH"; fi  ## use -sourcpath ... option for javac only if given
+$JAVAC -version >>$TMPJAVAC/javac.log
+echo $JAVAC -encoding UTF-8 -verbose -d $TMPJAVAC/binjar $CLASSPATH $SRCPATH $FILE1SRC  >>$TMPJAVAC/javac.log
+cat $TMPJAVAC/javac.log
+     $JAVAC -encoding UTF-8 -verbose -d $TMPJAVAC/binjar $CLASSPATH $SRCPATH $FILE1SRC 1>>$TMPJAVAC/javac.log 2>$TMPJAVAC/javac.err
+echo see $TMPJAVAC/javac.log
 if test ! $? = 0; then
   echo ERROR javac --?????????????????????????????????????????--
   if test -f $JARFILE; then rm $JARFILE; fi    ##prevent usage of an older version here.  
@@ -144,6 +138,9 @@ fi
 #xx echo pwd=$(pwd)
 echo
 echo ====== zip-jar ================================================
+##Automatic build a zip file if SRC_ALL and maybe additionally SRC_ALL2 is given.
+##SRC_ALL refers to the java package path root directory,
+##but the source.zip should contain the parent folder which is srcJava_xyz/org/... 
 echo pwd=$PWD
 echo java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
 java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
@@ -153,24 +150,30 @@ if ! test "$MD5FILE" = ""; then echo output MD5 checksum
   echo md5sum -b $JARFILE
   md5sum -b $JARFILE > $MD5FILE
   echo "  srcFiles: $SRCZIPFILE" >> $MD5FILE
+  echo "  src-jar: $CLASSPATH" >> $MD5FILE
+  cat $MD5FILE >>$TMPJAVAC/javac.log
   cat $MD5FILE
 fi  
 
 if ! test -z "$SRCADD_ZIP"; then  ## do not zip sources if $SRCADD_ZIP is non existing, but build zip if it is empty.
+  echo >>$TMPJAVAC/javac.log
+  echo ====== zip-sources ================================================ >>$TMPJAVAC/javac.log
+  pwd >>$TMPJAVAC/javac.log
   echo
   echo ====== zip-sources ================================================
   pwd
-  SRCZIP=""
+  SRCZIP="$BUILD_TMP:/javac_$DSTNAME/*"   ## the javac.err, javac.log, source.txt, not subdirs.
   if ! test "$SRC_ALL" = ""; then
-    SRCZIP=".:$SRC_ALL/**/*"  ## with the srcJava_... dir
+    SRCZIP="$SRCZIP .:$SRC_ALL/**/*"  ## with the srcJava_... dir
   fi                                                                                        
   if ! test "$SRC_ALL2" = ""; then 
     SRCZIP="$SRCZIP .:$SRC_ALL2/**/*"                         
   fi  
   SRCZIP="$SRCZIP $SRCADD_ZIP"      ## note: adds only a space if $SRCADD_ZIP is empty                   
   ## $SRCZIP is a list of wildcard path arguments (separated with space) to add in zip
+  echo java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP >>$TMPJAVAC/javac.log
   echo java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
-  java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
+       java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
   if test -f $BUILD_TMP/deploy/$SRCZIPFILE; then echo ok $BUILD_TMP/deploy/$SRCZIPFILE; else echo ERROR src.zip $BUILD_TMP/deploy/$SRCZIPFILE; fi
 fi  
 

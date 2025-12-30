@@ -71,6 +71,9 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
   
   
 
+  /**This dirDst will be updated on each {@link #offerParentNode(FileRemote, Object, Object)} 
+   * and {@link #finishedParentNode(FileRemote, Object, Object)}.
+   */
   private FileRemote dirDst;
   
 //  private boolean first;
@@ -80,7 +83,9 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
   
   /**Event instance for user callback. */
   private final EventWithDst<FileRemoteProgressEvData,?> evBack;
-  private final FileRemoteProgressEvData progress;  //FileRemote.CallbackEvent evCallback;
+  
+  
+  private final FileRemoteProgressEvData progress;
   
   private final FileRemoteWalkerCallback callbackUser;
   
@@ -92,18 +97,16 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
   
   boolean aborted = false;
   
-  /**Constructs an instance to execute a comparison of directory trees.
-   * @param dir1
-   * @param dirDst
-   * @param evCallback maybe null, if given, this event will be sent to show the progression of the comparison
+  /**Constructs an instance to execute copy of files in a directory trees.
+   * @param dirDstStart Destination directory due to the given first FileRemote source directory on start walking.
+   * @param callbackUser usual null, possible as callback after move of one file.
+   * @param evBack The back event for progress and finish.
    */
   public FileCallbackLocalCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
-    //this.evCallback = evCallback;
     this.evBack = evBack;
     this.progress = evBack.data();
     this.callbackUser = callbackUser;
     this.dirDst = dirDstStart;
-    //this.first = true; //true;   //depends on input line...
   }
   
   

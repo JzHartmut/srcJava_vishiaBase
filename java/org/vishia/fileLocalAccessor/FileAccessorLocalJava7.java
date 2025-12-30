@@ -720,7 +720,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    */
   protected String execCmd ( FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     String ret = null;
-    switch(co.cmd()){
+    FileRemoteCmdEventData.Cmd cmd = co.cmd();
+    //cmd = FileRemoteCmdEventData.Cmd.abortAll;
+    switch(cmd){
     case check: break; //copy.checkCopy(commission); break;
     case abortAll: break;      //should abort the state machine!
     case delChecked: break; 
@@ -743,6 +745,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     case walkCopyDirTree:
       assert(co.callback() == null);
       co.setCallback(new FileCallbackLocalCopy(co.filedst(), null, evBack));  //evCallback);
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, evBack , false); 
+      break;
+    case walkMoveDirTree:
+      assert(co.callback() == null);
+      co.setCallback(new FileCallbackLocalMove(co.filedst(), null, evBack));  //evCallback);
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, evBack , false); 
       break;
     case walkDelete:
@@ -1045,14 +1052,42 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   //tag::walkFileTreeExecInThisThread[]
   /**Executes walk file tree. Usual called in the {@link #execCmd(org.vishia.fileRemote.FileRemoteCmdEventData, EventWithDst)}
    * either in one of the {@link WalkerThread} or immediately in the caller thread.  
+   * <ul>
+   * <li>_A_: First {@link FileRemoteWalkerCallback#start(FileRemote, FileRemoteCmdEventData)} is called
+   *   from 'co' if {@link FileRemoteCmdEventData#callback} is given.
+   * <li>_B_: If 'bRefreshChildren' is true, then all children from {@link FileRemoteCmdEventData#filesrc} 
+   *   are marked with child.flags |= mRefreshChildPending. After walking either this attribute bit is reseted, or the child will be deleted
+   *   because the appropriate file in the physical file system is not found while walking.  
+   * <li>_C_: if 'evBack' is given, {@link FileRemoteProgressEvData#clean()} is called
+   *   and the {@link FileRemoteProgressEvData#answerToCmd} is set from 'co' {@link FileRemoteCmdEventData#cmd}
+   * <li>_D_: {@link java.nio.file.Files#walkFileTree(Path, Set, int, FileVisitor))} is called, with 
+   *   <ul><li>'Path' from {@link FileRemoteCmdEventData#filesrc}
+   *   <li>'Set' options always with {@link FileVisitOption#FOLLOW_LINKS}, to check the links.
+   *   <li>'int' from {@link FileRemoteCmdEventData#depthWalk}, 1 for one level, 0: set to MAX_VALUE for all levels
+   *   <li>'FileVisitor' see next:
+   *   </ul>
+   * <li>_E_: The {@link FileVisitor} is always an instance of {@link WalkFileTreeVisitor} (inner class here).
+   *   This class is enough for refresh only. 
+   *   If more should be done, it uses {@link WalkFileTreeVisitor#callback} from 'co' {@link FileRemoteCmdEventData#callback}.
+   *   'callback' is intrinsically a command execution instance, not a so named callback.
+   *   But the term 'callback' is usual used, because this 'callback' instance is given 
+   *   with the calling instance 'co' in {@link FileRemoteCmdEventData#callback}
+   *   Candidates for this execution command ('callback') instance are {@link FileCallbackLocalCmp}, 
+   *   {@link FileCallbackLocalCopy}, {@link FileCallbackLocalMove} and {@link FileCallbackLocalDelete}. 
+   * <li>_F_: After walking {@link FileRemoteWalkerCallback#finished(FileRemote)} is called
+   *   from 'co' if {@link FileRemoteCmdEventData#callback} is given.
+   * <li>_G_: Then  {@link FileRemoteProgressEvData#done(org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, String)}   
+   *   is called from given 'evBack' {@link EventWithDst#d} (the payload) 
+   * <li>_H_: At least the given 'evBack' is sent to its sender instance (queue) via {@link EventWithDst#sendEvent(Object)}.  
+   * </ul>
    * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
-   * @param co data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
-   * @param bRefreshChildren true then reads the properties of all children from the original file system.
+   * @param bRefreshChildren true then reads the properties of all children from the original file system, 
+   *   refreshes also the {@link FileRemote#children()} if {@link FileRemoteCmdEventData#depthWalk} reaches this sub level.
    * @param evBack a progress event, also usable for quests with answer via the {@link EventWithDst#getOpponent()} prepared before call.
    * @param debugOut
    */
   protected void walkFileTreeExecInThisThread (
-  FileRemoteCmdEventData co
+    FileRemoteCmdEventData co
   , boolean bRefreshChildren
   , EventWithDst<FileRemoteProgressEvData, ?> evBack
   , boolean debugOut
@@ -1063,10 +1098,12 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 //      if(evWalker.progress !=null && evWalker.progress.timeOrder !=null) {
 //        evWalker.progress.timeOrder.activateCyclic();     // timeOrder back event to inform
 //      }
-      if(co.callback() !=null) { co.callback().start(co.filesrc(), co); }
-      if(bRefreshChildren) {                               // refreshChildren is for children in FileRemote instance
-        co.filesrc().internalAccess().newChildren(); 
+      if(co.callback() !=null) {                           //_A_: start()
+        co.callback().start(co.filesrc(), co); 
       }
+      if(bRefreshChildren) {                               //_B_: refreshChildren is for children in FileRemote instance
+        co.filesrc().internalAccess().pendingChildren();       // it marks all children with child.flags |= mRefreshChildPending,
+      }                                                    // does not create a new instance.
       int depth1;
       if(co.depthWalk() ==0){ depth1 = Integer.MAX_VALUE; }
       else if(co.depthWalk() < 0){ depth1 = -co.depthWalk(); }
@@ -1129,7 +1166,12 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     public boolean debugOut;
     
     final FileCluster fileCluster;
-    final boolean bRefresh; //, bResetMark;
+    
+    
+    /**true then reads the properties of all children from the original file system, 
+     *   refreshes also the {@link FileRemote#children()} if {@link FileRemoteCmdEventData#depthWalk} reaches this sub level.
+     */
+    final boolean bRefresh;
     
     /**Commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
      */
@@ -1182,7 +1224,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     
     /**Constructs the instance.
      * @param fileCluster The cluster where all FileRemote are able to found by its path.
-     * @param refreshChildren true then refreshes the FileRemote which are processed 
+     * @param refreshChildren true then reads the properties of all children from the original file system, 
+     *   refreshes also the {@link FileRemote#children()} if {@link FileRemoteCmdEventData#depthWalk} reaches this sub level.
      * @param co data for the commission especially also the callback for each dir and file
      * @param evBack given event to be used for messages to the caller, free for use 
      * @param bDbg
@@ -1206,9 +1249,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       this.walkInfo.levelProcessMarked = 0; //(int)(bMarkCheck >>32); // levelProcessMarked;
       this.startTime = System.currentTimeMillis();
       //this.lastTimeProgress = this.startTime - evProgress.delay;
-      if(co.cycleProgress() >0) {                  // progress only in cycles
+      if(co.cycleProgress() >0 && evBack !=null) {         // progress only in cycles, presumed evBack is given
         @SuppressWarnings("resource") EventThread_ifc timer = this.evBack.getDstThread();
-        assert(timer instanceof EventTimerThread_ifc); //should refer a timer
+        assert(timer instanceof EventTimerThread_ifc);     //should refer a timer
         this.timeOrderProgress = new TimeOrder("progress", (EventTimerThread_ifc)timer, this.evBack);
       } else {
         this.timeOrderProgress = null;
@@ -1263,20 +1306,20 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         Debugutil.stop();
       }
       final Path dirAbs;
-      if(!dir.isAbsolute()) {
+      if(!dir.isAbsolute()) {                   // when does it occure?
         dirAbs = dir.toAbsolutePath();
       } else {
-        dirAbs = dir;
-      }
-      Path linkedPath = dirAbs.toRealPath();
-      boolean isSymbolicLink = linkedPath.compareTo(dirAbs)!=0;
+        dirAbs = dir;                           // normal case
+      }                                //------------------vv detect a symbolic link, also a JUNCTION in windows
+      Path linkedPath = dirAbs.toRealPath();               // In windows this works also for JUNCTION
+      boolean isSymbolicLink = linkedPath.compareTo(dirAbs)!=0;  // compare both is a longer way but correct.
       boolean isSymbolicLinkByFilesystem = Files.isSymbolicLink(dir);  //Note: this does not detect JUNCTION in Windows.
-      if(isSymbolicLinkByFilesystem) {
+      if(isSymbolicLinkByFilesystem) { //------------------^^ isSymbolicLink is set.
         Debugutil.stop();
-      }
-      if(this.walkInfo.parent ==null) {                        // the first level of preVisistDirectory, the given one
-        selected = true;                                   // is always selected (elsewhere the operation will no t be called)
-        childFilter = this.walkInfo.fileFilter;                // the fileFilter is effective from the next level
+      }                                //------------------vv childFilter from the given walkInfo
+      if(this.walkInfo.parent ==null) {                    // on the first level of preVisistDirectory:
+        selected = true;                                   // it is always selected (elsewhere the operation will no t be called)
+        childFilter = this.walkInfo.fileFilter;            // the fileFilter is effective from the next level
       } else if((mSelectMask & FileMark.ignoreSymbolicLinks) !=0 &&  isSymbolicLink) {
         selected = false;                        // skip a directory which is a symbolic link if desired
         childFilter = null;
@@ -1286,27 +1329,39 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       } else {                                   // evaluate fileFilter, skip if no file is selected.
         childFilter = this.walkInfo.fileFilter.check(name, true); 
         selected = (childFilter != null); 
-      }
-      if( !selected && this.co.markSet() == 0      // somewhat to do else with the dir? 
-       && ( this.co.selectMask() == 0 || (this.co.selectMask() & FileMark.orWithSelectString) ==0 )
+      }                                //------------------^^ childFilter
+      int markSet = this.co.markSet();                     // any bit is set: info what to do to mark or reset mark:
+      int selectMask = this.co.selectMask();               // given bit mask for selection from commission
+      if( !selected                           // not selected, vv also not with a selectMask which ORs selection
+       && ( selectMask == 0 || (selectMask & FileMark.orWithSelectString) ==0 )
+       && markSet == 0                        // nothing else to do with the dir 
+       && !this.bRefresh                      // and also not to refresh
         ) {
-        return FileVisitResult.SKIP_SUBTREE;     // ====>> return skipSubtree, if not selected and no more to do 
+        return FileVisitResult.SKIP_SUBTREE;               // ====>> return skipSubtree, nothing more to do.  
       }
-      //------------------------------------------- either selected or some to do:
-      final FileRemote dir1;                     // get the FileRemote instance for the directory proper to this path
-      if(this.walkInfo.dir !=null) { 
-        dir1 = this.walkInfo.dir.subdir(name);       // get or create a child in FileRemote
-      } else {                                   // first time:
-        String sDir = dir.toString();            // get directory from nio.file.Path
-        dir1 = FileRemote.getDir(sDir);          // and gets the root directory from file cluster
+      //========^^^^^^^====================================== return skipSubtree if not selected and no more to do
+      //
+      //===================================================vv either selected or some to do:
+      final FileRemote dir1;                     //--------vv get the FileRemote instance for the directory proper to this path
+      if(this.walkInfo.dir ==null) {                       // null only on first entry 
+        String sDir = dir.toString();                      // get directory from nio.file.Path
+        dir1 = FileRemote.getDir(sDir);                    // and gets the base directory from file cluster
+      } else {                                             // not first time:
+        dir1 = this.walkInfo.dir.subdir(name);             // get or create a child in FileRemote
+      }
+      setAttributes(dir1, dir, attrs);           //--------<< copy the file attributes from nio.file..Path to FileRemote also if not bRefresh
+      if(this.bRefresh && this.walkInfo !=null){           // for this dir, mRefreshChildPending no more pending
+        dir1.internalAccess().clrFlagBit(FileRemote.mRefreshChildPending);
+        dir1.internalAccess().pendingChildren();               // but the children are set with mRefreshChildPending
       }
       //------------------------------------------- If a co.selectMask is given, then the subdir should contain one of the bit.
-      if(this.walkInfo.parent !=null && (this.co.selectMask() & FileMark.mSelectMarkBits) !=0) {
-        boolean bMarkSelect = (dir1.getMark() & FileMark.mSelectMarkBits & this.co.selectMask()) !=0;
-        if( (this.co.selectMask() & FileMark.orWithSelectString) !=0) {
-          selected |= bMarkSelect;
+           
+      if(this.walkInfo.parent !=null && (selectMask & FileMark.mSelectMarkBits) !=0) {  // one of the relevant bits are set? 0x3fffffff
+        boolean bMarkSelect = (dir1.getMark() & FileMark.mSelectMarkBits & selectMask) !=0; // true then selected with bits
+        if( (selectMask & FileMark.orWithSelectString) !=0) { 
+          selected |= bMarkSelect;                         // additional selection with this bits beside string mask
         } else {
-          selected &= bMarkSelect;
+          selected &= bMarkSelect;                         // necessary selection with this bits beside string mask
         }
       }                                          // if co.selectMask does not contain mSelectMarkBits, do nothing with it.
       //
@@ -1318,57 +1373,52 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 //            dir1.resetMarked(this.co.markSet);
 //          }
 //        }
-        ret =  FileVisitResult.SKIP_SUBTREE;  //but does nothing with the file.      
-      } else {
-        ret = FileVisitResult.CONTINUE;
-        //enter in directory always if curr.levelProcessMarked !=1
-        if(this.walkInfo.parent !=null && this.co.markSet() !=0) {  // anything to do here?
-          if( (this.co.markSet() & FileMark.resetMark) !=0) {       // reset a mark also for a directory
-            dir1.resetMarked(this.co.markSet());
-          } else {
-            boolean bMarkDir = (dir1.getMark() & FileMark.cmpAlone & this.co.selectMask()) !=0;
-            if(bMarkDir) {
-              dir1.setMarked(this.co.markSet());           // set the directory mark with the bits from the command because cmpAlone is detected and relevant
-            }                                              // to copy the directory content. 
-          }
-        }
-        setAttributes(dir1, dir, attrs);         // copy the file attributes from nio.file..Path to FileRemote
-        if(this.bRefresh && this.walkInfo !=null){   // yet mRefreshChildPending no more pending
-          dir1.internalAccess().clrFlagBit(FileRemote.mRefreshChildPending);
-          //curr.children.put(name, dir1);
-        }
-        
-        if(this.progress !=null) {                         
-          //--------------------------------------- creates or updates a time order for the state. 
-          if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-          this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshDirPre;
-          this.progress.nrDirProcessed +=1;
-          this.progress.currDir = dir1;          // all information about the FileRemote will be proper serialized if remote
-          if(this.co.cycleProgress() ==0) {        // send back event on any file or dir entry:
-            this.evBack.sendEvent(this);             // evBack is associated to the progress
-          } else {                               // send cyclically only informations about progress
-            long timeEvent = System.currentTimeMillis() + this.co.cycleProgress();
-            this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
-            //this.progress.nrofBytesAll += this.curr.nrBytesInDir;
-            //this.progress.nrFilesProcessed += this.curr.dir.children().size();
-          }
-        }
-        FileRemoteWalker.WalkInfo currInfo = new FileRemoteWalker.WalkInfo(dir1, this.walkInfo, childFilter);
-        if(this.walkInfo.parent !=null && this.callback !=null) {
-          result = this.callback.offerParentNode(dir1, dir, currInfo);  // not for the entry level
-        } else {
-          result = SortedTreeWalkerCallback.Result.cont;
-        }
-        if(result == SortedTreeWalkerCallback.Result.cont){
-          this.walkInfo = currInfo;                  // only store this currInfo if a new level is given, removed on postVisistDirectory
-          if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - pre dir; " + this.walkInfo.dir.getAbsolutePath());
-        } else {                                           
-          // currInfo will be garbaged, not necessary
-          if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - pre dir don't entry; " + this.walkInfo.dir.getAbsolutePath());
-        }
-        return translateResult(result);
+        return FileVisitResult.SKIP_SUBTREE;               // ====>> return skipSubtree, nothing more to do.  
       }
-      return ret;
+      //========^^^^^^^====================================== return skipSubtree if not selected
+      //
+      //===================================================vv selected:
+      ret = FileVisitResult.CONTINUE;                    // enter in directory always if curr.levelProcessMarked !=1
+      if(this.walkInfo.parent !=null && markSet !=0) {   // anything to do here?
+        if( (markSet & FileMark.resetMark) !=0) {        // reset a mark also for a directory
+          dir1.resetMarked(markSet);
+        } else {
+          boolean bMarkDir = (dir1.getMark() & FileMark.cmpAlone & selectMask) !=0;
+          if(bMarkDir) {
+            dir1.setMarked(this.co.markSet());           // set the directory mark with the bits from the command because cmpAlone is detected and relevant
+          }                                              // to copy the directory content. 
+        }
+      }
+      
+      if(this.progress !=null) {                         
+        //--------------------------------------- creates or updates a time order for the state. 
+        if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
+        this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshDirPre;
+        this.progress.nrDirProcessed +=1;
+        this.progress.currDir = dir1;          // all information about the FileRemote will be proper serialized if remote
+        if(this.co.cycleProgress() ==0) {        // send back event on any file or dir entry:
+          this.evBack.sendEvent(this);             // evBack is associated to the progress
+        } else {                               // send cyclically only informations about progress
+          long timeEvent = System.currentTimeMillis() + this.co.cycleProgress();
+          this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
+          //this.progress.nrofBytesAll += this.curr.nrBytesInDir;
+          //this.progress.nrFilesProcessed += this.curr.dir.children().size();
+        }
+      }
+      FileRemoteWalker.WalkInfo currInfo = new FileRemoteWalker.WalkInfo(dir1, this.walkInfo, childFilter);
+      if(/*this.walkInfo.parent !=null && */this.callback !=null) {
+        result = this.callback.offerParentNode(dir1, dir, currInfo);  // not for the entry level
+      } else {
+        result = SortedTreeWalkerCallback.Result.cont;
+      }
+      if(result == SortedTreeWalkerCallback.Result.cont){
+        this.walkInfo = currInfo;                  // only store this currInfo if a new level is given, removed on postVisistDirectory
+        if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - pre dir; " + this.walkInfo.dir.getAbsolutePath());
+      } else {                                           
+        // currInfo will be garbaged, not necessary
+        if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - pre dir don't entry; " + this.walkInfo.dir.getAbsolutePath());
+      }
+      return translateResult(result);
     }
 
     
@@ -1390,7 +1440,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         //thread safety: The children which are marked with mRefreshChildPending are removed.
         //If this mark is set in another thread too because the same directory should be refreshed in another thread
         //then children are removed which are existing and not to remove.
-        //Only one thread should done this action.
+        //Only one thread should do this action.
         //The setChildrenRefreshed() is called yet (2015-11-13) before  the callback.finishedParentNode(...) is called
         //because that call invokes refresh the second time.
         this.walkInfo.dir.timeChildren = System.currentTimeMillis();

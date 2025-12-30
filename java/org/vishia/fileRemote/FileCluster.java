@@ -123,6 +123,10 @@ public class FileCluster
   
   /**Gets the existing file instance with this path from the file system or creates and registers a new one.
    * If the file is not existing on the file system it is created anyway because the file may be a new candidate. 
+   * It is package private because it is only used 
+   * in the static {@link FileRemote#getFile(FileCluster, CharSequence, CharSequence)}
+   * or {@link FileRemote#getFile(CharSequence, CharSequence)} or {@link FileRemote#getDir(FileCluster, CharSequence)}
+   * 
    */
   FileRemote getFile( final CharSequence sDirP, final CharSequence sName){
     return getFile(sDirP, sName, true);

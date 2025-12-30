@@ -535,26 +535,29 @@ public class FileFunctions {
    *   if null, then call {@link #absolutePath(String, File)} for build the absolute path.
    * @param sPath relative or absolute path maybe with environment variables or starts with "/tmp/", see {@link #absolutePath(String, File)}
    * @param bMkDir only if it is true {@link #mkDirPath(String)} is called with the resulting path.
-   * @return File object.
+   * @return File object. null if bMkdir and FileNotFoundException.
    * @throws FileNotFoundException if the sPath is faulty
    * @since 2023-09-21 recognises also environment variables in sPath, creates necessary directory levels
    */
-  public static File newFile ( File currDir, String sPath, boolean bMkdir) throws FileNotFoundException {
+  public static File newFile ( File currDir, String sPath, boolean bMkdir) {
     String sAbsPath = absolutePath(sPath, currDir);
-    if(bMkdir) { mkDirPath(sAbsPath); }
-    return new File(sAbsPath);
+    boolean bMkdirOk = true;
+    if(bMkdir) { 
+      try { mkDirPath(sAbsPath); } catch (Exception exc) { bMkdirOk = false; };
+    }
+    return bMkdirOk ? new File(sAbsPath) : null;
   }
 
   
   
-  /**Same as {@link #newFile(String, File. boolean)} but with currDir = null and bMkDir=true.
+  /**Same as {@link #newFile(File. String, boolean)} but with currDir = null and bMkDir=true.
    * @param sPath
-   * @return File Object with absolute path.
+   * @return File Object with absolute path maybe non existing
    * @throws FileNotFoundException
    */
-  public static File newFile (String sPath) throws FileNotFoundException {
+  public static File newFile (String sPath) {
     String sAbsPath = absolutePath(sPath, null);
-    mkDirPath(sAbsPath);
+    try { mkDirPath(sAbsPath); } catch (Exception exc) {};
     return new File(sAbsPath);
   }
   

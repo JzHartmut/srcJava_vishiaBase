@@ -1552,7 +1552,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
               String scriptname = scriptFile.getName();
               DataAccess.Variable<Object> varFile = new DataAccess.Variable<Object>('S', "scriptfile", scriptname, true);
               this.localVariables.put("scriptfile", varFile);
-            } catch(FileNotFoundException exc) { throw new RuntimeException(exc); }
+            } catch(Exception exc) { throw new RuntimeException(exc); }
           }
           else if(key.equals("scriptfile")){
             //do nothing, already done with scriptdir handling

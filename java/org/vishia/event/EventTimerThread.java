@@ -420,7 +420,9 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
             EventWithDst event = (EventWithDst) ev;
             //System.out.println(LogMessage.timeCurr("applyEvent:") + event.name);
             event.stateOfEvent = 'r';  //it is possible that the processEvent sets donotRelinquish to true.
+            //======>>>> notifyDequeued
             event.notifyDequeued();
+            //======>>>> processEvent
             int retProcess = event.processEvent();
             //if(stateOfEvent == 'r') {
             //--------------------------------------------- relinquish anytime except special cases.

@@ -694,6 +694,50 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
+  /**Gets a file relative to the given file, possible a child, another parallel dir etc.
+   * If it is not existing, it is returned anyway because it may be created afterwards.
+   * @param sPath if starts with "../" goes to the root. Path can contain ./ or double /.
+   *   All children a created. if it ends with "/" the last children is created as directory
+   * @return the last children found. If sPath == "../" it is the parent. 
+   */
+  public FileRemote getRelative(CharSequence sPath) {
+    int pos0 = 0, pos1, pos9 = sPath.length();
+    FileRemote ret = this;
+    boolean bCont = true;
+    do {
+      if(StringFunctions.compare(sPath, pos0, "../", 0, 3) ==0) {
+        pos0 +=3;
+        ret = ret.getParentFile();
+      }
+      else if(StringFunctions.compare(sPath, pos0, "./", 0, 3) ==0) {
+        pos0 +=2;
+      }
+      else if(pos0 < pos9 && sPath.charAt(pos0) =='/') {
+        pos0 +=1;
+      }
+      else if( (pos1 = StringFunctions.indexOf(sPath, '/', pos0)) >0) {
+        ret = ret.subdir(sPath.subSequence(pos0, pos1+1));
+        pos0 = pos1 +1;
+      }
+      else if(StringFunctions.compare(sPath, pos0, "..", 0, 3) ==0) {
+        pos0 +=2;
+        ret = ret.getParentFile();
+      }
+      else if(StringFunctions.compare(sPath, pos0, ".", 0, 3) ==0) {
+        pos0 +=1;
+      }
+      else {
+        if(pos0 < pos9) {
+          ret = ret.child(sPath.subSequence(pos0, pos1));
+        }
+        bCont = false;
+      }
+    } while(bCont);
+    return ret;
+  }
+ 
+  
+  
   /**Gets or creates a child with the given name. 
    * If the child is not existing, it is create as a new FileRemote instance which is not tested.
    * The created instances is not registered in the {@link #itsCluster} because it is assumed that it is a file, not a directory.
@@ -788,6 +832,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
  
+  /**Gets a named child.
+   * @param name
+   * @return null if the child is not given as FileRemote (independent whether is given on file system).
+   */
   public FileRemote getChild(CharSequence name){
     boolean bWindows = this.sDir.length() >=2 && this.sDir.charAt(1) == ':';
     String key = bWindows ? name.toString().toUpperCase() : name.toString();
@@ -876,12 +924,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     FileRemoteAccessor device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dirPath);
     CharSequence sfPath = null;
     if(device !=null) {
-      sfPath = device.completeFilePath(dirPath);
+      sfPath = device.completeFilePath(dirPath);           // gets the FileFunctions.getAbsolutePath()
     }
     return cluster.getFile(sfPath, null);
   }  
   
-  /**Returns the instance which is associated to the given directory.
+  /**Returns the instance which is associated to the given directory in the {@link #clusterOfApplication}.
+   * It calls {@link #getDir(FileCluster, CharSequence)}.
    * @param dirPath The directory path where the file is located, given absolute.
    * @return A existing or new instance.
    */
@@ -904,7 +953,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     return cluster.getFile(sfPath, name);
   }  
 
-  /**Returns the instance which is associated to the given directory and name.
+  /**Returns the instance which is associated to the given directory and name
+   * in the {@link #clusterOfApplication}.
+   * It calls {@link #getFile(FileCluster, CharSequence, CharSequence)}.
    * @param dir The directory path where the file is located, given absolute.
    * @param name The name of the file.
    * @return A existing or new instance.
@@ -1212,23 +1263,25 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Refreshes the properties of this file and gets all children in an extra thread with user-callback for any file.
+  /**Refreshes the properties of this file and all its immediately child files for only this level.
+   * It calls {@link FileRemoteAccessor#cmd(boolean, FileRemoteCmdEventData, EventWithDst)} with 'bWait'
+   * and a new instance of {@link FileRemoteCmdEventData} as cmd. 
    * In an on demand created thread the routine {@link FileRemoteAccessor#refreshPropertiesAndChildren(FileRemote, boolean, FileFilter, CallbackFile)}
    * will be called with the given CallbackFile.
-   * @param callback maybe null if the callback is not used.
    * @param bWait true then waits for success. On return the walk through is finished and all callback routines are invoked already.
-   *   false then this method may return immediately. The callback routines are not invoked. The walk is done in another thread.
+   *   false then this method returns immediately. The walk is done in another thread.
    *   Note: Whether or not another thread is used for communication it is not defined with them. It is possible to start another thread
    *   and wait for success, for example if communication with a remote device is necessary. 
+   * @param evBack maybe null if given, then it should be prepared for inform a partner thread which waits. 
+   *   If 'bWait' then this evBack can be processed in this thread after return from this operation.
    */
   public void refreshPropertiesAndChildren(boolean bWait, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
-    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkRefresh, null, null, 0, 0, 1);
+    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkRefresh, null, null, 0, 0, 1);  // last 1 is depth
     this.device.cmd(bWait, co, evBack);
-    //device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, evBack, false);  //should work in an extra thread.
   }
   
   
@@ -1352,6 +1405,23 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 //    co.selectMask = (int)mark;
     this.device.cmd(bWait, co, evBack);
   }
+  
+  
+  public void moveDirTreeTo(boolean bWait, FileRemote dirDst, int depth, int markSet, int markSetDir
+      , String selectFilter, int selectMask
+      , EventWithDst<FileRemoteProgressEvData,?> evBack) { 
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    FileRemoteCmdEventData co = new FileRemoteCmdEventData();
+    co.setCmdWalkLocal(this, FileRemoteCmdEventData.Cmd.walkMoveDirTree, dirDst, markSet, markSetDir, selectFilter, selectMask, depth, null, 100);
+//    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkCopyDirTree, dirDst, mask, 100, depth);
+//    co.markSet = setMark;
+//    co.markSetDir = setMarkDir;
+//    co.selectMask = (int)mark;
+    this.device.cmd(bWait, co, evBack);
+  }
+  
   
   
   
@@ -2923,13 +2993,14 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       flags &= ~mShouldRefresh; timeRefresh = timeChildren = System.currentTimeMillis(); 
     }
     
-    /**Creates a new children list or removes all children because there should be refreshed.
-     * The children are not removed but only marked as {@link FileRemote#mRefreshChildPending} because the instances are necessary for refreshing
+    /**marks the children as pending for refresh. 
+     * This operation is especially used on walking with {@link FileRemote#walkLocal(FileRemote, int, int, String, int, int, FileRemoteWalkerCallback, FileRemoteCmdEventData, int, EventWithDst)}.
+     * On refresh the children are not removed, instead only marked as {@link FileRemote#mRefreshChildPending} because the instances are necessary for refreshing
      * to get the same instance for the same child again. Note that some marker may be stored there, see {@link FileRemote#setMarked(int)} etc.
-     * On entry a new child the instance will be unchanged, but the marker mRemoved is removed and the properties of the child are refreshed.
-     * On finishing the refreshing of a directory all {@link FileRemote} child instances which's mRemoved is remain are removed then.
+     * On leaf entry on walking the child instance is still given, but the marker {@link #mRefreshChildPending} is removed and the properties of the child are refreshed.
+     * On finishing the refreshing {@link #setChildrenRefreshed()} is called. This cleans {@link FileRemote#children}.
      */
-    public void newChildren(){ 
+    public void pendingChildren(){ 
       if(children == null){
         children = createChildrenList(); 
       } else {
@@ -2961,7 +3032,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     /**Sets this FileRemote to the delete state because the underlying file was deleted. 
      * This FileRemote itself will be marked with 0 in all length, flags and date.
      * This FileRemote will be removed from the parent's children list.
-     * */
+     * TODO should it removed from index TODO it should*/
     public boolean setDeleted() {
       setFlagBits(0xffffffff, 0); //clean all
       setLengthAndDate(0, 0,0,0);

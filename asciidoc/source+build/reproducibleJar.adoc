@@ -7,7 +7,7 @@
 
 Dr. Hartmut Schorrig, Germany in Europa, link:https://vishia.org[www.vishia.org]
 
-date: 2020-03-20
+date: 2020-03-20, 2025-12-29 some fixes
 
 == The mission
 
@@ -25,7 +25,7 @@ That is until questions are asked:
 
 Now the sources of the software are in focus. But the question is: 
 Are the sources correct?
-If a new generation produces abbreviating binaries, 
+If a new generation produces divergent binaries, 
 the question of correctness cannot be answered with the new generation.
 The correctness is only a guess or assertion, errors in the saving may have occurred 
 or environmental conditions may not have been fully recorded.

@@ -806,6 +806,16 @@ public final class OutTextPreparer
      */
     public void setCheck(boolean bChecks) { this.bChecks = bChecks; }
     
+    
+    /**Executes the referenced OutText {@link #prep} with this given data.
+     * It simplifies the call ot {@link OutTextPreparer#exec(Appendable, DataTextPreparer)}
+     * @param out
+     * @throws IOException
+     */
+    public void exec(Appendable out) throws IOException {
+      this.prep.exec(out, this);
+    }
+    
   }
 
   enum ECmd{

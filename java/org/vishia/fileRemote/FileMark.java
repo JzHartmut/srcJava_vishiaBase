@@ -233,44 +233,24 @@ public class FileMark extends SelectMask
    * @param count TODO
    */
   public void setMarkParent(int mask, boolean count){
-    FileRemote parent = itsFile;
-    List<FileRemote> parents = null;
-    FileRemote lastDirParent = itsFile;
-    if((selectMask & markRoot) ==0){
+    FileRemote parent = this.itsFile;
+    FileRemote lastDirParent = this.itsFile;
+    if((this.selectMask & markRoot) ==0){
       while( (parent = parent.getParentFile()) !=null){  //break inside!
         if(parent.mark== null) {
           parent.mark = new FileMark(parent);  //it is not the root of marking. Any directory between this and root.
         }
-        //if(parent.mark !=null && (parent.mark.selectMask & (FileMark.markDir | FileMark.markRoot))!=0){
-          lastDirParent = parent;
-          parent.mark.selectMask |= mask;
-          if(count){
-            parent.mark.nrofFilesSelected += this.nrofFilesSelected;
-            parent.mark.nrofBytesSelected += this.nrofBytesSelected;
-          }
-          if((parent.mark.selectMask & FileMark.markRoot)!=0){
-            break;
-          }
-        //} else {
-        //  if(parents == null){ parents = new LinkedList<FileRemote>(); }
-        //  parents.add(parent);  //in case of found a markRoot, mark all that with markDir
-        //}
-      }
-      if(parent !=null){ //any markRoot found
-        if(parents !=null){ //but not all markDir existing:
-          //This routine is done only the first time if any parent is marked as root
-          //but all other child directories in the path are not marked. 
-          for(FileRemote parent1: parents){
-            parent1.setMarked(mask | FileMark.markDir);
-            if(count){
-              parent.mark.nrofFilesSelected += this.nrofFilesSelected;
-              parent.mark.nrofBytesSelected += this.nrofBytesSelected;
-            }
-          }
-        } else {
-          //all ok
+        if((parent.mark.selectMask & FileMark.markRoot)!=0){
+          break;
         }
-      } else {
+        lastDirParent = parent;
+        parent.mark.selectMask |= mask;
+        if(count){
+          parent.mark.nrofFilesSelected += this.nrofFilesSelected;
+          parent.mark.nrofBytesSelected += this.nrofBytesSelected;
+        }
+      }
+      if(parent ==null){ //no markRoot found
         //a markRoot was not found, set the markRoot to the last valid file.
         lastDirParent.setMarked(FileMark.markRoot);
       }

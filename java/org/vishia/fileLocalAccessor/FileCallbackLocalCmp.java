@@ -1,12 +1,10 @@
 package org.vishia.fileLocalAccessor;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.text.DateFormat;            // remain it necessary for debug
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -14,14 +12,13 @@ import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileMark;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
+import org.vishia.fileRemote.FileRemoteReport;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.fileRemote.FileRemoteCmdEventData;
-import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileCompare;
 import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
-import org.vishia.util.SortedTreeWalkerCallback;
 import org.vishia.util.StringFunctions;
 
 /**This class supports comparison of files in a tree. It is a callback class for the File Walker.
@@ -113,14 +110,21 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
   }
 
   
+  @SuppressWarnings("removal") // the cache function for this value since Java9 may force a too long cache. Use the old approach" 
+  static Integer objCmpAlone = new Integer(FileMark.cmpAlone);
   
-  
-  
+  private FileRemoteReport freport;
   
   
   private final CompareCtrl cmpCtrl = new CompareCtrl();
 
-  private final FileRemote dir1, dir2;
+  /**The given start directories for both trees. */
+  private final FileRemote dir1Base, dir2Base;
+  
+  /**The given current directories set in {@link #offerParentNode(FileRemote, Object, Object)},
+   * used in {@link #offerLeafNode(FileRemote, Object)}, 
+   * set to null in {@link #offerLeafNode(FileRemote, Object)} for both trees. */
+  private FileRemote dir1Curr, dir2Curr;
   
   private final String basepath1;
   private final int zBasePath1;
@@ -169,24 +173,29 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     //this.evCallback = evCallback;
     //this.evWalker2 = new FileRemoteWalkerEvent("", dir2.device(), null, null, 0);
     this.evBack = evBack;
-    this.progress = evBack.data();
+    this.progress = evBack == null ? null : evBack.data();
     this.callbackUser = callbackUser;
-    this.dir1 = dir1; this.dir2 = dir2;
+    this.dir1Base = dir1; this.dir2Base = dir2;
     this.mode = cmpMode;
-    basepath1 = FileSystem.normalizePath(dir1.getAbsolutePath()).toString();
-    zBasePath1 = basepath1.length();
+    this.basepath1 = FileFunctions.normalizePath(dir1.getAbsolutePath()).toString();
+    this.zBasePath1 = this.basepath1.length();
     //} catch(Exception exc){
     //  dir1 = null; //does not exists.
     //}
-    cmpCtrl.ignoreToEol.add(".file");
-    cmpCtrl.ignoreToEol.add("//");
-    cmpCtrl.ignoreToEol.add("Compilation time:");
-    cmpCtrl.ignoreToEol.add("Compiler options:");
-    cmpCtrl.ignoreCommentline.add("//");
-    cmpCtrl.ignoreFromTo.add(new String[]{".epcannot:", ".epcannot.end:"});
-    cmpCtrl.ignoreFromTo.add(new String[]{".static1:", ".static1.end:"});
+    this.cmpCtrl.ignoreToEol.add(".file");
+    this.cmpCtrl.ignoreToEol.add("//");
+    this.cmpCtrl.ignoreToEol.add("Compilation time:");
+    this.cmpCtrl.ignoreToEol.add("Compiler options:");
+    this.cmpCtrl.ignoreCommentline.add("//");
+    this.cmpCtrl.ignoreFromTo.add(new String[]{".epcannot:", ".epcannot.end:"});
+    this.cmpCtrl.ignoreFromTo.add(new String[]{".static1:", ".static1.end:"});
   }
   
+  
+  void reportFileRemoteDir (File fOut, FileRemote dir) {
+    if(this.freport == null) { this.freport = new FileRemoteReport(); }  // create instance only one time.
+    this.freport.showTree(fOut, dir);
+  }
   
   
   /**On start of comparison it refreshes the second dir tree.
@@ -196,82 +205,101 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
    */
   @Override public void start(FileRemote startDir, FileRemoteCmdEventData co)
   {
-    dir2.refreshPropertiesAndChildren(true, null);  //do it in this thread      
-    
     //try{ 
     int markReset = FileMark.markRoot | FileMark.markDir | FileMark.markDir | FileMark.mCmpFile;
-    dir1.resetMarkedRecurs(markReset, null);
-    dir2.resetMarkedRecurs(markReset, null);
-    dir1.setMarked(FileMark.markRoot);            // a marker to stop going backward with dir marking.
-    dir2.setMarked(FileMark.markRoot);
+    this.dir1Base.resetMarkedRecurs(markReset, null);
+    this.dir2Base.resetMarkedRecurs(markReset, null);
+    this.dir1Base.setMarked(FileMark.markRoot);            // a marker to stop going backward with dir marking.
+    this.dir2Base.setMarked(FileMark.markRoot);
   }
   
   
   
   @Override public Result offerParentNode(FileRemote dir, Object oPath, Object oWalkInfo){
-    //if(dir == this.dir1){ return Result.cont; } //the first entry
+    //if(dir == this.dir1Base) Debugutil.stopp();  //{ return Result.cont; } //the first entry
     //else {
+    this.dir1Curr = dir;
     FileRemote dir2sub;
-      CharSequence path = FileSystem.normalizePath(dir.getAbsolutePath());
-      if(path.length() <= zBasePath1){
-        dir2sub = dir2;
-        //it should be file == dir1, but there is a second instance of the start directory.
-        //System.err.println("FileRemoteCallbackCmp - faulty FileRemote; " + path);
-        //return Result.cont;
-      } else {
-        //Build dir2sub with the local path from dir1:
-        CharSequence localPath = path.subSequence(zBasePath1+1, path.length());
-        if(StringFunctions.equals(localPath, "functionBlocks"))
-          Debugutil.stop();
-        //System.out.println("FileRemoteCallbackCmp - dir; " + localPath);
-        dir2sub = dir2.subdir(localPath);
+    CharSequence path = FileFunctions.normalizePath(dir.getAbsolutePath());
+    if(path.length() <= this.zBasePath1){
+      dir2sub = this.dir2Base;
+      //it should be file == dir1, but there is a second instance of the start directory.
+      //System.err.println("FileRemoteCallbackCmp - faulty FileRemote; " + path);
+      //return Result.cont;
+    } else {
+      //Build dir2sub with the local path from dir1:
+      CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
+      if(StringFunctions.equals(localPath, "functionBlocks"))
+        Debugutil.stop();
+      //System.out.println("FileRemoteCallbackCmp - dir; " + localPath);
+      dir2sub = this.dir2Base.subdir(localPath);
+    }
+    if(!dir2sub.exists()){
+      dir.setMarked(FileMark.cmpAlone);
+      dir.mark().setMarkParent(FileMark.cmpMissingFiles, false);
+      //System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());
+      return Result.skipSubtree;  //if it is a directory, but do not skip it, enter to detect all files intern are cmpAlone. Mark it!        
+    } else {
+      //-------------------------------------------------vv second directory to compare found, refresh it first.
+      this.dir2Curr = dir2sub;
+      dir2sub.refreshPropertiesAndChildren(true, null);    // refresh the second side, in this thread. first side is refreshed in the calling WalkFileTreeVisitor      
+      //reportFileRemoteDir(new File("/tmp/RAMd/FcmdCmp_" + dir2sub.getName() + ".txt"), dir2sub);  // DEBUG only
+      //                                       //--------vv but yet not clarified whether all sub file/dir:
+      FileMark mark2 = dir2sub.mark();
+      if( mark2==null || (mark2.getMark() & FileMark.cmpAlone) ==0) {  //mark only with cmpAlone if not marked already with.
+        // mark all files and sub dir with cmpAlone because elsewhere they are not marked with cmpAlone because never found. 
+        dir2sub.walkLocal(null, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, 0, null, null, 0, null);
+        // an all found and used for comparision children, cmpAlone is reseted.
       }
-      if(!dir2sub.exists()){
-        dir.setMarked(FileMark.cmpAlone);
-        dir.mark().setMarkParent(FileMark.cmpMissingFiles, false);
-        //System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());
-        return Result.cont; //skipSubtree;  //if it is a directory, but do not skip it, enter to detect all files intern are cmpAlone. Mark it!        
-      } else {
-        //--------------------------------------------------- directory found, but yet not clarified whether all sub file/dir
-        FileMark mark2 = dir2sub.mark();
-        if( mark2==null || (mark2.getMark() & FileMark.cmpAlone) ==0) {  //mark only with cmpAlone if not marked already with.
-          dir2sub.walkLocal(null, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, 0, null, null, 0, null);
-        }
-        dir2sub.resetMarked(FileMark.cmpAlone);            // hence set cmpAlone for all sub file/dir, but reset for this.
-        //System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
-        //waitfor
-        //dir2sub.refreshPropertiesAndChildren(null);        
-        return Result.cont;
-      }
+      dir2sub.resetMarked(FileMark.cmpAlone);            // hence set cmpAlone for all sub file/dir, but reset for this.
+      //System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
+      //waitfor
+      //dir2sub.refreshPropertiesAndChildren(null);        
+      return Result.cont;
+    }
     //}
   }
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file, Object data, Object oWalkInfo){
-    
+  @Override public Result finishedParentNode(FileRemote file, Object data, Object oWalkInfo) {
+    this.dir1Curr = this.dir1Curr.getParentFile();
+    this.dir2Curr = this.dir2Curr.getParentFile();
     return Result.cont;      
   }
   
   
-  @Override public Result offerLeafNode(FileRemote file, Object info)
-  {
-    CharSequence path = FileSystem.normalizePath(file.getAbsolutePath());
-    CharSequence localPath = path.subSequence(zBasePath1+1, path.length());
+  /**This does the comparison of the file.
+   *
+   */
+  @Override public Result offerLeafNode(FileRemote file, Object info) {
+    CharSequence path = FileFunctions.normalizePath(file.getAbsolutePath());
+    CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
+    CharSequence name = file.getName();
     //System.out.println("FileRemoteCallbackCmp - file; " + localPath);
-    if(StringFunctions.compare(localPath, "functionBlocks/AngleBlocks_FB.h")==0) Debugutil.stopp();
-    FileRemote file2 = dir2.child(localPath);
-    if(!file2.exists()){
-      if(callbackUser !=null) {
-        callbackUser.offerLeafNode(file, new Integer(FileMark.cmpAlone));  ////
+    if(StringFunctions.compare(localPath, "asciidoc/CppJava.css")==0) Debugutil.stopp();
+    FileRemote file2 = this.dir2Curr.getChild(name);    //this.dir2Base.child(localPath);
+    if(file2 == null ) { //|| !file2.exists()) {           // if it is removed in the time between refresh and yet, it is not exists()
+      if(this.callbackUser !=null) {
+        this.callbackUser.offerLeafNode(file, objCmpAlone);  ////
       }
       file.setMarked(FileMark.cmpAlone);   //mark the file1, all file2 which maybe alone are marked already in callbackMarkSecondAlone.
       file.mark().setMarkParent(FileMark.cmpMissingFiles, false);
       return Result.cont;    
     } else {
+      // There is a minimal reason that the file does no more exists, 
+      // if it is deleted just in the millisecond between refreshe in offerParentNode() and now.
+      // then if fast comparison is done, this is not detected. 
+      // it is detected by compareFile because the file is not able to open. 
+      // Then because of IOException it is marked as not equal.
+      //DO NOT: assert(file2.exists());  // do not assert, may be faulty, see above
+      //
       file2.resetMarked(FileMark.cmpAlone);
+      //
+      //======>>>> compareFile
       int cmprBits = compareFile(file, file2);
-      file.setMarked(cmprBits);
+      //if( (cmprBits & FileMark.cmpContentNotEqual) !=0) Debugutil.stopp(); 
+      file.setMarked(cmprBits);                            // set the result of compare.
       if((cmprBits & FileMark.cmpTimeGreater)!=0) {
         cmprBits &= ~FileMark.cmpTimeGreater;
         cmprBits |= FileMark.cmpTimeLesser;                // revert time greater/lesser for the other file.
@@ -279,14 +307,16 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
         cmprBits &= ~FileMark.cmpTimeLesser;
         cmprBits |= FileMark.cmpTimeGreater;               // revert time greater/lesser for the other file.
       }
-      file2.setMarked(cmprBits);
+      file2.setMarked(cmprBits);                           // set the result of compare on second. 
       if( (cmprBits & (FileMark.cmpContentEqual | FileMark.cmpLenTimeEqual)) ==0) {
         file.mark().setMarkParent(FileMark.cmpFileDifferences, false);
         file2.mark().setMarkParent(FileMark.cmpFileDifferences, false);
-        this.progress.nrofFilesMarked +=1;
+        if(this.progress !=null) { this.progress.nrofFilesMarked +=1; }
       }
-      if(callbackUser !=null) {
-        callbackUser.offerLeafNode(file, new Integer(cmprBits));  ////
+      if(this.callbackUser !=null) {
+        //@SuppressWarnings("removal") 
+        Integer objCmprBits = new Integer(cmprBits);
+        this.callbackUser.offerLeafNode(file, objCmprBits);  ////
       }
       return Result.cont;
     }
@@ -295,7 +325,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
   
   
   @Override public boolean shouldAborted(){
-    return aborted;
+    return this.aborted;
   }
 
   
@@ -321,8 +351,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     boolean readProblems;
     
 
-    if(file1.getName().equals("ReleaseNotes.topic"))
-      Assert.stop();
+    //if(file1.getName().equals("ReleaseNotes.topic")) Debugutil.stopp();
     int ret = 0;
     
     long date1 = file1.lastModified();
@@ -360,7 +389,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
       //timestamp is not tested.
       if(len1 != len2){
         //different length
-        if((mode & (FileCompare.withoutComment | FileCompare.withoutEndlineComment | FileCompare.withoutLineend)) !=0){
+        if((this.mode & (FileCompare.withoutComment | FileCompare.withoutEndlineComment | FileCompare.withoutLineend)) !=0){
           //comparison is necessary because it may be equal without that features:
           doCmpr = true;
           equal = false;  //compare it, set only because warning.
@@ -374,7 +403,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
         //Files are different in timestamp or timestamp is insufficient for comparison:
       }
       if(doCmpr){
-        try{ 
+        try{ //======>>>> compare
           equal = compareFileContent(file1, file2);
           if(equal){
             ret |= FileMark.cmpContentEqual;
@@ -421,7 +450,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     while( bEqu && (s1 = readIgnoreComment(r1)) !=null) {  //read lines of file 1 maybe with ignored comment.
       s2 = readIgnoreComment(r2);                          //read the line of the file2
       //check if an eol ignore String is contained:
-      for(String sEol: cmpCtrl.ignoreToEol) {
+      for(String sEol: this.cmpCtrl.ignoreToEol) {
         int z1 = s1.indexOf(sEol);
         if( z1 >=0){
           s1 = s1.substring(0, z1);    //shorten s1 to eol text
@@ -433,7 +462,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
         }
       }
       //check if an ignore String is contained, not after the eol!
-      for(String[] fromTo: cmpCtrl.ignoreFromTo) {
+      for(String[] fromTo: this.cmpCtrl.ignoreFromTo) {
         int z1 = s1.indexOf(fromTo[0]);
         if(z1 >=0){
           //from-marker was found:
@@ -493,7 +522,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
       cont = false;
       line = reader.readLine();
       if(line != null){
-        for(String sEol: cmpCtrl.ignoreCommentline) {
+        for(String sEol: this.cmpCtrl.ignoreCommentline) {
           if(line.startsWith(sEol)){
             //ignore it, read next.
             //faulty: line = reader.readLine();

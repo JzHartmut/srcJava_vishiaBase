@@ -66,9 +66,9 @@ public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
 
   @Override public Result offerLeafNode ( FileRemote fileRemote, Object oPath ) {
     try{ 
-      Path path = (Path)oPath;                               // The FileLocalAccessor offers the java.nio.file.Path
-      Files.delete(path);
-      fileRemote.internalAccess().setDeleted(); 
+      Path path = (Path)oPath;                             // The FileLocalAccessor offers the java.nio.file.Path
+      Files.delete(path);                                  // system delete on file system.
+      fileRemote.internalAccess().setDeleted();            // delete also the FileRemote instance in the parent's child list.
     }
     catch(IOException exc) {
       if(this.evBack !=null) {
@@ -89,9 +89,9 @@ public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
     if(filter == null || filter.selAllDirEntries() && filter.selAllFilesInDir()) {
       try{ 
         Path path = (Path)oPath;                           // The FileLocalAccessor offers the java.nio.file.Path
-        Files.delete(path); 
-        dirRemote.internalAccess().setDeleted(); 
-      }
+        Files.delete(path);                                // system delete on file system.
+        dirRemote.internalAccess().setDeleted();           // delete also the FileRemote instance in the parent's child list.
+      }                                     // TODO does it remove the FileRemote instance from index?
       catch(IOException exc) {                             // especially if the dir is not empty.
         if(this.evBack !=null) {
           FileRemoteProgressEvData data = this.evBack.data();

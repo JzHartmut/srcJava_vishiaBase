@@ -106,7 +106,7 @@ public class ZipUtils {
   public static void copyFileFromZip(String sfileZip, String sFileDst, String pathInZip) throws IOException {
     Path fPathDst = Paths.get(sFileDst);
     Path zipFilePath = Paths.get(sfileZip);
-    FileSystem fs = FileSystems.newFileSystem(zipFilePath, null);
+    FileSystem fs = FileSystems.newFileSystem(zipFilePath, (ClassLoader)null);
     Path fileInsideZipPath = fs.getPath("/" + pathInZip);
     if(Files.exists(fPathDst)) {
       Files.delete(fPathDst);
@@ -142,7 +142,7 @@ public class ZipUtils {
   public static void replaceFile(String sfileZip, String snewFile, String pathInZip) throws IOException {
     Path fPath = Paths.get(snewFile);
     Path zipFilePath = Paths.get(sfileZip);
-    FileSystem fs = FileSystems.newFileSystem(zipFilePath, null);
+    FileSystem fs = FileSystems.newFileSystem(zipFilePath, (ClassLoader)null);
     Path fileInsideZipPath = fs.getPath("/" + pathInZip);
     if(Files.exists(fileInsideZipPath)) {
       Files.delete(fileInsideZipPath);
