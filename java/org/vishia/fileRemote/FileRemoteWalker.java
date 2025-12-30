@@ -59,7 +59,7 @@ public class FileRemoteWalker {
   
   final FileRemoteCmdEventData co;
   
-  final FileRemoteWalkerCallback callback;
+  final SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback;
   
   final EventWithDst<FileRemoteProgressEvData,?> evBack;
   

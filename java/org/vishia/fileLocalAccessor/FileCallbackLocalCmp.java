@@ -41,7 +41,7 @@ import org.vishia.util.StringFunctions;
  * @author Hartmut Schorrig
  *
  */
-public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
+public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
 {
   
   /**Version, history and license.

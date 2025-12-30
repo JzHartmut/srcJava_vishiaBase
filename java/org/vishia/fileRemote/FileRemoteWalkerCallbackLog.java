@@ -17,7 +17,7 @@ import org.vishia.util.TreeNodeCallback;
  * @author hartmut Schorrig
  *
  */
-public class FileRemoteWalkerCallbackLog implements FileRemoteWalkerCallback {
+public class FileRemoteWalkerCallbackLog implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> {
 
   
   final LogMessageStream logout;

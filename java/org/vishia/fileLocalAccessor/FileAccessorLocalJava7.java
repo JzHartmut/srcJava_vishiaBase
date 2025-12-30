@@ -1177,7 +1177,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
      */
     final FileRemoteCmdEventData co;
     
-    final FileRemoteWalkerCallback callback;
+    final SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback;
     
     /**Information to the current level of walking. 
      * 

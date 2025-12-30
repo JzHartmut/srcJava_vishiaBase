@@ -1,6 +1,7 @@
 package org.vishia.fileRemote;
 
 import org.vishia.event.Payload;
+import org.vishia.util.SortedTreeWalkerCallback;
 
 public class FileRemoteCmdEventData  implements Payload { 
   
@@ -57,7 +58,7 @@ public class FileRemoteCmdEventData  implements Payload {
   /**For {@link Cmd#chgProps}: A new time stamp. */
   long newDate;
   
-  private FileRemoteWalkerCallback callback;  //it may be implementation specific
+  private SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback;  //it may be implementation specific
   
   
   /**Creates the payload of a command event
@@ -123,7 +124,7 @@ public class FileRemoteCmdEventData  implements Payload {
    */
   public void setCmdWalkLocal ( FileRemote srcdir, Cmd cmd, FileRemote dstdir, int markSet, int markSetDir
       , String selectFilter, int selectMask, int depthWalk
-      , FileRemoteWalkerCallback callback, int cycleProgress) {
+      , SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback, int cycleProgress) {
     clean();
     this.filesrc = srcdir;
     this.filedst = dstdir;
@@ -148,7 +149,7 @@ public class FileRemoteCmdEventData  implements Payload {
     return this.filedst;
   }
 
-  public FileRemoteWalkerCallback callback () { return this.callback; }
+  public SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback () { return this.callback; }
   
   public void setCallback (FileRemoteWalkerCallback callback) { this.callback = callback; }
   

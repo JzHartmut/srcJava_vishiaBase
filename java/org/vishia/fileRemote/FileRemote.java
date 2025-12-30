@@ -29,6 +29,7 @@ import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.MarkMask_ifc;
+import org.vishia.util.SortedTreeWalkerCallback;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
 import org.vishia.util.TreeNodeNamed_ifc;
@@ -1214,7 +1215,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *   For any file and dir the number of files and the sum of bytes are count. 
    */
   public void walkLocal ( FileRemote dstdir, int markSet, int markSetDir, String selectFilter, int selectMask, int depthWalk
-      , FileRemoteWalkerCallback callback
+      , SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback
       , FileRemoteCmdEventData cmdDataArg, int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> progressEv) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());

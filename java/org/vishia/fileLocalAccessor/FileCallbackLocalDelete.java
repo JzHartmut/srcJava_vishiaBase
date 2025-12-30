@@ -12,7 +12,7 @@ import org.vishia.fileRemote.FileRemoteWalker;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.util.FilepathFilterM;
 
-public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
+public class FileCallbackLocalDelete extends FileRemoteWalkerCallback{
 
   /**Version, history and license.
    * <ul>

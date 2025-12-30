@@ -1,6 +1,6 @@
 package org.vishia.fileRemote;
 
-public class FileRemoteTestCallback  implements FileRemoteWalkerCallback {
+public class FileRemoteTestCallback  extends FileRemoteWalkerCallback {
 
   @Override public void start ( FileRemote startNode, FileRemoteCmdEventData co ) {
     System.out.println("start callback test: " + startNode.toString());

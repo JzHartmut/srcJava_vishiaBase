@@ -8,7 +8,7 @@ import org.vishia.fileRemote.FileRemoteCmdEventData;
  * @author hartmut
  *
  */
-public class FileRemoteCallbackCopyDispersedFiles implements FileRemoteWalkerCallback
+public class FileRemoteCallbackCopyDispersedFiles extends FileRemoteWalkerCallback
 {
   
   /**Version, history and license.

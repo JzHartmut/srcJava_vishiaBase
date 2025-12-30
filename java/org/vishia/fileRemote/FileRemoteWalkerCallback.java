@@ -10,5 +10,8 @@ import org.vishia.util.SortedTreeWalkerCallback;
  * It is similar like the concept of {@link java.nio.file.Files#walkFileTree(java.nio.file.Path, java.nio.file.FileVisitor)}
  * with its visitor interface. But it is implemented for Java6-usage too, usable as common approach.
  */
-public interface FileRemoteWalkerCallback extends SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> {
+public abstract class FileRemoteWalkerCallback implements SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> {
+
+
+
 }

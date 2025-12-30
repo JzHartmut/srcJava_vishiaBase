@@ -13,7 +13,7 @@ import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.util.Debugutil;
 
-public class FileCallbackLocalMove  implements FileRemoteWalkerCallback {
+public class FileCallbackLocalMove  extends FileRemoteWalkerCallback {
 
   
   /**Version, history and license.

@@ -26,7 +26,7 @@ import org.vishia.util.FileFunctions;
  * @author Hartmut Schorrig
  *
  */
-public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
+public class FileCallbackLocalCopy extends FileRemoteWalkerCallback
 {
   /**Version, history and license.
    * <ul>

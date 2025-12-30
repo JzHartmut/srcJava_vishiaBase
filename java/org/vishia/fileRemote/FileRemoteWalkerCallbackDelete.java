@@ -1,8 +1,5 @@
 package org.vishia.fileRemote;
 
-import org.vishia.event.EventThread_ifc;
-import org.vishia.event.EventWithDst;
-import org.vishia.event.Payload;
 
 /**This callback operations are used to delete files from walking to the FileRemote instances
  * using {@link FileRemote#walkLocal(org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, int, int, String, int, int, FileRemoteWalkerCallback, FileRemoteCmdEventData, int, org.vishia.event.EventWithDst)}
@@ -13,11 +10,13 @@ import org.vishia.event.Payload;
  * @author hartmut
  *
  */
-public class FileRemoteWalkerCallbackDelete extends FileRemoteProgressEventConsumer implements FileRemoteWalkerCallback {
+public class FileRemoteWalkerCallbackDelete extends FileRemoteWalkerCallback {
+
+  final FileRemoteProgressEventConsumer evConsumer;
 
   
   protected FileRemoteWalkerCallbackDelete() {
-    super("FileRemoteWalkerCallbackDelete", null, null);
+    this.evConsumer = new FileRemoteProgressEventConsumer("FileRemoteWalkerCallbackDelete", null, null);
   }
 
   @Override public void start ( FileRemote startNode, FileRemoteCmdEventData startInfo ) {
@@ -25,8 +24,8 @@ public class FileRemoteWalkerCallbackDelete extends FileRemoteProgressEventConsu
   }
 
   @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
-    parentNode.deleteFilesDirTree(false, 0, "**/*", FileMark.ignoreSymbolicLinks, this.evBack);
-    awaitExecution(0, true);
+    parentNode.deleteFilesDirTree(false, 0, "**/*", FileMark.ignoreSymbolicLinks, this.evConsumer.evBack);
+    this.evConsumer.awaitExecution(0, true);
     return Result.skipSubtree;   // all is deleted, do not look for content. 
   }
 
@@ -35,8 +34,8 @@ public class FileRemoteWalkerCallbackDelete extends FileRemoteProgressEventConsu
   }
 
   @Override public Result offerLeafNode ( FileRemote leafNode, Object leafNodeData ) {
-    leafNode.delete(this.evBack);
-    awaitExecution(0, true);
+    leafNode.delete(this.evConsumer.evBack);
+    this.evConsumer.awaitExecution(0, true);
     return Result.cont;
   }
 

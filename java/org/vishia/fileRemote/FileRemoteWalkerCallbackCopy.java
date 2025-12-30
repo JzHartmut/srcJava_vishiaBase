@@ -12,14 +12,14 @@ import org.vishia.event.Payload;
  * @author hartmut
  *
  */
-public class FileRemoteWalkerCallbackCopy  extends FileRemoteProgressEventConsumer implements FileRemoteWalkerCallback {
+public class FileRemoteWalkerCallbackCopy  extends FileRemoteWalkerCallback {
 
-  
+  final FileRemoteProgressEventConsumer evConsumer;
   
   FileRemote srcRootDir, dstRootDir, dstDir;
   
   public FileRemoteWalkerCallbackCopy ( ) {
-    super("FileRemoteWalkerCallbackCopy", null, null);
+    this.evConsumer = new FileRemoteProgressEventConsumer("FileRemoteWalkerCallbackCopy", null, null);
   }
 
   public void cleanSetDstDir(FileRemote dstDir) {
@@ -34,8 +34,8 @@ public class FileRemoteWalkerCallbackCopy  extends FileRemoteProgressEventConsum
   @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
     String name = parentNode.getName();
     this.dstDir = this.dstDir.subdir(name);
-    this.dstDir.mkdir(true, this.evBack);
-    awaitExecution(0, true);
+    this.dstDir.mkdir(true, this.evConsumer.evBack);
+    this.evConsumer.awaitExecution(0, true);
     return Result.cont;   // all is deleted, do not look for content. 
   }
 
@@ -47,8 +47,8 @@ public class FileRemoteWalkerCallbackCopy  extends FileRemoteProgressEventConsum
   @Override public Result offerLeafNode ( FileRemote leafNode, Object leafNodeData ) {
     String sName = leafNode.getName();
     FileRemote dst = this.dstDir.child(sName);
-    leafNode.copyTo(dst, this.evBack);
-    awaitExecution(0, true);
+    leafNode.copyTo(dst, this.evConsumer.evBack);
+    this.evConsumer.awaitExecution(0, true);
     return Result.cont;
   }
 
