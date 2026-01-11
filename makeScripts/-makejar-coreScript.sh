@@ -1,3 +1,4 @@
+#!/bin/bash
 #shell script to generate jar file
 #it can be run under Windows using MinGW: sh.exe - thisScript.sh
 #MinGW is part of git, it should be known for Gcc compile too.
@@ -85,16 +86,16 @@ echo DSTNAME = $DSTNAME >>$TMPJAVAC/javac.log  ## output file names
 echo BUILD_TMP = $BUILD_TMP >>$TMPJAVAC/javac.log  ## root for all temporary outputs
 echo SRC_ALL = $SRC_ALL >>$TMPJAVAC/javac.log      ## gather all *.java there
 echo SRC_ALL2 = $SRC_ALL2 >>$TMPJAVAC/javac.log  ## gather all *.java there - optional
-echo SRCPATH = $SRCPATH >>$TMPJAVAC/javac.log  - search path sources for javac
+echo SRCPATH = $SRCPATH - search path sources for javac  >>$TMPJAVAC/javac.log  
 echo FILE1SRC = $FILE1SRC >>$TMPJAVAC/javac.log  ## alternatively: argument files for javac
 echo RESOURCEFILES = $RESOURCEFILES >>$TMPJAVAC/javac.log  ## additional files in jar
 echo CLASSPATH = $CLASSPATH - search path jars for javac >>$TMPJAVAC/javac.log
-echo Classpath_vishiaBase = $Classpath_vishiaBase  - jar file for jar/zip generation >>$TMPJAVAC/javac.log
-echo TMPJAVAC =  $TMPJAVAC  - temporary files while compilation >>$TMPJAVAC/javac.log
-echo JARFILE = $JARFILE  - generated jar >>$TMPJAVAC/javac.log
-echo MD5FILE = $MD5FILE  - generated MD5 text file >>$TMPJAVAC/javac.log
+echo Classpath_vishiaBase = $Classpath_vishiaBase - jar file for jar/zip generation >>$TMPJAVAC/javac.log
+echo TMPJAVAC =  $TMPJAVAC - temporary files while compilation >>$TMPJAVAC/javac.log
+echo JARFILE = $JARFILE - generated jar >>$TMPJAVAC/javac.log
+echo MD5FILE = $MD5FILE - generated MD5 text file >>$TMPJAVAC/javac.log
 echo SRCZIPFILE = $SRCZIPFILE - generated sozrce.zip file >>$TMPJAVAC/javac.log
-echo DSTJARDIR = $DSTJARDIR >>$TMPJAVAC/javac.log
+echo DSTJARDIR = $DSTJARDIR - >>$TMPJAVAC/javac.log
 ##====== javac =============================================================
 if test "$JAVAC_HOME" = ""; then
   ##  export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
@@ -122,7 +123,7 @@ fi
 ##ls /tmp
 echo >>$TMPJAVAC/javac.log
 echo ====== javac ================================================ >>$TMPJAVAC/javac.log
-if ! test "$SRCPATH" == ""; then export SRCPATH="-sourcepath $SRCPATH"; fi  ## use -sourcpath ... option for javac only if given
+if ! test "$SRCPATH" = ""; then export SRCPATH="-sourcepath $SRCPATH"; fi  ## use -sourcpath ... option for javac only if given
 $JAVAC -version >>$TMPJAVAC/javac.log
 echo $JAVAC -encoding UTF-8 -verbose -d $TMPJAVAC/binjar $CLASSPATH $SRCPATH $FILE1SRC  >>$TMPJAVAC/javac.log
 cat $TMPJAVAC/javac.log

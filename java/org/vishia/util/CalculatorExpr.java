@@ -2556,10 +2556,11 @@ public class CalculatorExpr
    * </ul>
    * Unary operators:
    * <ul> 
-   * <li>"b" Convert to boolean.
-   * <li>"b!" boolean not operator
-   * <li>"u~" bit negation operator
-   * <li>"u-" numeric negation
+   * <li>"!" boolean NOT operator not recommended, use "~"
+   * <li>"~" bit negation operator or boolean NOT operator.
+   *   Hint: to check whether all bits are 0 in a bit variable use <code>var==0</code>
+   * <li>"-" numeric negation
+   * <li>"+" admissible, do nothing
    * </ul>
    */
   protected static Map<String, Operator> operators;

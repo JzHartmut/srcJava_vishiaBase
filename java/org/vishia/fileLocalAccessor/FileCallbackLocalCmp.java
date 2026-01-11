@@ -188,7 +188,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
     //if(dir == this.dir1Base) Debugutil.stopp();  //{ return Result.cont; } //the first entry
     //else {
     super.prepareDirs(dir, false);
-    if(this.dir2Curr !=null && !this.dir2Curr.exists()){
+    if(this.dir2Curr == null || !this.dir2Curr.exists()){  // correct fix for nullpointer situation
       dir.setMarked(FileMark.cmpAlone);
       dir.mark().setMarkParent(FileMark.cmpMissingFiles, false);
       //System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());

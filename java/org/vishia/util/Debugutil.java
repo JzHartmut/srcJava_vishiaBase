@@ -32,8 +32,8 @@ public class Debugutil
   }
   
   /**Stop here while program writing. */
-  public static int totest(){
-    return 0;
+  public static void totest(boolean bAssert){
+    if(bAssert) unexpected();   // possible set breakpoint here.
   }
   
   /**Adequate assert(false) but possible to set a central breakpoint. Use only while program development. */

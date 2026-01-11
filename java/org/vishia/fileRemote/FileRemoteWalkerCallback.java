@@ -77,8 +77,10 @@ public abstract class FileRemoteWalkerCallback implements SortedTreeWalkerCallba
           //if(StringFunctions.equals(localPath, "functionBlocks")) Debugutil.stopp();
           //System.out.println("FileRemoteCallbackCmp - dir; " + localPath);
           this.dir2Curr = this.dir2Base.subdir(localPath);
-        } else {
-          this.dir2Curr = this.dir2Curr.getChild(dir.getName());  // it is null if not refreshed and existing.
+        } else {                                           // TODO do not create the sub dir if it is not physically existing, with an additonal parameter
+          CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
+          this.dir2Curr = this.dir2Base.subdir(localPath);
+//          this.dir2Curr = this.dir2Curr.getChild(dir.getName());  // it is null if not refreshed and existing.
         }
       }
     }

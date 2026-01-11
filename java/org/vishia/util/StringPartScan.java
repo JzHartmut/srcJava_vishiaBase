@@ -1224,6 +1224,16 @@ public class StringPartScan extends StringPart
 
   }
 
-  
+  /**This is only a helper to set a breakpoint while scanning.
+   * Write this operation in mid of ...scan(...).
+   */
+  public StringPartScan scanDebug () {
+    if(bCurrentOk) {
+      Debugutil.stop();   // debug the ok pass
+    } else {
+      Debugutil.stop();   // debug the nok pass
+    }
+    return this;          // possible append more .scan    
+  }
 
 }

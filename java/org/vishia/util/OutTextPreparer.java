@@ -17,6 +17,8 @@ import java.lang.reflect.Method;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Formatter;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -49,7 +51,7 @@ import org.vishia.util.Java4C.ConstRef;
  * 
  * <:otx: otxExample : data, placeholder, NEWLINE:--:nli >
  * Output plain text with <&placeholder.value>
- * <:if:data.cond>conditional output<:else>other variant<.if>
+ * <:if:data.cond>conditional output<:elsif:!data.cond2>other variant<:else>else variant<.if>
  * <:for:var:data.container>element = <&var_key>: <&var><:if:var_next>, <.if><.for>
  * <:wr:data.wrBuffer>Write this text with <&var> in another buffer<.wr>
  * <:call:subtext:arg=data.var>
@@ -125,7 +127,7 @@ try {
  * to output a <code>&lt;&</code> itself. See next list.
  * <ul> 
  * <li><code>&lt;: ></code> skips over all white spaces till the next placeholder 
- * <li><code>&lt;: ></code> second time after a <code>&lt;: ></code> stops skipping withspaces but outputs a space. 
+ * <li><code>&lt;: ></code> deprecated use <code>&lt;:s></code> second time after a <code>&lt;: ></code> stops skipping withspaces but outputs a space. 
  * <li><code>&lt;:?nl></code> skips till the next line (skips over the newline character in the script) (since 2023-05)
  * <li><code>&lt;:? ></code>  skips over all white spaces till the next placeholder (since 2023-05)
  * <li><code>&lt;:s></code> outputs a space (since 2023-05, alternatively usable to a second <code>&lt;: ></code> )
@@ -175,7 +177,7 @@ try {
  * <li> or 'idxConstData' given on construction. 
  *   This is a fast access, only to an container {@link TreeMap} or via indexed array access to the arguments.
  * <li><code>&lt;&data.element></code> is a more complex access expression 
- *   then the capability of {@link DataAccess} is used. This accesses the elements via reflection.
+ *   then the capability of {@link DataAccess} and {@link CalculatorExpr} is used. This accesses the elements via reflection.
  *   It means the given {@link Class#getDeclaredFields()}, {@link Class#getDeclaredMethods()} etc. are used
  *   to get the data, accessed via {@link java.lang.reflect.Field} etc. 
  *   The access is completely controlled in the {@link DataAccess} class. For usage it is simple.
@@ -186,6 +188,10 @@ try {
  *   But you can also prepare complex expressions by Java programming and call this expressions or operations.
  *   For that the 'execClass' class can be used which may contain prepared operations for your own. 
  *   Hence you can decide writing simple expressions or also more complex as script or just as Java operations.
+ * <li>More examples for such expressions:
+ *   <ul>
+ *   <li><code>&lt;&~data.bVar></code> NOT operation
+ *   </ul>  
  * <li><code>&lt;&#></code> produces the line number, which is automatically count. (since 2025-05)
  * </ul>
  * <br>
@@ -303,8 +309,15 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
-   * <li>2025-12-22: NEWLINE-::_name, Now the newline string can have any character except ',' and identfier.
-   *   Hence more possibilities. 
+   * <li>2026-01-11: Because a necessry bugfix: faulty end if on end '<=' was written, 
+   *   the {@link ParseHelper#parse()} now differences exactly between '<&', '<:' and '<.'.
+   *   Only this three text variants are gTxt-controls and NEVER normal texts. Hence also an Exception if <:... with faulty following text.
+   *   With this clarify the syntax is more concise, butt may be older scripts should be corrected,
+   *   which uses for example '<:anytext' which is not a control command. Or also '<.anytext>. 
+   * <li>2026-01-07: Now also <code>&lt;:else:comment></code> is possible, more concise tested also on <code>&lt;.if:comment></code>:
+   *    <code>&lt;.ifcomment></code> has worked but was never explainded, for example <code>&lt;.if.comment></code> is now faulty.
+   * <li>2025-12-22: NEWLINE-::name, Now the newline string can have any character except ',', '>' and identfier.
+   *   Hence more possibilities. Note that '_' is also an identifier character. <code>NEWLINE:__:name</code> is faulty!
    * <li>2025-12-21: capability of &lt;:tab:20> 
    * <li>2025-12-11: bugfix {@link #parse(Class, Map, Map)}: If this is called twice for the same script, then the {@link #cmds} are also twice
    *   and the output is dirty. hence check, exception if it is called a second one. Repair it on calling level!
@@ -1105,7 +1118,7 @@ public final class OutTextPreparer
   static class TabCmd extends Cmd {
     
     public TabCmd( int ixCmd, int[] linecol, int linePos ) {
-      super(ixCmd, linecol, ECmd.tab, null);
+      super(ixCmd, linecol, ECmd.tab, "" + linePos);
       this.linePos = linePos;
     }
 
@@ -2306,13 +2319,32 @@ public final class OutTextPreparer
           this.pos0 = (int)this.sp.getCurrentPosition();
         }                                                    // Note: spaces are detected because of content till <
         //    //===========================================vv search an <...>, the text before is also stored.
-        this.sp.seek("<", StringPart.mSeekCheck + StringPart.mSeekEnd);  // < is always start of a special output
-        if(this.sp.found()) {
+//        this.sp.seek("<", StringPart.mSeekCheck); //   // seek before '<', but pos0 is the last position before. + StringPart.mSeekEnd);  // < is always start of a special output
+//        if(this.sp.found()) {
+        if(this.sp.scanToAnyChar("<", '\0', '\0', '\0').scanOk()) { 
           this.sp.lentoMax();                              // in line mode, here see the whole pattern.
-          parseElement();                                  // stores also the text before the element.
+          int pos1 = (int)this.sp.getCurrentPosition();
+          if(this.sp.scan("<&").scanOk()) {
+            parseElementValue();                                  // stores also the text before the element.
+          } else if(  this.nLastWasSkipOverWhitespace !=0 //The last scan action was not a <: >, it it was, it is one space insertion.
+                && (this.sp.scan("<: >").scanOk() || this.sp.scan("<:+>").scanOk() || this.sp.scan("<:? >").scanOk())){ 
+            this.pos1 = pos1;     //before '<:' as end of text before
+            addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //adds the text before <:+>
+            this.sp.scanSkipSpace();
+            this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+            this.nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
+          } else if(this.sp.scan("<:").scanOk()) {
+            parseElementCmd();                                  // stores also the text before the element.
+          } else if(this.sp.scan("<.").scanOk()) {
+            parseElementEndCmd();                                  // stores also the text before the element.
+          } else {
+            Debugutil.stop();
+            this.sp.seekPos(1);            // skip over the '<' but pos0 remains still before that all, to search the next '<'   
+          }
         }     //===========================================^^ found a element in script or only in the line
         else { //==========================================vv no more '<' found in the script
           if(this.otx.sLineoutStart !=null) {    //--------vv line mode
+            this.pos1 = (int)this.sp.getCurrentPosition();
             String sText;
             sText = this.sp.getCurrent().toString();                       // the rest of the line
             int posComment = sText.indexOf("##");
@@ -2322,7 +2354,11 @@ public final class OutTextPreparer
             }
             int zText = sText.length();
             if(zText>0) {                                  // add the last text of the line.
-              addCmd(sText.toString(), this.sp.getlineCol(), 0, zText, null);
+              addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addString, sText);
+            } else if(this.pos1>this.pos0) {
+              addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, null); // add a before skipped range till a found free '<'
+            } else {
+              Debugutil.stop();   // nothing on end
             }
             this.sp.fromEnd().seekNoChar("\n\r\f");        // start scanning from next line start
             this.bNewline = true;
@@ -2343,42 +2379,20 @@ public final class OutTextPreparer
     }
   
     
-    
-    
-    private void parseElement ( ) throws ParseException {
-      this.pos1 = (int)this.sp.getCurrentPosition() -1;     //before '<' as end of text before
+    private void parseElementValue ( ) throws ParseException {
+      this.pos1 = (int)this.sp.getCurrentPosition() -2;     //before '<&' as end of text before
       this.sp.scanStart();
-      //if(this.sp.scan("&").scanIdentifier().scan(">").scanOk()){
-      if(this.sp.scan(":args:").scanOk()){ 
-        parseArgs();
-        if(!this.sp.scan(">").scanOk()) { 
-          addError("faulty <:args:... at " + this.sp.getCurrentPosition(), this.sp.getlineCol());
-        }
-        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
-      }
-      else if(  this.nLastWasSkipOverWhitespace !=0 //The last scan action was not a <: >, it it was, it is one space insertion.
-          && (this.sp.scan(": >").scanOk() || this.sp.scan(":+>").scanOk() || this.sp.scan(":? >").scanOk())){ 
-        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //adds the text before <:+>
-        this.sp.scanSkipSpace();
-        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
-        this.nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
-      }  
-      else if( this.sp.scan(":?nl>").scanOk()){ 
-        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //adds the text before <:+>
-        this.sp.seekAfterNewline();
-        this.pos0 = (int)this.sp.getCurrentPosition();  //after newline
-      }
-      else if(this.sp.scan("&").scanIdentifier().scan(">").scanOk()){
+      if(this.sp.scanIdentifier().scan(">").scanOk()){
         //------------------------------------------------- <&varname> a simple access to a given value
         String sName = this.sp.getLastScannedString();        // it adds a simple index in Cmd, not using DataAccess
         addCmdSimpleVar(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addVar, sName);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan("&#>").scanOk()) { //The line count
+      else if(this.sp.scan("#>").scanOk()) { //The line count
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addLinenr, null);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan("&").scanToAnyChar(">:", '\0', '\0', '\0').scanOk()){
+      else if(this.sp.scanToAnyChar(">:", '\0', '\0', '\0').scanOk()){
         //------------------------------------------------- <&data.path:format> more complex access to a given value
         final String sDatapath = this.sp.getLastScannedString();
   //      if(sDatapath.startsWith("&("))
@@ -2396,21 +2410,43 @@ public final class OutTextPreparer
         this.sp.seekPos(1);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":wr:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+      else { //No proper cmd-end found, then the '<-' is already scanned, but it is an textual character.
+        throw new ParseException("faulty <&" + sp.getCurrent(20), 0);
+      }
+ 
+    
+    }    
+    
+    private void parseElementCmd ( ) throws ParseException {
+      this.pos1 = (int)this.sp.getCurrentPosition() -2;     //before '<:' as end of text before
+      this.sp.scanStart();
+      if(this.sp.scan("args:").scanOk()){ 
+        parseArgs();
+        if(!this.sp.scan(">").scanOk()) { 
+          addError("faulty <:args:... at " + this.sp.getCurrentPosition(), this.sp.getlineCol());
+        }
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if( this.sp.scan("?nl>").scanOk()){ 
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //adds the text before <:+>
+        this.sp.seekAfterNewline();
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after newline
+      }
+      else if(this.sp.scan("wr:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
         //====>  ------------------------------------------ <:if:...>
         parseWr();
         this.ixCtrlCmd[++this.ixixCmd] = this.otx.cmds.size()-1;  //The position of the current wr
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
         
       }
-      else if(this.sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+      else if(this.sp.scan("if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
         //====>  ------------------------------------------ <:if:...>
         parseIf( ECmd.ifCtrl);
         this.ixCtrlCmd[++this.ixixCmd] = this.otx.cmds.size()-1;  //The position of the current if
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
         
       }
-      else if(this.sp.scan(":elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+      else if(this.sp.scan("elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
         //====>
         parseIf( ECmd.elsifCtrl);
         Cmd ifCmdLast;
@@ -2429,7 +2465,8 @@ public final class OutTextPreparer
         
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":else>").scanOk()) {
+      else if( this.sp.scan("else>").scanOk()   //--------vv The end of '<:else:' may be <:else:any comment>
+            || this.sp.scan("else:").scanToAnyChar(">", '\0', '\0', '\0').scanChar('>').scanOk()) { 
         //====>
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.elseCtrl, null);
         Cmd ifCmd;
@@ -2448,7 +2485,7 @@ public final class OutTextPreparer
   
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+      else if(this.sp.scan("for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
         String container = this.sp.getLastScannedString().toString();
         String entryVar = this.sp.getLastScannedString().toString();
         //====>
@@ -2476,7 +2513,7 @@ public final class OutTextPreparer
         this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
+      else if(this.sp.scan("set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
         String value = this.sp.getLastScannedString().toString();
         String variable = this.sp.getLastScannedString().toString();
   //      if(variable.equals("sIx"))
@@ -2490,7 +2527,7 @@ public final class OutTextPreparer
         cmd.ixVariable = ixOentry.ix;
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":type:").scanToAnyChar(":", '\\', '\'', '\'').scan(":").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
+      else if(this.sp.scan("type:").scanToAnyChar(":", '\\', '\'', '\'').scan(":").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
         String sType = this.sp.getLastScannedString().toString();
         String sValue = this.sp.getLastScannedString().toString();
         Class<?> type = null;;
@@ -2512,25 +2549,25 @@ public final class OutTextPreparer
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":exec:").scanOk()) { //scanIdentifier().scanOk()) {
+      else if(this.sp.scan("exec:").scanOk()) { //scanIdentifier().scanOk()) {
         //====>
         Cmd cmd = parseExec(this.otx.pattern, this.pos0, this.pos1, this.sp, this.execClass, this.idxConstData,this. idxScript);
         this.otx.cmds.add(cmd);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":call:").scanIdentifier().scanOk()) {
+      else if(this.sp.scan("call:").scanIdentifier().scanOk()) {
         //====>
         parseCall(this.otx.pattern, this.pos0, this.pos1, this.sp, this.execClass, this.idxConstData,this. idxScript);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":tab:").scanInteger().scan(">").scanOk()) {
+      else if(this.sp.scan("tab:").scanInteger().scan(">").scanOk()) {
         long linePos = this.sp.getLastScannedIntegerNumber();
         //====>
         Cmd cmd = new TabCmd(this.otx.cmds.size(), this.sp.getlineCol(), (int)linePos);
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, cmd);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }  
-      else if(this.sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+      else if(this.sp.scan("debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
         String cmpString = this.sp.getLastScannedString().toString();
         String debugVar = this.sp.getLastScannedString().toString();
         //====>
@@ -2538,24 +2575,24 @@ public final class OutTextPreparer
         cmd.cmpString = cmpString;
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }  
-      else if(this.sp.scan(":debug>").scanOk()) {
+      else if(this.sp.scan("debug>").scanOk()) {
         //====>
         @SuppressWarnings("unused") DebugCmd cmd = (DebugCmd)
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.debug, null);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":--").scanToStringEnd("-->").scanOk()) {
+      else if(this.sp.scan("--").scanToStringEnd("-->").scanOk()) {
         //it is commented
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(":x").scanHex(4).scan(">").scanOk()) {
+      else if(this.sp.scan("x").scanHex(4).scan(">").scanOk()) {
         char[] cText = new char[1];                      // <:x1234> a special UTF16 char
         cText[0] = (char)this.sp.getLastScannedIntegerNumber();
         String sTextSpecial = new String(cText);
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addString, sTextSpecial);
       }
-      else if(this.sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
+      else if(this.sp.scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
         // ------------------------------------------------ <:text> or <:n> <:r> <:t> <:s>
         final int posend = (int)this.sp.getCurrentPosition();
         final String sText = this.otx.pattern.substring(this.pos1+2, posend-1);
@@ -2574,7 +2611,16 @@ public final class OutTextPreparer
         }
         this.pos0 = posend;  //after '>'
       }
-      else if(this.sp.scan(".wr>").scanOk()) { //The end of an if
+      else { //No proper cmd-end found, then the '<-' is already scanned, but it is an textual character.
+        throw new ParseException("faulty <:" + sp.getCurrent(20), 0);
+      }
+    }
+  
+  
+    private void parseElementEndCmd ( ) throws ParseException {
+      this.pos1 = (int)this.sp.getCurrentPosition() -2;     //before '<.' as end of text before
+      this.sp.scanStart();
+      if(this.sp.scan("wr>").scanOk()) { //The end of an if
         Cmd wrCmd;
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //The last text before <.wr>
         if(this. ixixCmd >=0 && (wrCmd = this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd])).cmd == ECmd.wr) {
@@ -2592,8 +2638,8 @@ public final class OutTextPreparer
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(".if").scanOk()) {    //--------vv The end of an if // <.if:any comment>
-        this.sp.seek('>', StringPart.mSeekEnd);
+      else if(this.sp.scan("if>").scanOk()       //--------vv The end of '<.if:' may be <.if:any comment>
+           || this.sp.scan("if:").scanToAnyChar(">", '\0', '\0', '\0').scanDebug().scanChar('>').scanOk()) { 
         Cmd cmd = null;
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //The last text before <.if>
         while(  this. ixixCmd >=0 
@@ -2622,7 +2668,7 @@ public final class OutTextPreparer
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }                                                    
-      else if(this.sp.scan(".for").scanOk()) {   //--------vv The end of a for loop // <.for:any comment>
+      else if(this.sp.scan("for").scanOk()) {   //--------vv The end of a for loop // <.for:any comment>
         this.sp.seek('>', StringPart.mSeekEnd);
         Cmd forCmd;
         if(this. ixixCmd >=0 && (forCmd = this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd])).cmd == ECmd.forCtrl) {
@@ -2644,12 +2690,13 @@ public final class OutTextPreparer
           throw new ParseException(sError, 0);
         }
       }
-      else { //No proper cmd found:
-        Debugutil.stop();
+      else { //No proper cmd-end found, then the '<-' is already scanned, but it is an textual character.
+        throw new ParseException("faulty <." + sp.getCurrent(20), 0);
       }
-    }
-  
-  
+      
+    
+    }    
+    
   
     private void parseArgs() {
       do {
@@ -3341,6 +3388,7 @@ public final class OutTextPreparer
    */
   private void execFor(WriteDst wrCt, ForCmd cmd, int ixCmd, Object container, DataTextPreparer args) throws IOException {
     if(args.logExec !=null) { args.logExec.append(" " + this.sIdent + ":for@" + cmd.linecol[0]); } 
+    if(container instanceof Map.Entry) Debugutil.stopp(); 
     if(container == null) {
       //do nothing, no for
     }
@@ -3399,6 +3447,25 @@ public final class OutTextPreparer
       }
       if(container instanceof LinkedListLock) {
         ((LinkedListLock<?>)container).unlock();
+      }
+      if(!bFirst) {  //-------------------------------------- if the container is not empty, 
+        args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
+        args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
+        execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+      }
+    }
+    else if(container instanceof Iterator) {
+      boolean bFirst = true;
+      args.args[cmd.ixEntryKey] = null;
+      Iterator<?> iter = (Iterator<?>)container;
+      while(iter !=null && iter.hasNext()) {
+        args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
+        args.args[cmd.ixEntryVarNext] = iter.next();
+        if(bFirst) {
+          bFirst = false;
+        } else { //start on 2. item
+          execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
@@ -3501,7 +3568,7 @@ public final class OutTextPreparer
   
   
   void debug() { 
-    Debugutil.stopp(); 
+    Debugutil.stop(); 
   }
   
 } //class OutTextPreparer
