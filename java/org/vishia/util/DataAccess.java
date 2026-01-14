@@ -1639,7 +1639,7 @@ public class DataAccess {
           debugMethod = null; //only one time after set.
         }
       } else {
-        msg.append("DataAccess - method not found, searched:\n  ");
+        msg.append("\nDataAccess - method not found, searched: ");
         msg.append(clazz1.getName()).append(".") .append(element.ident) .append("(");
         boolean bNext = false;
         if(args !=null) {
