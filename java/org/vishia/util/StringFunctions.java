@@ -194,6 +194,80 @@ public class StringFunctions {
   }
   
   
+  
+  /**Searches the position of the first identifier character starting from the given position.
+   * If the given position is on an identifier start character, it will be returned without change.
+   * <pre>
+   *  +--start
+   *  v         v--end       found the xyz:
+   * 'abc + xyz '
+   *        ^  ^---indexEnd
+   *        +-- return
+   *        
+   *  +--start 
+   *  v     v--end        found the abc on begin
+   * 'abc + x'
+   *  ^  ^---indexEnd
+   *  +-- return
+   *        
+   *  +--start 
+   *  v        v--end        found the abc not on begin
+   * ' + abc + '
+   *     ^  ^---indexEnd
+   *     +-- return
+   *        
+   *  +--start
+   *  v  v--end              no identifier found backward:
+   * ' + a '
+   *  ^---indexEnd
+   *  return -1
+   * </pre>
+   * @param src
+   * @param start maximal back position for search
+   * @param end >=0: absolute exclusive end position for backward search, <0: end position relative to end, -1 is the end of src
+   * @param additionalChars null: do not use, 
+   * @param indexEnd if given [0] is set either with the exclusive end position of the identifier or to start if an identifier is not found. 
+   * @return -1 if an identifier is not found. Elsewhere it is the position of the first identifier character.
+   */
+  public static int indexBackIdentifier(CharSequence src, int start, int end, String additionalChars, int[] indexEnd){
+
+    int zsq = src.length();
+    int pos = (end < 0 ? zsq + end +1 : (end >= zsq ? zsq : end)) ;  //end is <pos if endMax is left from start
+    char cc;
+    boolean bIsIdentifier = false;
+    int posEnd = pos;
+    while(!bIsIdentifier && --pos >= start ) {    //--------vv repeat search last identifier char if the identifier before was not bIdentifier
+      if ( (cc = src.charAt(pos)) == '_' 
+        || (cc >= 'A' && cc <='Z') 
+        || (cc >= 'a' && cc <='z') 
+        || (cc >= '0' && cc <='9') 
+        || (additionalChars != null && additionalChars.indexOf(cc)>=0)
+        ) {                                      //--------identifier char from back found
+        posEnd = pos +1;
+        char c1 = '\0';
+        while( --pos >= start 
+          && ((cc = src.charAt(pos)) == '_' 
+            || (cc >= 'A' && cc <='Z') 
+            || (cc >= 'a' && cc <='z') 
+            || (cc >= '0' && cc <='9') 
+            || (additionalChars != null && additionalChars.indexOf(cc)>=0)
+             ) ) {
+          c1 = cc;
+        }
+        bIsIdentifier = c1 <'0' || c1 >'9';    // first char of an identifier must not be a digit, A..Z, a..z, _ but also all additionalChars are admissible
+      } 
+    }
+    if(++pos >= start) {
+      if(indexEnd !=null) {
+        indexEnd[0] = bIsIdentifier ? posEnd : start;
+      }
+      return bIsIdentifier ? pos : -1;
+    } else {
+      return -1;
+    }
+  }
+
+  
   /**Returns the position after the end of an identifier.
    * Note: An identifier usual never starts with 0..9. But this routine assumes that it is an identifier. 
    * It means starting with 0..9 should be detected and processed outside. If this src starts with 0..9 it is accepted here.

@@ -605,7 +605,7 @@ public class CmdExecuter implements Closeable
       try {
         this.echoCmd.append(">cmdExecuter>");
         for(String arg: cmdArgs) {
-          this.echoCmd.append(" <").append(arg).append(">"); 
+          this.echoCmd.append(" ").append(arg); 
         }
         this.echoCmd.append("\n");
       } catch (IOException e) {
