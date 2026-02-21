@@ -35,7 +35,10 @@ import org.vishia.util.Java4C.ConstRef;
 /**This class helps to prepare output texts with data.
  * It is a more powerful text preparer in comparison to {@link java.io.PrintStream#printf(String, Object...)}
  * or {@link String#format(String, Object...)}. The first ones are only for number and date formatting.
- * This class allows access to all Java data as placeholder values inclusively conditions and loops. 
+ * This class allows access to all Java data as placeholder values inclusively conditions and loops.
+ * <br>
+ * The capability of this class is also denominated as <b><i>gTxt</i></b> or <b><i>gTxt preparation</i></b>
+ * in meaning of <i>generated Text</i> 
  * <ul> 
  * <li>It may be seen as small solution in comparison to {@link org.vishia.jztxtcmd.JZtxtcmd} only for text preparation of one or a few lines. 
  * <li>In opposite to {@linkplain https://www.eclipse.org/xtend/} resolution for ''' TEXTs ''':
@@ -48,20 +51,25 @@ import org.vishia.util.Java4C.ConstRef;
  * using {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}
  * in the following forms (example, text file via readTemplate...(): 
  * <pre>
- * 
- * <:otx: otxExample : data, placeholder, NEWLINE:--:nli >
+ * <:gTxt: otxExample : data, placeholder, NEWLINE:--:nli >
  * Output plain text with <&placeholder.value>
  * <:if:data.cond>conditional output<:elsif:!data.cond2>other variant<:else>else variant<.if>
  * <:for:var:data.container>element = <&var_key>: <&var><:if:var_next>, <.if><.for>
+ * <&ref.opeation(arg1, null, 'stringLiteral', )>
  * <:wr:data.wrBuffer>Write this text with <&var> in another buffer<.wr>
  * <:call:subtext:arg=data.var>
  * <:exec:operation(arguments,...)>
- * <.otx>
+ * <.gTxt>
  * </pre>
- * To execute this script you should call (see {@link #createArgumentDataObj()} and {@link #exec(Appendable, DataTextPreparer)}: 
+ * The <code><&dataAccess></code> can access data, its String representation is inserted in the text.
+ * But it is also possible to call any operations which changes data. It means, a free execution script is possible.
+ * But this is not the first approach. Side effects on data on script execution should be excluded by careful usage.
+ * For capabilities of the <code><&dataAccess></code> the class {@link DataAccess} is used with a lot of possiblities
+ * also for calculation of expressions. 
+ * <br>To execute this script you should call (see {@link #createArgumentDataObj()} and {@link #exec(Appendable, DataTextPreparer)}: 
  * <pre>
 
-StringBuilder sb = new StringBuilder(500);    // for the output text
+StringBuilder sb = new StringBuilder(5000);    // for the output text
 try {
   OutTextPreparer.DataTextPreparer args = mainOtx.createArgumentDataObj();
   args.setArgument("data", myData);           // The data class for access.
@@ -188,6 +196,12 @@ try {
  *   But you can also prepare complex expressions by Java programming and call this expressions or operations.
  *   For that the 'execClass' class can be used which may contain prepared operations for your own. 
  *   Hence you can decide writing simple expressions or also more complex as script or just as Java operations.
+ * <li><code>&lt;&data.access></code> can also contain static elements in the data class given before;
+ *   <ul><li><code>&lt;&sdata></code> A static field (also operation) in the execClass
+ *   <li><code>&lt;&name.sdata></code>A static access in any user data given with 'name'
+ *   <li><code>&lt;&className.sdata></code>className can be a varibale of type java.lang.Class.
+ *     Then sdata must be a static access in this class.
+ *   </ul>
  * <li>More examples for such expressions:
  *   <ul>
  *   <li><code>&lt;&~data.bVar></code> NOT operation
@@ -217,7 +231,7 @@ try {
  * whereas the <code>classXyz</code> can be given in the static reflection class as static variable as
  * <code>public static Class<?> classXyz = MyClassXyz.class; </code> 
  * <br>
- * <br><b><code>&lt;for:var:container>text for any element &lt;&var> with &lt;&var_key> in loop &lt;:if:variable_next>, &lt;.if>&lt;.for></code></b><br>
+ * <br><b><code>&lt;for:var:container>text for any element &lt;&var> with &lt;&var_key> in loop &lt;:if:var_next>, &lt;.if>&lt;.for></code></b><br>
  * The container can be an array, any {@link Iterable} such a {@link List} or a {@link Map}.
  * Inside the statement 
  * <ul><li><code>var</code> is the value of the container element, 
@@ -226,6 +240,41 @@ try {
  * </ul>
  * One can test <code>&lt;if:var_next>....&lt;.if></code> to detect whether there is a following element for example to output an separator.
  * <br>
+ * <br>
+ * <b>Write output </b><br>
+ * <ul><li>The output destination can be given on {@link #exec(Appendable, DataTextPreparer)} as simple for example an opened file {@link FileWriter}.
+ *   Open and close should be organised outside. Also a {@link StringBuilder} as output is possible.
+ * <li>To view the currently (last done) output while debugging, general internally the {@link WriteDst} is used. 
+ *   The currently output for the called script can be visited their in {@link WriteDst#wrCurr}.
+ *   This is especially interesting for output debugging. 
+ *   The {@link WriteDst#wrCurr} contains only that parts generated from the current script, it is not too much and able for overview.
+ * <li>After finish the script or after calling {@link WriteDst#finishAppend()} this content is transported to the output destination to use
+ *   (e.g. the opened file) and can be visited their because {@link Writer#flush()} is used, or can be visited in the StringBuilder as output,
+ *   which contains the output of a whole generation process with more scripts.  
+ * <li>Writing to the real output destination is confirmed either on end of execution of each {@link #execSub(WriteDst, DataTextPreparer, int, int)}
+ *   or if {@link WriteDst#finishAppend()} is called in certain situations, of usage.
+ *   If a sub script is called or a new {@link #exec(Appendable, DataTextPreparer)} is called, first the output before is not written in the destination,
+ *   only on end of the script all is written. But for debug it is not immediately removed from {@link WriteDst#wrCurr}, still visible.
+ *   But {@link WriteDst#bSbClean} is set to mark the situation.
+ * <li>The real output destination may be recommended as a StringBuilder, which collects the text and is written to a file at least as a whole.
+ *   This is independent of the debug possibilities.
+ *   It is for example helpful if text parts are necessary to insert in the whole generated text afterwards. 
+ *   This is for example to insert definition statements of variables in C code on start of the operations body, 
+ *   gathered while output the code and completely known only just afterwards.
+ *   This should be organised outside the OutTextPreparer. A {@link StringBuilder} as output is internally only used as {@link Appendable}, 
+ *   hence this modifications are possible. But {@link WriteDst#finishAppend()} should be called before an insert point is stored.
+ *   This is another aspect as the following:
+ * </ul>
+ * Another possibility is: set output back, but only for the current output in {@link WriteDst#wrCurr} for one script execution
+ * before {@link WriteDst#finishAppend()}:
+ * <ul><li><code><:OUT1></code> in a script marks the current position.
+ * <li><code><:set:out1:OUT1></code> sets the output back to this marked position and moves the content after this position in the variable 'out1',
+ *   the variable name is flexible.
+ * <li>Then the created output behind the marker can be used in a specific way, for example inserted again but with parenthesis
+ *   with a script part: <code>"(<&out1>)"</code>, or inserting a text before with <code>"<&textBefore> <&out1>"</code>.
+ *   The last example  is similar the last point in the table above, but it is for small parts, organised in the gTxt script itself. 
+ * <li>This allows more flexibility in scripts, using <code><:if:...></code> checks possible only afterwards  
+ * </ul>     
  * <br>
  * <b>Write to another output <code><:wr:buffer>...<.wr></code></b><br>
  * This is for example usable if texts should be placed on another position, but occurs with the data in this order.
@@ -359,7 +408,7 @@ public final class OutTextPreparer
    *   It's also better for documentation.
    * <li>2024-01-17 small refactoring in {@link #execSub(Appendable, DataTextPreparer, int, int)}:
    *   The arguments are not prepared firstly, instead as argument of the cmd. This is very more better for debugging. 
-   *   For that a subroutine {@link #dataForCmd(Cmd, DataTextPreparer, Appendable)} was created. 
+   *   For that a subroutine {@link #data4Cmd(Cmd, DataTextPreparer, Appendable)} was created. 
    * <li>2024-01-15 new capability for type check: <code>&lt;:type:vaue:classPath></code>, 
    *   able to switch off with {@link DataTextPreparer#setCheck(boolean)} 
    * <li>2024-01-15 {@link #readTemplateCreatePreparer(InputStream, String, Map, Object, Map)} and {@link #readTemplateList(InputStream, String, Object, Map)}:
@@ -433,6 +482,36 @@ public final class OutTextPreparer
   public static final String version = "2024-08-30";
   
   
+  
+  /**Helper class with some static operations and data.
+   * TODO build a standard variable of type {@link Class} to access operations of this class.
+   * The {@link DataAccess} supports it.
+   * 
+   */
+  public static class GtxtHelper {
+    /**It can be used to set a debug stop point in an otx script.
+     * Call there: <code><&testOtx(val, val, ...)></code>
+     * 
+     */
+    public static void testgTxt(Object ... val) {
+      Debugutil.stop();
+      //if(val[0] instanceof StateTransCond && ((FBlock_FBcl)val[0]).name().equals("trans_Back_Working_On__HoldPos_Working_On")) Debugutil.stopp();
+    }
+
+
+    /**Conditional debug stop in the otx
+     * Call there: <code><&testOtx(stringAccess, 'expectedValue', val)></code>
+     * 
+     */
+    public static void testgTxtCond(String valTest, String sTest, Object ... val) {
+      if(valTest !=null && valTest.equals(sTest))
+        Debugutil.stop();
+    }
+
+
+  }
+  
+  
   @ConstRef static final public Map<String, Object> idxConstDataDefault = new TreeMap<String, Object>(); {
     //this.idxConstDataDefault.put("null", null);   //This does not work because null is not recognized as constData
     // but usable for others ... in future
@@ -456,7 +535,7 @@ public final class OutTextPreparer
    * <li>Any found new line sets {@link #linePos} to 0, other character increments it.
    * <li>
    * <li>If {@link #OutTextPreparer(Appendable, int, int)} is used, an extra StringBuilder is created.
-   *   then all {@link #append(CharSequence)} operations appends only to {@link #wr},
+   *   then all {@link #append(CharSequence)} operations appends only to {@link #wrCurr},
    *   buf if {@link #finishAppend()} is called, it writes out the content to {@link #wrDst},
    *   but prevents the content in the {@link #sb}. So it can be visited both in the file (after flush)
    *   and also in the {@link #sb}.
@@ -472,13 +551,6 @@ public final class OutTextPreparer
      */
     private final Appendable wrDst;
     
-    /**This is always the used destination reference for all {@link #append(char)}, {@link #append(CharSequence)}, {@link #append(int)},
-     * {@link #append(CharSequence, int, int)} and {@link #add(WriteDst)}.
-     * It is either a StringBuilder if {@link #OutTextPreparer(Appendable, int, int)} is called,
-     * or it is any other Appendable.
-     */
-    private final Appendable wr;
-    
     /**This is set if the Appendable on construction, the last used output, is a {@link StringBuilder}. 
      * It allows more access possibilities for the user to change the generated text.
      * If the output Appendable is not a StringBulder this field remains null.
@@ -489,6 +561,20 @@ public final class OutTextPreparer
      */
     public final StringBuilder sb;
     
+    /**This is always the used destination reference for all {@link #append(char)}, {@link #append(CharSequence)}, {@link #append(int)},
+     * {@link #append(CharSequence, int, int)} and {@link #add(WriteDst)}.
+     * It is either a StringBuilder if {@link #OutTextPreparer(Appendable, int, int)} is called,
+     * or it is any other Appendable.
+     */
+    private final Appendable wrCurr;
+    
+    
+    /**Possible stored position on {@link ECmd#markOUT1}
+     * used for {@link ECmd#moveOUT1}
+     */
+    @SuppressWarnings("synthetic-access")
+    private int wrCurr1;
+
     /**Counts the '\n' inside appended texts. */
     private int lineCt;
     
@@ -500,11 +586,11 @@ public final class OutTextPreparer
     /**Current position (column) in the current line.*/
     private int linePos;
     
-    /**If true, then the next any {@link #append(char)} cleans first the {@link #wr} as StringBuilder
+    /**If true, then the next any {@link #append(char)} cleans first the {@link #wrCurr} as StringBuilder
      * and sets this flag to false. 
      * This flag is set to true after {@link #finishAppend()}, after the content is written to {@link #wrDst}.
      * {@link #close()} also call {@link #finishAppend()} to write out content.
-     * If this flag is true, the {@link #wr} contains the last written content
+     * If this flag is true, the {@link #wrCurr} contains the last written content but which is already written to {@link #wrDst}.
      */
     private boolean bSbClean;
     
@@ -512,10 +598,10 @@ public final class OutTextPreparer
      * The given 'wr' is immediately used for output. 
      * <ul>
      * <li>{@link #wrDst} is set to null, not used-
-     * <li>{@link #wr}, the immediately used output is set to given 'wr' argument.
+     * <li>{@link #wrCurr}, the immediately used output is set to given 'wr' argument.
      * <li>{@link #sb} is only set if 'wr' is a StringBuilder, to view the same via this reference.
      *   If 'wr' is not a StringBuilder, 'sb' = null, no view of written text in debug possible.
-     * <li>#lineCt and #lineStart are set with 'lineStart' but maybe non exactly used.
+     * <li>{@link #lineCt} and {@link #lineStart} are set with 'lineStart' but maybe non exactly used.
      * </ul>  
      * @param wr may be also an instance of {@link StringBuilder}, then {@link #sb} is set also.
      * @param lineStart number of this first line. It is important for immediately instances.
@@ -524,7 +610,7 @@ public final class OutTextPreparer
     public WriteDst(Appendable wr, int lineStart) {
       assert(! (wr instanceof WriteDst));                  // prevent error using recursively
       this.wrDst = null;
-      this.wr = wr;
+      this.wrCurr = wr;
       this.sb = wr instanceof StringBuilder ? (StringBuilder)wr: null;
       this.lineCt = lineStart;
       this.lineStart = lineStart;
@@ -534,7 +620,7 @@ public final class OutTextPreparer
      * for any {@link OutTextPreparer#exec(Appendable, DataTextPreparer) }.
      * <ul>
      * <li>{@link #wrDst} is set to the given wrDst argument, the originally output.-
-     * <li>{@link #wr} is created as temporary used StringBuilder, to write first all into.
+     * <li>{@link #wrCurr} is created as temporary used StringBuilder, to write first all into.
      *   It means on debug-output the output is seen here, but not immediately in the given 'wrDst'.
      *   <br>
      *   The content is primary written to here, and with 
@@ -549,7 +635,7 @@ public final class OutTextPreparer
     public WriteDst(Appendable wrDst, int lineStart, int sizeStringBuilder) {
       assert(! (wrDst instanceof WriteDst));                  // prevent error using recursively
       this.wrDst = wrDst;
-      this.wr = new StringBuilder(sizeStringBuilder);
+      this.wrCurr = new StringBuilder(sizeStringBuilder);
       this.sb = wrDst instanceof StringBuilder ? (StringBuilder)wrDst: null;
       this.lineCt = lineStart;
       this.lineStart = lineStart;
@@ -567,15 +653,15 @@ public final class OutTextPreparer
     
     /**Finishes one append phase. 
      * Only if this is constructed with {@link #OutTextPreparer(Appendable, int, int)}
-     * and hence {@link #wr} is a StringBuilder: Writes out the content of {@link #wr} to {@link #wrDst}
-     * but prevent the content in {@link #wr} (it is a StringBuilder) for debug view, else do nothing. 
+     * and hence {@link #wrCurr} is a StringBuilder: Writes out the content of {@link #wrCurr} to {@link #wrDst}
+     * but prevent the content in {@link #wrCurr} (it is a StringBuilder) for debug view, else do nothing. 
      * Sets {@link #bSbClean} which forces clean {@link #sb} on the next any {@link #append(char)}.
      * This operation is also called on {@link #close()}. 
      * @throws IOException
      */
     public void finishAppend() throws IOException {
-      if(!this.bSbClean && this.wrDst !=null && this.wr instanceof StringBuilder) {   // extra StringBuilder to view output text:
-        this.wrDst.append((StringBuilder)this.wr);               // then transfer the output to the file, but let it readable for debug
+      if(!this.bSbClean && this.wrDst !=null && this.wrCurr instanceof StringBuilder) {   // extra StringBuilder to view output text:
+        this.wrDst.append((StringBuilder)this.wrCurr);               // then transfer the output to the file, but let it readable for debug
         if(this.wrDst instanceof Flushable) {
           ((Flushable)this.wrDst).flush();             // interesting to see what's written in debug
         }
@@ -590,11 +676,11 @@ public final class OutTextPreparer
      * @throws IOException
      */
     public void add(WriteDst other) throws IOException {
-      if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
+      if(this.bSbClean && this.wrCurr instanceof StringBuilder) { ((StringBuilder)this.wrCurr).setLength(0); this.bSbClean = false; } 
       assert(other.sb !=null);
       this.lineCt += (other.lineCt - other.lineStart);
       other.finishAppend();
-      this.wr.append(other.sb);
+      this.wrCurr.append(other.sb);
     }
     
     
@@ -604,32 +690,33 @@ public final class OutTextPreparer
      * @throws IOException
      */
     public WriteDst append(int val) throws IOException {
-      if(this.bSbClean && this.wr instanceof StringBuilder) { // bSbClean is set in finishAppend(...)
-        ((StringBuilder)this.wr).setLength(0); this.bSbClean = false;
+      if(this.bSbClean && this.wrCurr instanceof StringBuilder) { // bSbClean is set in finishAppend(...)
+        ((StringBuilder)this.wrCurr).setLength(0); this.bSbClean = false;
       } 
       String sInteger = Integer.toString(val);
       this.linePos += sInteger.length();
-      this.wr.append(sInteger);                  // appends to the output wr
+      this.wrCurr.append(sInteger);                  // appends to the output wr
       return this;
     }
     
 
     /**Standard append operation see {@link Appendable#append(CharSequence)} */
     @Override public WriteDst append ( CharSequence csq ) throws IOException {
-      return append(csq, 0, csq.length());
+      if(csq == null) { return this; }
+      else { return append(csq, 0, csq.length()); }
     }
 
     /**Standard append operation see {@link Appendable#append(CharSequence, int, int)} 
-     * The implementation calls {@link #append(char)} for {@link #wr},
+     * The implementation calls {@link #append(char)} for {@link #wrCurr},
      * but checks \n to count {@link #lineCt()} and {@link #linePos}.
      */
     @Override public WriteDst append ( CharSequence csq, int start, int end ) throws IOException {
-      if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
+      if(this.bSbClean && this.wrCurr instanceof StringBuilder) { ((StringBuilder)this.wrCurr).setLength(0); this.bSbClean = false; } 
       for(int ix = start; ix < end; ++ix) {
         char cc = csq.charAt(ix);                          // append char by char to check \n and count linePos 
         if(cc=='\n') { this.lineCt +=1; this.linePos = 0; }
         else { this.linePos +=1; }
-        this.wr.append(cc);                      // append to the output wr
+        this.wrCurr.append(cc);                      // append to the output wr
       }
       //this.wr.append(csq, start, end);  //TODO test calculation time.
       return this;
@@ -637,10 +724,10 @@ public final class OutTextPreparer
 
     /**Standard append operation see {@link Appendable#append(char)} */
     @Override public WriteDst append ( char c ) throws IOException {
-      if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
+      if(this.bSbClean && this.wrCurr instanceof StringBuilder) { ((StringBuilder)this.wrCurr).setLength(0); this.bSbClean = false; } 
       if(c=='\n') { this.lineCt +=1; this.linePos = 0; }
       else { this.linePos +=1; }
-      this.wr.append(c);
+      this.wrCurr.append(c);
       return this;
     }
     
@@ -653,12 +740,12 @@ public final class OutTextPreparer
         nrSpaces = 1;
       }
       this.linePos += nrSpaces;
-      while(nrSpaces >= spaces.length()) { this.wr.append(spaces); nrSpaces -=spaces.length(); }
-      if(nrSpaces >0) { this.wr.append(spaces.substring(0, nrSpaces)); }
+      while(nrSpaces >= spaces.length()) { this.wrCurr.append(spaces); nrSpaces -=spaces.length(); }
+      if(nrSpaces >0) { this.wrCurr.append(spaces.substring(0, nrSpaces)); }
     }
     
     
-    /**Close() if any of {@link #wrDst} or {@link #wr} is a {@link Closeable},
+    /**Close() if any of {@link #wrDst} or {@link #wrCurr} is a {@link Closeable},
      * especially a File {@link Writer}
      *
      */
@@ -667,17 +754,17 @@ public final class OutTextPreparer
       if(this.wrDst !=null && this.wrDst instanceof Closeable) {
         ((Closeable)this.wrDst).close();
       }
-      if(this.wr !=null && this.wr instanceof Closeable) {
-        ((Closeable)this.wr).close();
+      if(this.wrCurr !=null && this.wrCurr instanceof Closeable) {
+        ((Closeable)this.wrCurr).close();
       }
     }
 
     /**This should be used only for debug view. 
-     * It outputs the {@link #lineCt()} and only the content if {@link #wr} is a {@link StringBuilder}
+     * It outputs the {@link #lineCt()} and only the content if {@link #wrCurr} is a {@link StringBuilder}
      */
     @Override public String toString() {
       return "lines: " + this.lineStart + " + " + (this.lineCt - this.lineStart +1) 
-           + ( this.wr instanceof StringBuilder ? "\n" + this.wr 
+           + ( this.wrCurr instanceof StringBuilder ? "\n" + this.wrCurr 
              : this.sb == null ? "" : "\n" + this.sb);
     }
   }
@@ -694,7 +781,7 @@ public final class OutTextPreparer
   public static class DataTextPreparer {
     
     /**The associated const data for OutText preparation used for {@link #setArgument(String, Object)} by name. */
-    final OutTextPreparer prep;
+    public final OutTextPreparer gTxtScrpt;
     
     /**The instance where the &lt;:exec:operation(...)> are located. null if not necessary. */
     Object execObj;
@@ -736,7 +823,7 @@ public final class OutTextPreparer
       if(prep.cmds.size()==0) {
         throw new IllegalStateException("OutTextPreparer is not initialized, new DataTextPreparer(...) only possible on initialized OutTextPreparer");
       }
-      this.prep = prep;
+      this.gTxtScrpt = prep;
       this.argsIxByName = prep.nameVariables;
       if(prep.nameVariables.size() >0) {
         this.args = new Object[prep.nameVariables.size()];
@@ -759,9 +846,9 @@ public final class OutTextPreparer
      * @param value any value for this argument.
      * */
     public void setArgument(String name, Object value) {
-      DataAccess.IntegerIx ix0 = this.prep.nameVariables.get(name);
+      DataAccess.IntegerIx ix0 = this.gTxtScrpt.nameVariables.get(name);
       if(ix0 == null) 
-        throw new IllegalArgumentException("OutTextPreparer script " + this.prep.sIdent + ", argument: " + name + " not existing: ");
+        throw new IllegalArgumentException("OutTextPreparer script " + this.gTxtScrpt.sIdent + ", argument: " + name + " not existing: ");
       int ix = ix0.ix;
       this.args[ix] = value;
     }
@@ -777,7 +864,7 @@ public final class OutTextPreparer
      * @return true if set, false if the argument does not exists.
      * */
     public boolean setArgumentOptional(String name, Object value) {
-      DataAccess.IntegerIx ix0 = this.prep.nameVariables.get(name);
+      DataAccess.IntegerIx ix0 = this.gTxtScrpt.nameVariables.get(name);
       if(ix0 != null) {
         int ix = ix0.ix;
         this.args[ix] = value;
@@ -824,13 +911,13 @@ public final class OutTextPreparer
     public void setCheck(boolean bChecks) { this.bChecks = bChecks; }
     
     
-    /**Executes the referenced OutText {@link #prep} with this given data.
+    /**Executes the referenced OutText {@link #gTxtScrpt} with this given data.
      * It simplifies the call ot {@link OutTextPreparer#exec(Appendable, DataTextPreparer)}
      * @param out
      * @throws IOException
      */
     public void exec(Appendable out) throws IOException {
-      this.prep.exec(out, this);
+      this.gTxtScrpt.exec(out, this);
     }
     
   }
@@ -852,7 +939,9 @@ public final class OutTextPreparer
     call('C', "call"),
     exec('E', "exec"),
     debug('D', "debug"),
-    tab('p', "tab")
+    tab('p', "tab"),
+    markOUT1('1', "markOUT1"),
+    moveOUT1('9', "moveOUT1")
     ;
     ECmd(char cmd, String sCmd){
       this.cmd = cmd; this.sCmd = sCmd;
@@ -992,12 +1081,12 @@ public final class OutTextPreparer
      * Determined in ctor ({@link OutTextPreparer#parse(String, Object)} */
     public int ixVariable;
 
-    public SetCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, StringPartScanLineCol spDatapath, Class<?> reflData) throws Exception {
-      super(ixCmd, linecol, outer, ECmd.setVar, spDatapath, reflData);
+    public SetCmd ( ECmd eCmd, int ixCmd, int[] linecol, OutTextPreparer outer, StringPartScanLineCol spDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, eCmd, spDatapath, reflData);
     }
 
-    public SetCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
-      super(ixCmd, linecol, outer, ECmd.setVar, sDatapath, reflData, null);
+    public SetCmd ( ECmd eCmd, int ixCmd, int[] linecol, OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, eCmd, sDatapath, reflData, null);
     }
   }
   
@@ -2534,18 +2623,26 @@ public final class OutTextPreparer
         this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan("set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
-        String value = this.sp.getLastScannedString().toString();
+      else if(this.sp.scan("set:").scanIdentifier().scanOk()) {
         String variable = this.sp.getLastScannedString().toString();
+        SetCmd cmd;
+        if(this.sp.scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
+          String value = this.sp.getLastScannedString().toString();
+          cmd = (SetCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.setVar, value, log);
+        } else if(this.sp.scan(":OUT1").scan(">").scanOk()) {
+          cmd = (SetCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.moveOUT1, null, log);
+        } else {
+          throw new ParseException("faulty <:set:ident" + sp.getCurrent(20), 0);
+        }
   //      if(variable.equals("sIx"))
   //        Debugutil.stop();
-        SetCmd cmd = (SetCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.setVar, value, log);
+        
         DataAccess.IntegerIx ixOentry = this.otx.nameVariables.get(variable); 
         if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
           ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
           this.otx.nameVariables.put(variable, ixOentry);
         }
-        cmd.ixVariable = ixOentry.ix;
+        cmd.ixVariable = ixOentry.ix;                      // add the ix of variable
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
       else if(this.sp.scan("type:").scanToAnyChar(":", '\\', '\'', '\'').scan(":").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
@@ -2600,6 +2697,10 @@ public final class OutTextPreparer
         //====>
         @SuppressWarnings("unused") DebugCmd cmd = (DebugCmd)
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.debug, null, log);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan("OUT1>").scanOk()) {
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.markOUT1, null, log);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
       else if(this.sp.scan("--").scanToStringEnd("-->").scanOk()) {
@@ -3016,7 +3117,8 @@ public final class OutTextPreparer
               }
             } break;
             case wr: cmd = new WrCmd(this.otx.cmds.size(), linecol, this.otx, sDatapath, this.execClass); break;
-            case setVar: cmd = new SetCmd(this.otx.cmds.size(), linecol, this.otx, sDatapath, this.execClass); break;
+            case setVar: cmd = new SetCmd(ECmd.setVar, this.otx.cmds.size(), linecol, this.otx, sDatapath, this.execClass); break;
+            case moveOUT1: cmd = new SetCmd(ECmd.moveOUT1, this.otx.cmds.size(), linecol, this.otx, sDatapath, this.execClass); break;
             case debug: cmd = new DebugCmd(this.otx.cmds.size(), linecol, this.otx, sDatapath, this.execClass, idxConstData); break;
             case addString: cmd = new CmdString(this.otx.cmds.size(), linecol, sDatapath); break;
             default: cmd = new Cmd(this.otx.cmds.size(), linecol, this.otx, ecmd, sDatapath, this.execClass, null); break;
@@ -3093,7 +3195,7 @@ public final class OutTextPreparer
    * Note: it is possible that this operation is recursively called with the same or different instances of this,
    * because in script-called operation this operation can be also used for detail outputs.
    * Writing to the same output channel is successive and possible. 
-   * @param wr The output channel. If it is a {@link Flushable} then after this operation flush() is called.
+   * @param wrCurr The output channel. If it is a {@link Flushable} then after this operation flush() is called.
    *   This allows view ouutput on file level. flush() is also possible to call inside from user level
    *   in any called sub operations where the wr instance is known, simple using this.
    *   <br>If the text generation should be done so fast as possible
@@ -3106,20 +3208,20 @@ public final class OutTextPreparer
    * @throws Exception 
    */
   public void execLineCt( WriteDst wrCt, DataTextPreparer args) throws IOException {
-    if(args.prep != this) {
+    if(args.gTxtScrpt != this) {
       throw new IllegalArgumentException("OutTextPreparer mismatch: The data does not match to the script.");
     }
     assert(this.nameVariablesByIx!=null);
     execSub(wrCt, args, 0, this.cmds.size());
     wrCt.finishAppend();                        // finish a possible existing append content from before.
-    if(wrCt.wr instanceof Flushable) {
-      ((Flushable)wrCt.wr).flush();             // interesting to see what's written in debug
+    if(wrCt.wrCurr instanceof Flushable) {
+      ((Flushable)wrCt.wrCurr).flush();             // interesting to see what's written in debug
     }
   }
   
   
   /**Executes preparation for a range of cmd for internal control structures
-   * @param wr The output channel
+   * @param wrCurr The output channel
    * @param args for preparation.
    * @param ixStart from this cmd in {@link #cmds} 
    * @throws IOException 
@@ -3155,10 +3257,10 @@ public final class OutTextPreparer
           case wr: {               //======================== replace the current output
             int ixWrBuffer = ((WrCmd)cmd).ixDataWr;
             //if(args.args[ixWrBuffer] == null) {  //---------- first get the write buffer
-              args.args[ixWrBuffer] = dataForCmd(cmd, args, wrCt);
+              args.args[ixWrBuffer] = data4Cmd(cmd, args, wrCt);
             //}
             if(args.args[ixWrBuffer] == null || !(args.args[ixWrBuffer] instanceof Appendable)) {
-              wrCt.wr.append("<??:wr:buffer not found or faulty: ??>");
+              wrCt.wrCurr.append("<??:wr:buffer not found or faulty: ??>");
               ixCmd += ((WrCmd)cmd).offsEndCtrl -1;
             } else {
               Object wo = args.args[ixWrBuffer];
@@ -3190,14 +3292,15 @@ public final class OutTextPreparer
    * @throws IOException 
    * 
    */
+  @SuppressWarnings("synthetic-access")
   private int execSwitchCmd ( Cmd cmd, int ixCmdArg, WriteDst wrCt, DataTextPreparer args) throws IOException {
     int ixCmd = ixCmdArg;
-    Debugutil.retest(0); 
+    Debugutil.retest(2); 
     switch(cmd.cmd) {
       case addString: wrCt.append(cmd.textOrVar); break;
       case addVar: {                                   // <&access...>
         //Integer ixVar = varValues.get(cmd.str);
-        Object data = dataForCmd(cmd, args, wrCt);
+        Object data = data4Cmd(cmd, args, wrCt);
         if(data != null) {                   //--------vv call of void operation delivers null, no output then. 
           String sData = data == null ? "" : data.toString();
           assert(sData !=null);
@@ -3206,7 +3309,7 @@ public final class OutTextPreparer
       } break;
       case setVar: {
         int ixVar = ((SetCmd)cmd).ixVariable;
-        Object res =  dataForCmd(cmd, args, wrCt);
+        Object res =  data4Cmd(cmd, args, wrCt);
         if(res instanceof CalculatorExpr.Value) {
           CalculatorExpr.Value resExpr = (CalculatorExpr.Value) res;
           args.args[ ixVar ] = resExpr.objValue();
@@ -3218,26 +3321,26 @@ public final class OutTextPreparer
       } break;
       case typeCheck: if(args.bChecks){
         TypeCmd cmdt = (TypeCmd)cmd;
-        Object data = dataForCmd(cmd, args, wrCt);
+        Object data = data4Cmd(cmd, args, wrCt);
         boolean bOk = cmdt.type.isInstance(data);
         if(!bOk) {
           Class<?> typefound = data.getClass();
-          wrCt.wr.append("<?? typecheck fails, " + cmdt.textOrVar + " is type of " + typefound.getCanonicalName() + " ??>");
+          wrCt.wrCurr.append("<?? typecheck fails, " + cmdt.textOrVar + " is type of " + typefound.getCanonicalName() + " ??>");
         }
       } break;
       case addLinenr: {
-        wrCt.wr.append("#" + wrCt.lineCt());
+        wrCt.wrCurr.append("#" + wrCt.lineCt());
       } break;
       case elsifCtrl:
       case ifCtrl: {
-        Object data = dataForCmd(cmd, args, wrCt);
+        Object data = data4Cmd(cmd, args, wrCt);
         ixCmd = execIf(wrCt, (IfCmd)cmd, ixCmd, data, args);
       } break;
       case elseCtrl: break;  //if <:else> is found in queue of <:if>...<:elseif> ...<:else> next statements are executed.
       case forCtrl: {
         if(((ForCmd)cmd).ixStart ==0)
           Debugutil.stop();
-        Object data = dataForCmd(cmd, args, wrCt);
+        Object data = data4Cmd(cmd, args, wrCt);
         execFor(wrCt, (ForCmd)cmd, ixCmd, data, args);;
         ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
       } break;
@@ -3248,16 +3351,16 @@ public final class OutTextPreparer
           cmd.dataAccess.access(args.execObj, true, false, null, args.args, false, null);
           //DataAccess.access(dataAccess1, args.execObj, true, false, null, args.args, false, null);   // this shortens the access only a little bit
         } catch (Exception exc) {
-          wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<exec:" + cmd.textOrVar + ": execution exception " + exc.getMessage() + "??>");
+          wrCt.wrCurr.append("<?? OutTextPreparer script " + this.sIdent + "<exec:" + cmd.textOrVar + ": execution exception " + exc.getMessage() + "??>");
         } 
       } break;
       case call: {
-          Object data = dataForCmd(cmd, args, wrCt);
+          Object data = data4Cmd(cmd, args, wrCt);
           if(data == null) {
-              wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ": variable not found, not given??>");
+              wrCt.wrCurr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ": variable not found, not given??>");
           }
           if(!(data instanceof OutTextPreparer)) {
-              wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ":  variable is not an OutTextPreparer ??>");
+              wrCt.wrCurr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ":  variable is not an OutTextPreparer ??>");
           } else {
               execCall(wrCt, (CallCmd)cmd, args, (OutTextPreparer)data);
           } 
@@ -3265,8 +3368,28 @@ public final class OutTextPreparer
       case tab: {
           wrCt.setLinePos(((TabCmd)cmd).linePos);
       } break;
+      case markOUT1: {
+        if(wrCt.wrCurr instanceof StringBuilder) {         // store the current end position in wrCurr StringBuilder
+          StringBuilder sb = (StringBuilder)wrCt.wrCurr;
+          wrCt.wrCurr1 = (sb).length();
+        }     
+      } break;
+      case moveOUT1: {
+        if(wrCt.wrCurr instanceof StringBuilder) {         // store the current end position in wrCurr StringBuilder
+          StringBuilder sb = (StringBuilder)wrCt.wrCurr;
+          String sMove = sb.substring(wrCt.wrCurr1, sb.length());
+          sb.setLength(wrCt.wrCurr1);                      // set to the given length on <:OUT1> marker.
+          int ixVar = ((SetCmd)cmd).ixVariable;
+          String name = this.nameVariablesByIx[ixVar];
+          args.args[ ixVar ] = sMove;
+          args.argsByName.put(name, args.args[ixVar]);
+          
+        } else {
+          wrCt.wrCurr.append("<?? OutTextPreparer script " + this.sIdent + "<set:" + cmd.textOrVar + ":OUT1> output is not a StringBuilder ??>");
+        }
+      } break;
       case debug: {
-        if(((DebugCmd)cmd).cmpString ==null || dataForCmd(cmd, args, wrCt).toString().equals(((DebugCmd)cmd).cmpString)){
+        if(((DebugCmd)cmd).cmpString ==null || data4Cmd(cmd, args, wrCt).toString().equals(((DebugCmd)cmd).cmpString)){
           debug();
         }
       } break;
@@ -3278,7 +3401,7 @@ public final class OutTextPreparer
   
   
   
-  private Object dataForCmd ( Cmd cmd, DataTextPreparer args, WriteDst wrCt ) throws IOException {
+  private Object data4Cmd ( Cmd cmd, DataTextPreparer args, WriteDst wrCt ) throws IOException {
     @SuppressWarnings("unused") boolean bDataOk = true;
     Object data;  //========================================= first gather the data
     if(args.logExec !=null) { args.logExec.append(" " + cmd.linecol[0]); } 
@@ -3290,7 +3413,7 @@ public final class OutTextPreparer
       } catch (Exception e) {
         bDataOk = false;
         data = null;
-        wrCt.wr.append("<??OutTextPreparer script >>" + this.sIdent + "<<: >>" + cmd.textOrVar + "<< execution error: " + e.getMessage() + "??>");
+        wrCt.wrCurr.append("<??OutTextPreparer script >>" + this.sIdent + "<<: >>" + cmd.textOrVar + "<< execution error: " + e.getMessage() + "??>");
       }
     }
     else if(cmd.ixValue >=0) { //-------------------------- any index to the arguments or local arguments
@@ -3307,7 +3430,7 @@ public final class OutTextPreparer
         if(args.logExec !=null) { args.logExec.append(" Exception dataAccess: ").append(this.sIdent).append(':').append(cmd.toString()); }
         CharSequence sMsg = ExcUtil.exceptionInfo("", exc, 1, 10);
         data = "<??>";
-        wrCt.wr.append("<??OutTextPreparer variable error: '" + this.sIdent + ":" + cmd.toString() + "'" + sMsg + "\" ??>");
+        wrCt.wrCurr.append("<??OutTextPreparer variable error: '" + this.sIdent + ":" + cmd.toString() + "'" + sMsg + "\" ??>");
       }
       
     }
@@ -3374,7 +3497,7 @@ public final class OutTextPreparer
   
   
   /**Executes a if branch
-   * @param wr the output channel
+   * @param wrCurr the output channel
    * @param cmd The ForCmd
    * @param ixCmd the index of the cmd in {@link #cmds}
    * @param container The container argument
@@ -3406,7 +3529,7 @@ public final class OutTextPreparer
   
   /**Executes preparation for a for cmd for internal control structures
    * complete the names of the for variables, only used for debug
-   * @param wr The output channel
+   * @param wrCurr The output channel
    * @param args for preparation.
    * @param ixStart from this cmd in {@link #cmds} 
    * @throws IOException 
@@ -3426,7 +3549,7 @@ public final class OutTextPreparer
   
   
   /**Executes a for loop
-   * @param wr the output channel
+   * @param wrCurr the output channel
    * @param cmd The ForCmd
    * @param ixCmd the index of the cmd in {@link #cmds}
    * @param container The container argument
@@ -3562,7 +3685,7 @@ public final class OutTextPreparer
       }
     }
     else {
-      wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + ": for variable is not an container: " + cmd.textOrVar + "??>");
+      wrCt.wrCurr.append("<?? OutTextPreparer script " + this.sIdent + ": for variable is not an container: " + cmd.textOrVar + "??>");
     }
   }
     
@@ -3570,7 +3693,7 @@ public final class OutTextPreparer
     
     
   /**Executes a call
-   * @param wr the output channel
+   * @param wrCurr the output channel
    * @param cmd The CallCmd
    * @param args actual args of the calling level
    * @param callVar The OutTextPreparer which is called here.
@@ -3592,7 +3715,7 @@ public final class OutTextPreparer
         Object value = null;
         try{ value = arg.calc(null, args.args); }
         catch(Exception exc) { 
-          wrCt.wr.append("<??OutTextPreparer call argument error: '" + this.sIdent + ":" + cmd.toString() + "'" +exc.getMessage() + "\" ??>");
+          wrCt.wrCurr.append("<??OutTextPreparer call argument error: '" + this.sIdent + ":" + cmd.toString() + "'" +exc.getMessage() + "\" ??>");
         }
         if(arg.ixDst >=0) {
           valSub.setArgument(arg.ixDst, value);
