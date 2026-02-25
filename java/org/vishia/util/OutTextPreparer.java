@@ -1277,8 +1277,12 @@ public final class OutTextPreparer
   private String[] nameVariablesByIx;
   
   
-  /**Index of the OUT element in variables */
-  int ixOUT;
+  /**Index of the OUT element in variables 
+   * If remains -1, then te OUT elements will not be created,
+   * because OUT is another argument used in the script. 
+   * ixOut is set in {@link #setVariables(List)}.
+   */
+  int ixOUT = -1;
   
   /**Container with {@link OutTextPreparer} instances which can be called as sub pattern. 
    * Usual they are the patterns read from one textual file with several scripts (or a few files).
@@ -2311,6 +2315,8 @@ public final class OutTextPreparer
         this.nameVariables.put("OTXdata", new DataAccess.IntegerIx(this.ixOUT +2));
         this.nameVariables.put("OTX", new DataAccess.IntegerIx(this.ixOUT +3));
       }
+    } else {
+      Debugutil.stop();   // Script has an 'OUT' variable for its own. 
     }
   }
 
@@ -3233,9 +3239,11 @@ public final class OutTextPreparer
     WriteDst wrCt = wdArg;
     assert(wrCt !=null);
     WriteDst wdBack = wdArg;  
-    args.args[this.ixOUT] = wrCt;                            // variable "OUT" is the output writer, always stored here as OUT
-    args.args[this.ixOUT+2] = args;                        // variable "OTXdata" is args itself, for debug info
-    args.args[this.ixOUT+3] = this;                        // variable "OTX" is this itself, for debug info
+    if(this.ixOUT >=0) {               // if the script has an 'OUT' for own, this is not done. 
+      args.args[this.ixOUT] = wrCt;                        // variable "OUT" is the output writer, always stored here as OUT
+      args.args[this.ixOUT+2] = args;                      // variable "OTXdata" is args itself, for debug info
+      args.args[this.ixOUT+3] = this;                      // variable "OTX" is this itself, for debug info
+    }
     Cmd cmd;
     if(args.argsByName == null) {
       args.argsByName = new TreeMap<>();
@@ -3250,7 +3258,9 @@ public final class OutTextPreparer
       if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
         debug();
       cmd = this.cmds.get(ixCmd++);
-      args.args[this.ixOUT+1] = cmd;                       // variable "OTXCMD" is the current cmd
+      if(this.ixOUT >=0) {                         //------vv only if OUT is automatically built
+        args.args[this.ixOUT+1] = cmd;                     // variable "OTXCMD" is the current cmd nice to have for debug only.
+      }
       boolean bDataOk = true;
       if(bDataOk) {    //==================================== second execute the cmd with the data
         switch(cmd.cmd) {
@@ -3715,7 +3725,7 @@ public final class OutTextPreparer
         Object value = null;
         try{ value = arg.calc(null, args.args); }
         catch(Exception exc) { 
-          wrCt.wrCurr.append("<??OutTextPreparer call argument error: '" + this.sIdent + ":" + cmd.toString() + "'" +exc.getMessage() + "\" ??>");
+          wrCt.wrCurr.append("<??OutTextPreparer call argument error: '" + this.sIdent + ":  arg=" + arg.name + " cmd=" + cmd.toString() + "'" +exc.getMessage() + "\" ??>");
         }
         if(arg.ixDst >=0) {
           valSub.setArgument(arg.ixDst, value);
@@ -3734,7 +3744,7 @@ public final class OutTextPreparer
   
   
   
-  @Override public String toString() { return this.sIdent + ":" + this.pattern; }
+  @Override public String toString() { return this.sIdent; } // + ":" + this.pattern; }
   
   
   void debug() { 
