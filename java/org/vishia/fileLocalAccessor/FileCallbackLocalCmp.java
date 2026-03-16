@@ -47,6 +47,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   
   /**Version, history and license.
    * <ul>
+   * <li>2026-03-16 {@link #compareFileContent(FileRemote, FileRemote)} solved own comparison propblems, see TODO there!!
    * <li>2024-04-08 {@link #offerParentNode(FileRemote, Object, Object)} do not skip but enter empty directories,
    *   because the files intern should be also marked with {@link FileMark#cmpAlone}.
    * <li>2024-02-12 Comparison of file trees now also in mode fast, without content:
@@ -132,6 +133,8 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   /**Constructs an instance to execute a comparison of directory trees.
    * since 2024-02: If cmpMode has set the bit {@link FileCompare#onlyTimestamp} then full content comparison is not done. 
    * The comparison is very more faster (seen 10 times). 
+   * <br>TODO: here some texts are set to ignore end of line: '.file', '//', 'compilation time:'. this should be come from an argument, not fix here.
+   * <br>TODO: also some arguments are set to excluding lines from to, also necessary as arguments.:  
    * @param dir1 One directory which contains a file tree. All files are compared with dir2
    * @param dir2 The other directory to compare
    * @param cmpMode can contain the bits {@link FileCompare#onlyTimestamp}, {@link FileCompare#withoutLineend}, {@link FileCompare#withoutEndlineComment}, {@link FileCompare#withoutComment}, 
@@ -145,12 +148,6 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   public FileCallbackLocalCmp(FileRemote dir1, FileRemote dir2, int cmpMode, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     super(dir1, dir2, callbackUser, evBack);
     this.mode = cmpMode;
-
-    //this.evCallback = evCallback;
-    //this.evWalker2 = new FileRemoteWalkerEvent("", dir2.device(), null, null, 0);
-    //} catch(Exception exc){
-    //  dir1 = null; //does not exists.
-    //}
     this.cmpCtrl.ignoreToEol.add(".file");
     this.cmpCtrl.ignoreToEol.add("//");
     this.cmpCtrl.ignoreToEol.add("Compilation time:");
@@ -158,6 +155,8 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
     this.cmpCtrl.ignoreCommentline.add("//");
     this.cmpCtrl.ignoreFromTo.add(new String[]{".epcannot:", ".epcannot.end:"});
     this.cmpCtrl.ignoreFromTo.add(new String[]{".static1:", ".static1.end:"});
+    /*.static.end:         write this to not break comparison of this file itself.
+      .epcannot.end: */
   }
   
   
@@ -228,6 +227,8 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
 //    CharSequence path = FileFunctions.normalizePath(file.getAbsolutePath());
 //    CharSequence localPath = path.subSequence(this.zBasePath1+1, path.length());
     //if(StringFunctions.compare(localPath, "asciidoc/CppJava.css")==0) Debugutil.stopp();
+    String sfName = file.getName();
+    //if(sfName.equals("FileCallbackLocalCmp.java")) Debugutil.stopp();
     FileRemote file2 = super.getFile2(file, false);
     if(file2 == null ) { //|| !file2.exists()) {           // if it is removed in the time between refresh and yet, it is not exists()
       if(this.callbackUser !=null) {
@@ -297,7 +298,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
     boolean readProblems;
     
 
-    //if(file1.getName().equals("ReleaseNotes.topic")) Debugutil.stopp();
+    //if(file1.getName().equals("FileCallbackLocalCmp.java")) Debugutil.stopp();
     int ret = 0;
     
     long date1 = file1.lastModified();
@@ -386,15 +387,17 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
    * @throws FileNotFoundException 
    */
   boolean compareFileContent(FileRemote file1, FileRemote file2) 
-  throws IOException
-  {
+  throws IOException {
+    //if(file1.getName().equals("FileCallbackLocalCmp.java")) Debugutil.stopp();
     boolean bEqu = true;
     BufferedReader r1 =null, r2 = null;
     r1 = new BufferedReader(new FileReader(file1));
     r2 = new BufferedReader(new FileReader(file2));
-    String s1, s2;
+    String s1 =null, s2=null;
+    @SuppressWarnings("unused") int nLine = 0;
     while( bEqu && (s1 = readIgnoreComment(r1)) !=null) {  //read lines of file 1 maybe with ignored comment.
       s2 = readIgnoreComment(r2);                          //read the line of the file2
+      nLine +=1;
       //check if an eol ignore String is contained:
       for(String sEol: this.cmpCtrl.ignoreToEol) {
         int z1 = s1.indexOf(sEol);
@@ -440,6 +443,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
           break; //break the for
         }
       }
+      //if(s1.startsWith("    super.prepareDirs(dir, false);")) Debugutil.stopp();
       if(s2 ==null || !s1.equals(s2)){
         //check trimmed etc.
         bEqu = false;

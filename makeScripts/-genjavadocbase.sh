@@ -1,10 +1,11 @@
+#!/bin/sh
 ## intern script for genJavadoc
 ## Note: the $DSTDIR can be set outside also to D:/vishia.
 ## $DST should contain for ex. Java/srcJava_vishiaBase to create it parallel to other main components.
 ## set $JAVAC_HOME maybe outside to a version for proper javadoc.
 
 if test -z "$DSTDIR"; then   ## only if DSTDIR is not set:
-  export DSTDIR=/tmp/RAMd/_Javadoc
+  export DSTDIR=/tmp/ramdisk/_Javadoc
 fi
 if ! test -d $DSTDIR; then mkdir $DSTDIR; fi
 if ! test -d $DSTDIR; then export DSTDIR="../../"; fi

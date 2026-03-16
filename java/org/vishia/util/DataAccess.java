@@ -676,6 +676,7 @@ public class DataAccess {
   , Class<?> reflData, char cTypeNewVariable
   ) throws ParseException {
     boolean bFirst = true;
+    //if(sp.getCurrent(7).equals("dTypeis")) Debugutil.stopp();
     do {
       DatapathElement element = new DatapathElement(sp, nameVariables, reflData, bFirst);
       if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
@@ -1224,6 +1225,7 @@ public class DataAccess {
       , Dst dst
   ) throws Exception {
     boolean bStatic;
+    //if(element.ident !=null && element.ident.equals("dTypeis")) Debugutil.stopp();
     Object data1 = dataArg;
     if(data1 instanceof Class){
       bStatic = true;              //If a class type is given as argument, static accesses are supported.
@@ -1292,11 +1294,16 @@ public class DataAccess {
           data1 = invokeNew(element);
         } break;
         case '(': {
+          Class<?> clazz;
           if(data1 !=null){
-            Class<?> clazz = bStatic && data1 instanceof Class<?> ? (Class<?>)data1: data1.getClass();
+            clazz = bStatic && data1 instanceof Class<?> ? (Class<?>)data1: data1.getClass();
             data1 = invokeMethod(element, clazz, data1, accessPrivate, varValues, false); 
           } else {
+            clazz = null;
             Debugutil.stop();                                // can occure if data before are null. Then data1 remain null
+            if(element.reflAccess !=null ) {
+              data1 = invokeMethod(element, clazz, data1, accessPrivate, varValues, false); 
+            }
           }
           //else: let data1=null, return null
         } break;
@@ -1531,7 +1538,7 @@ public class DataAccess {
     if(element.ident.equals("prcEvChain"))
       Debugutil.stop();
     Method method = (Method) element.reflAccess;           // primary use given method, ==null if not given
-    Class<?> clazz1 = method !=null ? method.getDeclaringClass() : clazz == null ? obj.getClass() : clazz;
+    Class<?> clazz1 = method !=null ? method.getDeclaringClass() : clazz == null ? obj == null ? null: obj.getClass() : clazz;
     Class<?> clazzcheck = clazz1;   //in loop superclass checked etc.
     Object[] givenArgs = args !=null ? args : element.fnArgs;
     if(element.ident.equals("new_draw_polygon"))
@@ -1662,7 +1669,7 @@ public class DataAccess {
   
   
   /**Invokes the static method which is described with the element.
-   * This operation is no more necessary, because {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])} does the same.
+   * ??This operation is no more necessary, because {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])} does the same. ??
    * @param element its {@link DatapathElement#whatisit} == '%'.
    *   The {@link DatapathElement#identArgJbat} should contain the full qualified "packagepath.Class.methodname" separated by dot.
    * @param varValues the outside given values which are accessed by index (from ident and string given variables)
@@ -3217,6 +3224,10 @@ public class DataAccess {
                 }
                 argTypes = operation.getParameterTypes();
                 this.reflAccess = operation;
+                if( (operation.getModifiers() & Modifier.STATIC) !=0) {
+                  // Do not do so, does not run because the 'this.reflAccess' is ignored yet and the newly call of serachMethod needs the full qualified path.
+                  //this.whatisit = '%';                     // if the operation is de facto static, then it should be designate as static in access.
+                }
                 break;
               }
             } // this.reflAccess only set if operaton is found one time.
@@ -3251,6 +3262,7 @@ public class DataAccess {
      */
     CalculatorExpr.Operand[] parseArgumentExpr(StringPartScan sArgs, Map<String,DataAccess.IntegerIx> nameVariables, Class<?> reflData) 
     throws ParseException {
+      //if(sArgs.getCurrent().toString().startsWith("mdl.ctrl.wx")) Debugutil.stopp();
       List<CalculatorExpr.Operand> listArgs = new LinkedList<CalculatorExpr.Operand>();
       do {
         CalculatorExpr.Operand arg = new CalculatorExpr.Operand(sArgs, nameVariables, reflData, false);

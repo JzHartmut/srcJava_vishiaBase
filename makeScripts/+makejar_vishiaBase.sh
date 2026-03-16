@@ -1,3 +1,4 @@
+#!/bin/sh
 echo ====== start script ===============================================================
 echo execute  $0
 ## Set the current dir 3 level before the script, it sees the src/srcDir/makeScripts:
@@ -18,7 +19,7 @@ export VERSIONSTAMP_GETWEBF=""
 ## if it is assumed that the sources are unchanged.
 ## Only then a comparison of MD5 is possible. 
 ## The comparison byte by byte inside the jar (zip) file is always possible.
-export TIMEinJAR="2025-12-22+00:00"
+export TIMEinJAR="2026-03-21+00:00"
 export TIMEinJAR_GETWEBF="2025-12-21+00:00"
 
 ## This directory contains some basic scripts. Should be exists
@@ -36,7 +37,7 @@ export FILE1SRC=""                           ## use a specific source file (with
 
 # Determines search path for compiled sources (in jar) for this component. 
 # do not left empty because it is used as argument for javac
-set CLASSPATH=""
+export CLASSPATH=""
 
 ## Determines the manifest file for the jar
 export MANIFEST="$SRCDIRNAME/makeScripts/$DSTNAME.manifest"

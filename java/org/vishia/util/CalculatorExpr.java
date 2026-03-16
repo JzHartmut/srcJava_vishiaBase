@@ -2649,7 +2649,7 @@ public class CalculatorExpr
    */
   public CalculatorExpr(StringPartScan sExpr, Map<String, DataAccess.IntegerIx> nameVariables
   , Class<?> reflData, boolean bSpecialSyntax) {
-    this();
+    this();                                      //vv======== setExpr
     String sError = setExpr(sExpr, nameVariables, reflData, bSpecialSyntax);
     if(sError !=null) {
       throw new IllegalArgumentException(sError);
@@ -3578,9 +3578,6 @@ public class CalculatorExpr
    *    This is more a special case if data itself were built with one of this operation as stored values,
    *    frequently used in {@link org.vishia.jztxtcmd.JZtxtcmd}.
    * </ul>
-   * @param data re-used data instance (Stack and accu). 
-   *   You should {@link Data#Data()} for first creation in a calculation thread.
-   *   This operation calls {@link Data#clean()} for new usage. 
    * @param accessVars Any data which are access-able with its name. It is the first part of a datapath.
    * @param args Some args given immediately. For example numerical args wrappend with Float etc or strings.
    *   It is also possible that args has member as array, often an (numeric) array. 
@@ -3609,7 +3606,9 @@ public class CalculatorExpr
   /**This routine does nothing else than {@link #calcDataAccess(Map, Object...)}.
    * The data instance does not need to hold in any local context, it is temporary.
    * The result of the calculation is referred and can be stored for further usage without influences.
-   * @param data
+   * @param data re-used data instance (Stack and accu). 
+   *   You should {@link Data#Data()} for first creation in a calculation thread.
+   *   This operation calls {@link Data#clean()} for new usage. 
    * @param accessVars
    * @param args
    * @return
