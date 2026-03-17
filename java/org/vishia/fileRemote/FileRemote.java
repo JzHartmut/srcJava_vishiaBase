@@ -1339,11 +1339,16 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser maybe null, a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress maybe null, if given then this callback is informed on any file or directory.
    */
-  public void refreshAndSearch(int depth, String mask, int mark, byte[] search, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback) { ////
+  public void refreshAndSearch(int depth, String sMask, int bMaskSel, String search, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback) { ////
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    //TODO implement with cmd
+    FileRemoteCmdEventData co = new FileRemoteCmdEventData();
+    //co.callback = new FileRemoteCallbackCmp(this, dir2, null, evBack);  //evCallback);
+    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkSearch, null, sMask, bMaskSel, 100, 0);
+    co.sText = search;
+    boolean bWait = false;  // do in extra thread.
+    this.device.cmd(bWait, co, evBack);
   }
   
   

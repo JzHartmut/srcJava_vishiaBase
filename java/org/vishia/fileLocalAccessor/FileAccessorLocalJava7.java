@@ -67,6 +67,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
+   * <li>2026-03-17 {@link #execCmd(FileRemoteCmdEventData, EventWithDst)}: call of {@link FileCallbackLocalSearch} on {@link FileRemoteCmdEventData.Cmd#walkSearch} 
    * <li>2024-04-02 {@link WalkFileTreeVisitor#preVisitDirectory(Path, BasicFileAttributes)}:
    *   If the parent directory is marked with {@link FileMark#cmpAlone} and this bit is part of the select mask in the command (commision),
    *   then the directory is marked with {@link FileRemoteCmdEventData#markSet()}, means the bits to set for selection. 
@@ -237,7 +238,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     //super("FileAccessorLoacalJava7", null, null, null);
     //singleThreadForCommission.startThread();
     this.systemAttribtype = DosFileAttributes.class;
-    this.singleThreadForCommission = new EventTimerThread("FileAccessor-local");
+    this.singleThreadForCommission = new EventTimerThread("FileAccessor-local", this);
     this.singleThreadForCommission.start();
     for(int ix = 0; ix < this.walkerThread.length; ++ix) {
       this.walkerThread[ix] = new WalkerThread();
@@ -760,6 +761,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     case walkCompare:
       assert(co.callback() == null);
       co.setCallback(new FileCallbackLocalCmp(co.filesrc(), co.filedst(), co.modeCmpOper, null, evBack));
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, evBack , false); 
+      break;
+    case walkSearch:
+      assert(co.callback() == null);
+      co.setCallback(new FileCallbackLocalSearch(co.filesrc(), co.modeCmpOper, co.sText, null, evBack));
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, evBack , false); 
       break;
     case walkTest:
@@ -1501,8 +1507,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       try {
         final FileVisitResult ret;
         String name = file.getFileName().toString();
-        if(name.startsWith("constant-values.html"))
-          Debugutil.stop();
+        //if(name.startsWith("constant-values.html")) Debugutil.stopp();
+        
         boolean bDirectory = Files.isDirectory(file); //  attrs.isDirectory();
         if(this.progress !=null) {
           if(bDirectory) {

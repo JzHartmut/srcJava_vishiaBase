@@ -151,6 +151,11 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
                             ; 
   
   protected final String threadName;
+  
+  /**This is yet only an debug information, which instance has originally created this thread.
+   * It does not need effort and complexity, but may be possible for inform etc.
+   */
+  protected final Object threadCreator;
 
   /**The thread which executes delayed wake up. */
   protected Thread threadTimer;
@@ -209,16 +214,15 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
 
 
   
-  /**Creates the Manager for time orders.
+  /**Creates the thread for time orders and event queues.
    * It is necessary to invoke {@link #start()} at begin and {@link #close()} on end of an application. 
-   * @param executesTheOrder true then the method {@link #step(int, long)} need not be called (not necessary) because the TimeOrder
-   *   are executed from the threadTimer already. 
-   *   <br>
-   *   false then the {@link #step(int, long)} have to be called cyclically from any other thread.
+   * @param threadName a concise name for global viewing (threads, system administrator, debugging).
+   * @param threadCreator null possible, only for debugging to view which class has created, and view the state of it.
    */
-  public EventTimerThread(String threadName)
+  public EventTimerThread(String threadName, Object threadCreator)
   {
     this.threadName = threadName;
+    this.threadCreator = threadCreator;
   }
   
   
@@ -537,13 +541,13 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
     int timeWait;
     do {
       stateThreadTimer = 'c';
-      //----------------------------------------------------- check all time order, timeWait is the minimal time for next call.
+      //------------------------------------------------------ check all time order, timeWait is the minimal time for next call.
       timeSleep = System.currentTimeMillis();
-      timeWait = (int)(this.timeCheckNew - this.timeSleep);     // use timeCheckNew for decision look in all time orders.
-      if(timeWait < 0){                                    // check all time orders only if at least one of them is expired.
-        timeWait = checkTimeOrders();                      // execute expired events, calculate new waiting time
+      timeWait = (int)(this.timeCheckNew - this.timeSleep); // use timeCheckNew for decision look in all time orders.
+      if(timeWait < 0){                                     // check all time orders only if at least one of them is expired.
+        timeWait = checkTimeOrders();                       // execute expired events, calculate new waiting time
       }
-      //----------------------------------------------------- check all current stored events.
+      //------------------------------------------------------ check all current stored events.
       bExecute = false;
       while(checkEventAndRun()){
         bExecute = true;

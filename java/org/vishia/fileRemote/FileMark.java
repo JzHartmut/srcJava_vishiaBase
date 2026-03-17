@@ -17,6 +17,8 @@ public class FileMark extends SelectMask
   
   /**Version, history and license.
    * <ul>
+   * <li>2026-03-17 {@link #fileReadError} created as marker for a file with IOException, 
+   *   shown as '?' in {@link org.vishia.gral.widget.GralFileSelector}   
    * <li>2024-02-12 For comparison without content {@link #cmpTimeGreater} and ~Lesser added. 
    * <li>2023-02-12 Hartmut it has uses constants from {@link MarkMask_ifc} de facto, but not documented.
    *   Not documented. Enhanced with {@link #selectForCopy} =^ {@link MarkMask_ifc#select2}.
@@ -79,7 +81,10 @@ public class FileMark extends SelectMask
   /**Flags is a marker for directory which contains some to copy, select in light orange in Fcmd. */
   public static final int selectForCopySomeInDir = MarkMask_ifc.select2Parent;
 
+  public static final int fileReadError =    0x00010000;
 
+  
+  
   /**Flags means that this file is the root of mark. It is used for {@link FileMark#setMarkParent(int, boolean)} */
   public static final int markRoot = 0x00100000;
 
@@ -114,11 +119,6 @@ public class FileMark extends SelectMask
    * If 0 and also cmpContentEqual is 0, it is not tested. */
   public static final int cmpContentNotEqual = 0x08000000;
 
-  /**mask of all bits for comparison one file. */
-  public static final int mCmpFile =           0x3fc00000;
-
-  
-
   /**Flags as result of an comparison: the other file does not exist, or any files of an directory does not exists
    * or there are differences. */
   public static final int cmpMissingFiles = 0x10000000;
@@ -127,6 +127,11 @@ public class FileMark extends SelectMask
    * or there are differences. */
   public static final int cmpFileDifferences = 0x20000000;
 
+  /**mask of all bits for comparison one file. */
+  public static final int mCmpFile =           0x3fc00000;
+
+
+  
   /**This is not used for mark, only for a mark command. 
    * It means if this bit is set: reset the mark bits of non selected files. */
   public static final int resetNonMarked = 0x40000000;

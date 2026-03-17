@@ -58,6 +58,9 @@ public class FileRemoteCmdEventData  implements Payload {
   /**For {@link Cmd#chgProps}: A new time stamp. */
   long newDate;
   
+  /**Especially for search, the text to search. */
+  public String sText;
+  
   private SortedTreeWalkerCallback<FileRemote, FileRemoteCmdEventData> callback;  //it may be implementation specific
   
   
@@ -258,6 +261,8 @@ public class FileRemoteCmdEventData  implements Payload {
     walkMoveDirTree,
     /**walk through two file trees with given select masks, compare the files and mark due to comparison result.*/
     walkCompare,
+    /**Search files with pattern and containing text*/
+    walkSearch,
     /**Abort the currently action. */
     abortAll,
     /**Abort the copy process of the current directory or skip this directory if it is asking a file. */
