@@ -446,7 +446,9 @@ public abstract class Arguments {
       posEnvEnd9 = posEnvEnd;
       String nameEnv = argvalRet.substring(posEnv+1, posEnvEnd);
       String env = getEnv(nameEnv);
-      argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9);
+      if(env !=null) {
+        argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9);
+      }
     }
     return argvalRet;
   }
@@ -455,7 +457,7 @@ public abstract class Arguments {
   /**Operation used for environment variables in arguments, see {@link #replaceEnv(String)}.
    * Additional "DATE" and "TIME" is supported which returns "2025-04-03" and "17_45_33" adequate with the current time on call.
    * @param nameEnv
-   * @return value of the environment.
+   * @return value of the environment. null if not found.
    * @throws IllegalArgumentException if the environment variable are not found.
    */
   public static final String getEnv(String nameEnv) {
@@ -471,7 +473,10 @@ public abstract class Arguments {
     } else {
       env = System.getenv(nameEnv);
       if(env ==null) { env = System.getProperty(nameEnv); }
-      if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
+      if(env == null) {
+        //env = nameEnv;   //NO, return null return without resolving.
+        //throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
+      }
     }
     return env;
   }

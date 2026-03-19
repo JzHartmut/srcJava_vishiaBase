@@ -149,19 +149,49 @@ public class FileRemoteProgressEvData extends PayloadBack implements Serializabl
   public long dateCreate, dateLastAccess;
   
   /**Processed bytes. */
-  public long nrofBytesAll, nrofBytesFile, nrofBytesFileCopied;
+  public long nrofBytesFile;
   
   /**Number of processed directories and files independent of mark situation,
    * but don't count directories which are not entered. */
-  public int nrDirVisited, nrDirProcessed, nrFilesVisited;
+  public int nrDirVisited, nrDirProcessed;
+  
+  /**The whole number of visited files and there size in sum in the visitor run. 
+   * Without information whether they are used by select mask etc.
+   */
+  public int nrFilesVisited;
   
   /**Number of Files which are selected by String mask or marked bits. */
-  public int nrofFilesSelected;
+  public int nrofFilesUsed;
   
-  /**Number of Files which are marked while walking and processing. */
+  /**Number of bytes in sum which are selected by String mask or marked bits. */
+  public long nrofBytesUsed;
+  
+  /**Number of files which are marked because they are positive checked,
+   * for example search String found, difference detected.
+   */
   public int nrofFilesMarked;
   
+  /**Number of bytes in sum which are marked because they are positive checked,
+   * for example search String found, difference detected.
+   */
+  public long nrofBytesMarked;
   
+  /**Number of Files which are selected while walking and processing. 
+   * The selection is the immediately information to handle of a marked file.
+   * For example selected to copy.
+   */
+  public int nrofFilesSelected;
+  
+  /**Number of bytes is sum which are selected while walking and processing. 
+   * The selection is the immediately information to handle of a marked file.
+   * For example selected to copy.
+   */
+  public long nrofBytesSelected;
+  
+  /**Number of bytes copied in the current file especially while execute copy or move bytes.
+   * 
+   */
+  public long nrofBytesFileCopied;
   
   
 //  private FileRemote.Cmd cmd;
@@ -215,9 +245,11 @@ public class FileRemoteProgressEvData extends PayloadBack implements Serializabl
   this.nrDirProcessed = 0;
   this.nrDirVisited = 0;
   this.nrFilesVisited = 0;
-  this.nrofFilesSelected = 0;
+  this.nrofFilesUsed = 0;
+  this.nrofBytesUsed = 0;
+  this.nrofBytesMarked = 0;
   this.nrofFilesMarked = 0;
-  this.nrofBytesAll = 0;
+  this.nrofFilesSelected = 0;
   this.nrofBytesFile = 0;
   this.nrofBytesFileCopied = 0;
   this.bQuest = false;

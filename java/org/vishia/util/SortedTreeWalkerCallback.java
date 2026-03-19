@@ -48,10 +48,23 @@ public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
   
   /**It is similar {@link java.nio.file.FileVisitResult}.
    * This class is defined here because it runs with Java-6 too.
+   * The other reason is: on continue, more nuances are regarded:
+   * <ul><li>{@link #contMarked}: The file is selected, marked: For example search String is found, difference is found. 
+   * <li>{@link #contUsed}: The file was used to test, it is selected by file name pattern, but it is not marked.
+   * <li>{@link #contUnused}: The file is seen, but not selected by file name pattern etc.
+   * <li>{@link #contReadError}: The file is given in the directory, but it is not readable.
+   * <li>{@link #cont} no information about usage.
+   * </ul>
+   * These three return values should be result in {@link java.nio.file.FileVisitResult#CONTINUE},
+   * see {@link org.vishia.fileLocalAccessor.FileAccessorLocalJava7.WalkFileTreeVisitor#translateResult(Result)}.
    */
   public enum Result
   {
-    cont
+    contMarked
+    , contUsed
+    , contUnused
+    , contReadError
+    , cont
     , terminate
     , skipSiblings
     , skipSubtree

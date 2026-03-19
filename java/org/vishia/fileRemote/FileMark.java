@@ -81,6 +81,8 @@ public class FileMark extends SelectMask
   /**Flags is a marker for directory which contains some to copy, select in light orange in Fcmd. */
   public static final int selectForCopySomeInDir = MarkMask_ifc.select2Parent;
 
+  
+  
   public static final int fileReadError =    0x00010000;
 
   
@@ -121,16 +123,16 @@ public class FileMark extends SelectMask
 
   /**Flags as result of an comparison: the other file does not exist, or any files of an directory does not exists
    * or there are differences. */
-  public static final int cmpMissingFiles = 0x10000000;
+  public static final int cmpMissingFiles = 0x10000000;  // maybe todo remove the value to lower bit
 
   /**Flags as result of an comparison: the other file does not exist, or any files of an directory does not exists
    * or there are differences. */
-  public static final int cmpFileDifferences = 0x20000000;
+  public static final int cmpFileDifferences = 0x20000000; // maybe todo remove the value to lower bit
 
   /**mask of all bits for comparison one file. */
-  public static final int mCmpFile =           0x3fc00000;
+  public static final int mCmpFile =           0x3ff00000; // maybe todo remove the value to lower bit
 
-
+  // maybe todo more flags as cmd, useFirstlevelSymbolicLink
   
   /**This is not used for mark, only for a mark command. 
    * It means if this bit is set: reset the mark bits of non selected files. */
@@ -180,17 +182,18 @@ public class FileMark extends SelectMask
     }
     if(recursively){
       FileRemote parent = itsFile;
+      FileMark mark;
       while( (parent = parent.getParentFile()) !=null
-        && parent.mark !=null   //abort while-loop if the parent is not marked 
+        && (mark = parent.mark()) !=null   //abort while-loop if the parent is not marked 
         ){
-        parent.mark.nrofFilesSelected -=this.nrofFilesSelected;
-        if(parent.mark.nrofFilesSelected <=0){
-          parent.mark.nrofFilesSelected = 0;
-          parent.mark.selectMask &= ~mask;
+        mark.nrofFilesSelected -=this.nrofFilesSelected;
+        if(mark.nrofFilesSelected <=0){
+          mark.nrofFilesSelected = 0;
+          mark.selectMask &= ~mask;
         }
-        parent.mark.nrofBytesSelected -=this.nrofBytesSelected;
-        if(parent.mark.nrofBytesSelected <=0){
-          parent.mark.nrofBytesSelected = 0;
+        mark.nrofBytesSelected -=this.nrofBytesSelected;
+        if(mark.nrofBytesSelected <=0){
+          mark.nrofBytesSelected = 0;
         }
       }
     }
@@ -242,17 +245,15 @@ public class FileMark extends SelectMask
     FileRemote lastDirParent = this.itsFile;
     if((this.selectMask & markRoot) ==0){
       while( (parent = parent.getParentFile()) !=null){  //break inside!
-        if(parent.mark== null) {
-          parent.mark = new FileMark(parent);  //it is not the root of marking. Any directory between this and root.
-        }
-        if((parent.mark.selectMask & FileMark.markRoot)!=0){
+        FileMark mark = parent.mark();
+        if((mark.selectMask & FileMark.markRoot)!=0){
           break;
         }
         lastDirParent = parent;
-        parent.mark.selectMask |= mask;
+        mark.selectMask |= mask;
         if(count){
-          parent.mark.nrofFilesSelected += this.nrofFilesSelected;
-          parent.mark.nrofBytesSelected += this.nrofBytesSelected;
+          mark.nrofFilesSelected += this.nrofFilesSelected;
+          mark.nrofBytesSelected += this.nrofBytesSelected;
         }
       }
       if(parent ==null){ //no markRoot found

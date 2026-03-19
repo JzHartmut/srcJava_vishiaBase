@@ -100,8 +100,8 @@ public class FileRemoteProgressEventConsumer extends EventConsumerAwait<FileRemo
    */
   public void setAvail(FileRemoteProgressEvData ev) {
     this.nrDirAvail = ev.nrDirProcessed;
-    this.nrFilesAvail = ev.nrofFilesSelected;
-    this.nrofBytesAllAvail = ev.nrofBytesAll;
+    this.nrFilesAvail = ev.nrofFilesUsed;
+    this.nrofBytesAllAvail = ev.nrofBytesUsed;
   }
   
   

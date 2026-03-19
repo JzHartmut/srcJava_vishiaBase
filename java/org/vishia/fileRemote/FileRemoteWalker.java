@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.vishia.event.EventWithDst;
+import org.vishia.util.Debugutil;
 import org.vishia.util.ExcUtil;
 import org.vishia.util.FilepathFilterM;
 import org.vishia.util.SortedTreeWalkerCallback;
@@ -120,11 +121,15 @@ public class FileRemoteWalker {
   
   protected void walkFileTree()
   {
-    FilepathFilterM filter = this.co.selectFilter() == null ? null : FilepathFilterM.createWildcardFilter(this.co.selectFilter());
-    this.walkInfo = new WalkInfo(this.co.filesrc(), null, filter);
-    if(this.callback!=null) { this.callback.start(this.co.filesrc(), this.co); }
-    this.walkSubTree(this.co.filesrc(), this.co.depthWalk() <=0 ? Integer.MAX_VALUE: this.co.depthWalk());
-    if(this.callback!=null) { this.callback.finished(this.co.filesrc()); }
+    try {
+      FilepathFilterM filter = this.co.selectFilter() == null ? null : FilepathFilterM.createWildcardFilter(this.co.selectFilter());
+      this.walkInfo = new WalkInfo(this.co.filesrc(), null, filter);
+      if(this.callback!=null) { this.callback.start(this.co.filesrc(), this.co); }
+      this.walkSubTree(this.co.filesrc(), this.co.depthWalk() <=0 ? Integer.MAX_VALUE: this.co.depthWalk());
+      if(this.callback!=null) { this.callback.finished(this.co.filesrc()); }
+    } catch(Exception exc) {
+      Debugutil.stopp();
+    }
   }
     
 

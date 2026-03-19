@@ -262,7 +262,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
       if( (cmprBits & (FileMark.cmpContentEqual | FileMark.cmpLenTimeEqual)) ==0) {
         file.mark().setMarkParent(FileMark.cmpFileDifferences, false);
         file2.mark().setMarkParent(FileMark.cmpFileDifferences, false);
-        if(this.progress !=null) { this.progress.nrofFilesMarked +=1; }
+        if(this.progress !=null) { this.progress.nrofFilesSelected +=1; }
       }
       if(this.callbackUser !=null) {
         //@SuppressWarnings("removal") 

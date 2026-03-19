@@ -235,6 +235,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2026-03-18 {@link #realFile} new for linked directories, {@link #mark()} and
+   * <li>~ {@link #props} new with {@link Properties#idUsage} to hold a specific id while used for walking to prevent using the same file twice.
+   *   But this is really not reentrant for multi threading. 
+   * <li>~ {@link #props} should be used for all properties, which are only given on time in the real instance.
+   * <li>~ {@link #getDir(CharSequence, CharSequence)} to create a directory in the cluster also for linked as for real path.
    * <li>2025-12-18 {@link #moveTo(FileRemote, EventWithDst)} 
    * <li>2024-02-12 The {@link #cmdRemote(org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, String, int, int, int, FileRemoteCmdEventData, EventWithDst)}
    *   has now beside the String selectFilter the int bMaskSel. This CAN be used (is not yet) for selection via bits (TODO test may be run),
@@ -503,7 +508,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Counter, any instance has an ident number. */
   private static int ctIdent = 0;
   
-
+  /**Identification for usage base counter.
+   * @deprecated should be removed again because forces non reenter save behavior
+   */
+  private static long ctIdUsage = 1;
   
   /**A indent number, Primarily for debug and test. */
   private final int _ident;
@@ -522,8 +530,22 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * {@link org.vishia.fileLocalAccessor.FileAccessorLocalJava7} is used. */
   protected FileRemoteAccessor device;
   
-  /**A mark and count instance for this file. It is null if it is not necessary. */
-  protected FileMark mark;
+  
+  /**Container for all properties.
+   * TODO here even {@link #timeRefresh}, {@link #timeChildren} {@link #sCanonicalPath}, 
+   * {@link #date} {@link #dateCreation} {@link #dateLastAccess} {@link #length} {@link #flags}
+   * should be stored.
+   * <br>Not stored there, because properties of also the symbolic link referencing instance:
+   * {@link #sDir}, {@link #sFile}
+   * {@link #realFile} even as reference to the real file FileRemote instance
+   * {@link #parent}, {@link #children} builds the tree of the link referencing instances.
+   * {@link #oFile()}, {@link #path()}: representation in the file system of the linked instances.
+   */
+  private Properties props;
+  
+  /**A mark and count instance for this file. It is null if it is not necessary. 
+   * If this references to a linked file, the {@link #realFile} and this refers to the same {@link FileMark} instance. */
+  private FileMark mark;
   
   /**The last time where the file was synchronized with its physical properties. */
   public long timeRefresh, timeChildren;
@@ -546,12 +568,23 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    */
   protected String sFile;
   
-  /**The unique path to the file or directory entry. If the file is symbolic linked (on UNIX systems),
+  /**The unique path to the file or directory entry. 
+   * If the file is symbolic linked (on UNIX systems, Windows also a JUNCTION),
    * this field contains the non-linked direct path. But the {@link #sDir} contains the linked path. 
    */
   protected String sCanonicalPath;
   
-  /**Timestamp of the file. */
+  /**This is null if the FileRemote refers to a real instance on FileSystem.
+   * It is set if the real instance is known. 
+   * It is important to use exta instances of FileRemote for symbolic linked locations to return to its correct parent
+   * in the symbolic linked tree. The corrent parent is {@link #parent}.
+   * But especially mark actions and participation on updating {@link #timeRefresh} and the file properties 
+   * is given via this real instance.
+   * Then use always {@link #mark()}, {@link #timeRefresh}, {@link #timeChildren} etc. from the real instance.
+   */
+  protected FileRemote realFile;
+  
+  /**Time stamp of the file. */
   protected long date, dateCreation, dateLastAccess;
   
   /**Length of the file. */
@@ -764,11 +797,15 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   /**Returns the instance of FileRemote which is the child of this. If the child does not exists
-   * it is created and added as child. That is independent of the existence of the file on the file system.
+   * it is nevertheless created and added as child. That is independent of the existence of the file on the file system.
    * A non existing child is possible, it may be created on file system later.
-   * <br><br>
-   * All created sub directories are registered in {@link #itsCluster}
-   * <br>
+   * <ul>
+   * <li>All created sub directories are registered in {@link #itsCluster}
+   * <li>If this has set {@link #realFile} because it refers to a symbolic linked directory, this operation is also called for {@link #realFile}.
+   *   The failure opportunity that {@link #realFile} ## this is tested before (because else Stack overflow will be forced). 
+   *   But children of other referencing FileRemote instances are not changed. Should be updated by its own. 
+   *   This feature is @since 2026-03  
+   * </ul>
    * TODO: test if the path mets a file but the path is not on its end. Then it may be a IllegalArgumentException. 
    * @param sName Name of the child or a local path from this to a deeper sub child. If the name ends with a slash
    *   or backslash, the returned instance will be created as sub directory.
@@ -807,6 +844,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
           child = new FileRemote(itsCluster, device, dir1, pathchild1, length
                 , dateLastModified,dateCreation,dateLastAccess, flags, null, true);
           dir1.putNewChild(child);                       
+        }
+        assert(this.realFile !=this);  // null even admissible
+        if(this.realFile !=null && this.realFile != this) {  // test it anyway though assertion because assertion may be non active.
+          FileRemote realChild = this.realFile.child(sPathChild, flags, length, dateLastModified, dateCreation, dateLastAccess);
+          child.realFile = realChild;
         }
       } else {
         if(StringFunctions.compare(child.sFile, pathchild1)!=0) {
@@ -940,6 +982,23 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
  
+  /**Returns the instance which is associated to the given directory in the {@link #clusterOfApplication},
+   * also set {@link #realFile} with the given path to the real, non symbolic linked instance.
+   * It calls {@link #getDir(FileCluster, CharSequence)}.
+   * @param dirPath The directory path where the file is located maybe as symbolic link path, given absolute.
+   * @param dirPathReal The outside detected absolute path to the real instance.
+   *   Use for example {@link Path#toRealPath(java.nio.file.LinkOption...)} 
+   *    or {@link File#getCanonicalPath()} to get it from the Operation system. 
+   * @return A existing or new instance.
+   */
+  public static FileRemote getDir(CharSequence dirPath, CharSequence dirPathReal ) {
+    FileRemote dirReal = dirPathReal == null ? null : getDir(clusterOfApplication, dirPathReal);
+    FileRemote dir = getDir(clusterOfApplication, dirPath);
+    dir.realFile = dirReal;
+    return dir;
+  }
+  
+ 
   /**Returns the instance which is associated to the given directory and the file in this directory.
    * @param dirPath The directory path where the file is located,
    * @param name The name of the file.
@@ -1006,15 +1065,94 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   public boolean shouldRefresh(){ return (flags & mShouldRefresh )!=0; }
   
+  
+  /**Gets a new ident number for the whole application (all usage). It is unified
+   * wrapping only after 2^64 calls.
+   * @return a unified ident number
+   * @deprecated
+   */
+  public static long getIdUsage () { return ++ctIdUsage; }
+
+
+  /**If this file is checked with the same ident number one after another, returns false.
+   * This can be used to prevent take the same file one after another in a loop. 
+   * The loop may be should broken then. 
+   * The idUsage to test should be gotten only via {@link #getIdUsage()} 
+   * @param identNumber which is use in the whole loop which handles this file.
+   * @return true if the file was not used with this identNumber
+   * @deprecated
+   */
+  public boolean checkIdUsage (long identNumber) {
+    if(this.props == null) { props(); } // create it if not given
+    if(this.props.idUsage == identNumber) {
+      return false;
+    } else {
+      this.props.idUsage = identNumber;
+      return true;
+    }
+  }
+
+
+  /**Gets the {@link FileMark} for this file or null if not marked in any kind.
+   * @return
+   */
+  public FileMark mark () {
+    // return this.mark; this in intrinsic ok. 
+    if(this.realFile == this) {
+      assert(false);
+      this.realFile = null;
+    }
+    if(this.realFile !=null) {
+      return this.mark = this.realFile.mark(); //may return null.
+    }
+    else {
+      return this.mark;  // may be null. 
+    }
+  }
+  
+  
+  /**Gets or creates a {@link FileMark} for this file.
+   * If {@link #mark} is not set till now, it is checked whether {@link #realFile} is set.
+   * If it is so, then this same operation is called for the realInstance,
+   * which either gets the {@link #mark} from the {@link #realFile} 
+   * or creates it in the {@link #realFile} adnd stores it also here.
+   * So both refer to the same {@link FileMark} instance.
+   * @return the maybe newly created mark instance.
+   */
+  public FileMark getCreateMark () { 
+    if(this.realFile == this) {
+      assert(false);
+      this.realFile = null;
+    }
+    if(this.realFile !=null) {
+      return this.mark = this.realFile.getCreateMark(); 
+    }
+    else {
+      if(this.mark == null) { this.mark = new FileMark(this); } 
+      return this.mark;  // may be null. 
+    }
+  
+  
+  }
+
+
+  /**Returns the mark of a {@link #mark()} or 0 if it is not present.
+     * @see org.vishia.util.MarkMask_ifc#getMark()
+     */
+    @Override public int getMark() { 
+  //    if(sFile.equals("ReleaseNotes.topic"))
+  //      Debugutil.stop();
+      FileMark mark = this.mark();   // gets possible from the realFile
+      return mark == null ? 0 : mark.getMark();
+    }
+
+
   /**Marks the file with the given bits in mask.
    * @param mask
    * @return number of Bytes (file length)
    */
   public long setMarked(int mask){
-    if(mark == null){
-      mark = new FileMark(this);
-    }
-    mark.setMarked(mask, this);
+    getCreateMark().setMarked(mask, this);
     return length();
   }
   
@@ -1022,9 +1160,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param mask Mask to reset bits.
    * @return number of Bytes (file length)
    */
-  public long resetMarked(int mask){
+  public long resetMarked ( int mask) {
+    FileMark mark = this.mark();   // gets possible from the realFile
     if(mark != null){
-      mark.setNonMarked(mask, this);
+      mark().setNonMarked(mask, this);
       return length();
     }
     else return 0;
@@ -1054,8 +1193,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     long bytes = length();
     if(nrofFiles !=null){ nrofFiles[0] +=1; }
     //if(!isDirectory() && mark !=null){
+    FileMark mark = this.mark();   // gets possible from the realFile
     if(mark !=null){
-      mark.setNonMarked(mask, this);
+       mark.setNonMarked(mask, this);
     }
     if(recursion > 1000) throw new RuntimeException("FileRemote - resetMarkedRecurs,too many recursion");
     if(children !=null){
@@ -1070,66 +1210,74 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   
-  /**Gets or creates a {@link FileMark} for this file.
-   * @return
-   */
-  public FileMark getCreateMark () { 
-    if(this.mark == null) { this.mark = new FileMark(this); } 
-    return mark;
-  }
-  
-  
-  /**Gets the {@link FileMark} for this file or null if not marked in any kind.
-   * @return
-   */
-  public FileMark mark () { return this.mark; }
-  
-  
-  /**Returns the mark of a {@link #mark} or 0 if it is not present.
-   * @see org.vishia.util.MarkMask_ifc#getMark()
-   */
-  @Override public int getMark() { 
-//    if(sFile.equals("ReleaseNotes.topic"))
-//      Debugutil.stop();
-    return this.mark == null ? 0 : this.mark.getMark();
-  }
-
-
-  /**resets a marker bit in the existing {@link #mark} or does nothing if the bit is not present.
+  /**resets a marker bit in the existing {@link #mark()} or does nothing if the bit is not present.
    * @see org.vishia.util.MarkMask_ifc#setNonMarked(int, java.lang.Object)
    */
-  @Override public int setNonMarked(int mask, Object data)
-  { if(mark == null) return 0;
+  @Override public int setNonMarked(int mask, Object data) { 
+    FileMark mark = this.mark();   // gets possible from the realFile
+    if(mark == null) return 0;
     else return mark.setNonMarkedRecursively(mask, data, false);
   }
 
 
-  /**resets a marker bit in the existing {@link #mark} or does nothing if the bit is not present.
+  /**resets a marker bit in the existing {@link #mark()} or does nothing if the bit is not present.
    * @see org.vishia.util.MarkMask_ifc#setNonMarked(int, java.lang.Object)
    */
-  public int setNonMarkedRecursively(int mask, Object data)
-  { if(mark == null) return 0;
+  public int setNonMarkedRecursively(int mask, Object data) { 
+    FileMark mark = this.mark();   // gets possible from the realFile
+    if(mark == null) return 0;
     else return mark.setNonMarkedRecursively(mask, data, true);
   }
 
 
 
 
-  /**marks a bit in the {@link #mark}, creates it if it is not existing yet.
+  /**marks a bit in the {@link #getCreateMark()}, creates it if it is not existing yet.
    * @see org.vishia.util.MarkMask_ifc#setMarked(int, java.lang.Object)
    */
-  @Override public int setMarked(int mask, Object data)
-  { if(sFile.equals("ReleaseNotes.topic"))
-      Debugutil.stop();
-    if(mark == null){ mark = new  FileMark(this); }
+  @Override public int setMarked(int mask, Object data) { 
+    //if(sFile.equals("ReleaseNotes.topic")) Debugutil.stopp();
+    FileMark mark = this.getCreateMark();   // gets possible from the realFile
     return mark.setMarked(mask, data);
   }
   
 
   
-  public boolean isMarked(int mask){ return mark !=null && (mark.getMark() & mask) !=0; }
+  public boolean isMarked(int mask){ 
+    FileMark mark = this.getCreateMark();   // gets possible from the realFile
+    return mark !=null && (mark.getMark() & mask) !=0;
+  }
   
-  
+  /**Gets or creates a {@link Properties} for this file,
+   * linked to the possible {@link #realFile}
+   * If {@link #props} is not set till now, it is checked whether {@link #realFile} is set.
+   * If it is so, then this same operation is called for the realInstance,
+   * which either gets the {@link #props} from the {@link #realFile} 
+   * or creates it in the {@link #realFile} and stores it also here.
+   * So both refer to the same {@link Properties} instance.
+   * @return Properties created if non existing. 
+   */
+  public Properties props () { 
+    if(this.props !=null) {
+      //assert(this.realFile == null || this.realFile.props == this.props);
+      if(this.realFile != null && this.realFile.props != this.props) { Debugutil.stopp(); }
+      return this.props;
+    } else {
+      if(this.realFile == this) {
+        assert(false);
+        this.realFile = null;
+      }
+      if(this.realFile !=null) {
+        return this.props = this.realFile.props();  // create it if necessary 
+      }
+      else {
+        this.props = new Properties();  
+        return this.props; 
+      }
+    }
+  }
+
+
   /**Sets the properties to this.
    * 
    * This method is not intent to invoke from a users application. It should only invoked 
@@ -2625,7 +2773,22 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  
+  /**Properties of a FileRemote instance
+   * <br>Not stored there, because properties of also the symbolic link referencing instance:
+   * {@link #sDir}, {@link #sFile}
+   * {@link #realFile} even as reference to the real file FileRemote instance
+   * {@link #parent}, {@link #children} builds the tree of the link referencing instances.
+   * {@link #oFile()}, {@link #path()}: representation in the file system of the linked instances.
+
+   */
+  private static final class Properties {
+    /**This id can be checked to prevent usage twice in a loop.
+     * @deprecated 
+     */
+    long idUsage;
+    
+
+  }
 
   
   

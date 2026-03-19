@@ -53,6 +53,11 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2026-03-19 {@link #searchTextInFile(File, String, int, Object, Object, Object)} new. TODO there: what about binary files.
+   *   Second is, the wildcard search is not completed. Maybe should have a special set of arguments to support search in more files,
+   *   prepare wild card search only ones before call all searches.
+   * <li>2026-03-19 {@link #absolutePath(String, File, boolean)} with a 3th argument to select whether resolve with any environment variables.
+   *   There are files for example in Windows with name $RECYCLE.BIN which are faulty used then if their filename is necessary.
    * <li>2025-12-11 Helper class FilepathnameExt 
    * <li>2023-03-15 Hartmut new {@link FilePathnameExt}, new {@link #newFile(File, String, boolean)}
    * <li>2023-03-15 Hartmut bugfix {@link #addFilesWithBasePath(File, String, List)} used in {@link org.vishia.cmd.JZtxtcmdFileset}:
@@ -834,6 +839,197 @@ public class FileFunctions {
     return nrofBytes;
   }
   
+  
+  
+  /**Search a specified String in one line of all lines in a file.
+   * @param file The file
+   * @param sSearch search String. If bit2 of bSpecialChars is set, then interpret characters as following: <ul>
+   *   <li>The backslash is the escape character. The next character is valid as is. Write "\\" to search a backslash.
+   *   <li>">>" is a left word boundary. Left of the search word should be a non identifier character. Write "\>>" to search ">>"
+   *   <li>"<<" is a right word boundary. Right of the search word should be a non identifier character. Write "\<<" to search "<<"
+   *   <li>">>>" as first character means 'start of line'. Write ">\>>" to search ">>>".
+   *   <li>".." means 'any char', write "\.." to search "..".
+   *   </ul>
+   *   for example: <ul>
+   *   <li>">>name<<..text" searches 'name' as whole word, and after it 'text' as free text. " name: thetextis" matches.
+   *   <li>">>int<<..??;..>>y1<<" searches "int" and then "y1" as whole word, but between a semicolon must not occur. "int const y1;" matches, "int x2; float y1" does not match.
+   *   </ul>
+   * @param bSpecialChars <ul> 
+   *   <li>if 0, search only the string. 
+   *   <li>If bit0 is set, search no case sensitive, without upper/lower case check, sSearch should be given then in lower case. 
+   *   <li>If bit1 is set, search 'whole word', should be limited by non identifier chars.
+   *   <li>If bit2 is set, 
+   *   </ul>
+   * @param endlineCommento null possible, either a simple String for one end line comment start string, 
+   *   or an array of String[] for more possibilities.
+   * @param commentStarto  null possible, either a simple String for a comment start string for more as one lines, 
+   *   or an array of String[] for more possibilities.
+   * @param commentEndo   null possible, the proper end comment String for more lines. 
+   *   Either a simple String, valid for one or more commentStarto, or an array proper to commentStarto Array. 
+   * @return found result<ul>
+   *    <li> 0 not found
+   *    <li> > 0: the line number where found. First line in file is 1.
+   *    <li> < 0: error (Exception on reading file).
+   *    </ul> 
+   */
+  public static int searchTextInFile(File file, String sSearch, int bSpecialChars, Object endlineCommento, Object commentStarto, Object commentEndo) {
+    boolean bNotFound = true;
+    //======================================================vv prepare the comment handling
+    String endlineComment; String[] endlineComments; //-----vv end line comment designation
+    if(endlineCommento instanceof String) {
+      endlineComment = (String) endlineCommento;
+      endlineComments = null;
+    } else if(endlineCommento instanceof String[]) {
+      endlineComment = null;
+      endlineComments = (String[]) endlineCommento;
+    } else {
+      endlineComment = null; endlineComments = null;
+    }
+    String commentStart; String[] commentsStart; //---------vv comment designation 
+    if(commentStarto instanceof String) {
+      commentStart = (String) commentStarto;
+      commentsStart = null;
+    } else if(commentStarto instanceof String[]) {
+      commentStart = null;
+      commentsStart = (String[]) commentStarto;
+    } else {
+      commentStart = null; commentsStart = null;
+    }
+    String commentEnd; String[] commentsEnd;  //------------vv end comment designation
+    if(commentEndo instanceof String) {
+      commentEnd = (String) commentEndo;
+      commentsEnd = null;
+    } else if(commentEndo instanceof String[]) {
+      commentEnd = null;
+      commentsEnd = (String[]) commentEndo;
+    } else {
+      commentEnd = null; commentsEnd = null;
+    }
+    //======================================================vv prepare kind of searching
+    boolean bSearchFromStart = false;
+    boolean bWithespaceBefore = false;
+    boolean bNonIdentifierBefore = false;
+    String sSearch1 = null;
+    String[] bSearchMore = null;
+    boolean bWithespaceAfter = false;
+    boolean bNonIdentifierAfter = false;
+    
+    //======================================================vv iterate through file
+    BufferedReader r1 =null;
+    int nLine = 0;
+    try {
+      r1 = new BufferedReader(new FileReader(file));
+      String line =null;
+      int ixCommentedBlock = -1;
+      while( bNotFound && (line = r1.readLine()) !=null) {  //read lines of file 1 maybe with ignored comment.
+        nLine +=1;
+        //------------------------------------------// check if an endlineComment is contained:
+        if(endlineComment !=null) {
+          int z1 = line.indexOf(endlineComment);
+          if(z1 >=0) {
+            line = line.substring(0, z1);    //shorten s1 to eol text
+          }
+        } else if(endlineComments !=null) {
+          int z2 = Integer.MAX_VALUE;
+          for(String sEndlineComment: endlineComments) {
+            int z1 = line.indexOf(sEndlineComment);
+            if( z1 >=0 && z1 < z2) {
+              z2 = z1;
+            }
+          }
+          if(z2 < Integer.MAX_VALUE) {
+            line = line.substring(0, z2);    //shorten s1 to eol text
+          }
+        }
+        String lineUse = line;
+        if(ixCommentedBlock <0) {         //--------vv search whether a commented block starts:
+          if(commentStart !=null) {
+            int z1 = line.indexOf(commentStart);
+            if(z1 >=0) {
+              lineUse = line.substring(0, z1);    //shorten s1 to eol text
+              ixCommentedBlock = 0;
+            }
+          } else if(commentsStart !=null) {
+            int z2 = Integer.MAX_VALUE;
+            for(int ix = 0; ix < commentsStart.length; ++ix) {
+              String sCommentStart = commentsStart[ix];
+              int z1 = line.indexOf(sCommentStart);
+              if( z1 >=0 && z1 < z2) {
+                z2 = z1;
+                ixCommentedBlock = ix;
+              }
+            }
+            if(z2 < Integer.MAX_VALUE) {
+              lineUse = line.substring(0, z2);    //shorten s1 to eol text
+            }
+          }
+        } else {                        //-------vv in a line before ixCommentedBlock was set >=0, a comment over more lines.
+          lineUse = "";
+        }
+        if(ixCommentedBlock >0) {       //-------vv ixCommentedBlock >=0:
+          if(commentEnd !=null) {                // can be occure immediately in the same line after commentStart
+            int z1 = line.indexOf(commentEnd);
+            if(z1 >=0) {
+              lineUse += line.substring(z1 + commentEnd.length());    //shorten s1 to eol text
+              ixCommentedBlock = -1;
+            }
+          } else if(commentsEnd !=null) {
+            String sCommentEnd = commentsEnd[ixCommentedBlock];
+            int z1 = line.indexOf(sCommentEnd);  // use the correct endComment string
+            if(z1 >=0) {
+              lineUse += line.substring(z1 + sCommentEnd.length());    //shorten s1 to eol text
+              ixCommentedBlock = -1;
+            }
+          }
+          if(ixCommentedBlock >=0) {
+            line = "";
+          }
+        }
+        //------------------------------------------vv now search in the possible shortened line
+        if(lineUse.length() ==0) {              //-------------vv line accepted.
+        }
+        else if(sSearch1 ==null) {           //-------------vv simple search
+          if(lineUse.contains(sSearch)) {
+            bNotFound = false;
+          }
+        } else {                        //------------------vv complex search
+          int p1 = lineUse.indexOf(sSearch1);
+          if(p1 >=0) {
+            boolean bFound = true;
+            if(bNonIdentifierBefore) {
+              char cBefore = p1 == 0 ? '.' : lineUse.charAt(p1-1);
+              bFound &= !isIdentifierChar(cBefore, null);
+            }
+            if(bWithespaceBefore) {
+              
+            }
+            if(bFound) {
+              bNotFound = false;
+            }
+          }
+        }
+        //if(s1.startsWith("    super.prepareDirs(dir, false);")) Debugutil.stopp();
+      }
+      //file1 is finished.
+      r1.close();
+      r1 = null;
+    } catch(IOException exc) {
+      nLine = -1;
+    }
+    FileFunctions.close(r1);
+    return bNotFound ? 0 : nLine;
+  }
+  
+  
+  
+  private static boolean isIdentifierChar (char cc, String sAddIdentChars) {
+    return cc>= 'A' && cc <= 'Z' || cc>= 'a' && cc <= 'z'
+        || cc>= '0' && cc <= '9' || cc == '_'
+        || sAddIdentChars !=null && sAddIdentChars.indexOf(cc) >=0
+        ;
+  }
+  
+  
   /**checks if a path exists or execute mkdir for all not existing directory levels.
   *  If the file should be a directory but it doesn't exists, the parent directory is created.
   *  That is because it is not able to detect whether a non-existing directory path is a directory.
@@ -1333,12 +1529,18 @@ public class FileFunctions {
    * @param sFilePath given path/to/file. It may contain "\\". "\\" are converted to "/" firstly. 
    * @param currDir The current dir or null. If null then a necessary current dir for a relative given path
    *   is gotten calling <code>System.getProperty("user.dir")</code>
+   * @param bReplEnv true then environment variables are replaced, false, then not.  
    * @return The path as absolute path. It is not tested whether it is a valid path. 
    *   The path contains always / instead \, also on windows.
    */
-  public static String absolutePath(String sFilePath, File currDir)
-  { final String sAbs;
-    String sFilePath1 = Arguments.replaceEnv(sFilePath);
+  public static String absolutePath(String sFilePath, File currDir, boolean bReplEnv) { 
+    final String sAbs;
+    String sFilePath1;  
+    if(bReplEnv) {
+      sFilePath1 = Arguments.replaceEnv(sFilePath);
+    } else {
+      sFilePath1 = sFilePath;
+    }
     if(sFilePath1.startsWith("~")){ //The home directory
       String sHome = System.getenv("HOME");
       if(sHome == null) {
@@ -1377,6 +1579,20 @@ public class FileFunctions {
   }
   
   
+  /**See {@link #absolutePath(String, File, boolean)}. It replaces enviroment variables
+   * in the given 'sFilePath' since 2022.
+   * This is usefully in most cases. When not, use the long from with false as last argument. 
+   * This is especially if a real existing file name is used, and the file itself has the name like an environment variable,
+   * for example '$EXAMPLE.txt.' 
+   * 
+   * @param sFilePath
+   * @param currDir
+   * @return
+   */
+  public static String absolutePath(String sFilePath, File currDir) {
+    return absolutePath(sFilePath, currDir, true);
+  }
+
   
   /**Returns the normalized absolute path from a file. See {@link #normalizePath(CharSequence)}.
    * This function builds the absolte path if the file is relative.

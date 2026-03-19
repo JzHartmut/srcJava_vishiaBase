@@ -164,7 +164,7 @@ public class FileRemoteCallbackSearch implements SortedTreeWalkerCallback<FileRe
         }
         if( nFound <=0) {
           file.setMarked(FileMark.cmpFileDifferences);
-          file.mark.setMarkParent(FileMark.cmpFileDifferences, false);
+          file.mark().setMarkParent(FileMark.cmpFileDifferences, false);
         }
       }
     } catch(IOException exc) {
