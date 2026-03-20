@@ -333,6 +333,8 @@ public class FileRemoteWalker {
      * It will be stored in {@link FileRemote#length()} for the {@link #dir}.*/
     public long nrBytesInDir;
     
+    public int nrofFilesInSubtree;
+    
     /**This is the sum of all files length which are selected.
      * It will be stored in {@link FileRemote#mark()} for the {@link #dir}, there in {@link FileMark#nrofBytesSelected}. */
     public long nrBytesInDirSelected;

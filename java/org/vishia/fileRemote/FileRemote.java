@@ -657,6 +657,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
    */
   protected FileRemote(final FileCluster cluster, final FileRemoteAccessor device
+   //   , final FileRemote realFile    // would be nice regard from beginning.
       , final FileRemote parent
       , final CharSequence sPath //, CharSequence sName
       , final long length, final long dateLastModified, long dateCreation, long dateLastAccess, final int flags
@@ -1305,13 +1306,15 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   /**Gets the properties of the file from the physical file.
    * @param callback if null gets the properties immediately in this thread.
+   *   If given, then creates a temporary thread, check the file and sends the properties back to
+   *   {@link EventWithDst#evDst} in the queue for the given thread {@link EventWithDst#evDstThread}.
    * 
    */
   public void refreshProperties(EventWithDst<FileRemoteProgressEvData,?> evBack){
-    if(device == null){
-      device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    if(this.device == null){
+      this.device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    device.refreshFileProperties(this, evBack);
+    this.device.refreshFileProperties(this, evBack);
   }
   
   
@@ -1393,6 +1396,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callback null possible. A callback operation set for each file and dir. This defines what to do with the files.
    * @param cycleProgress cycle for progress in ms, 0 means progress for any file.
    * @param evProgress for progress. If bWait is false and evBack is null, no answer is given. 
+   * @deprecated it is the same as the {@link #cmdRemote(org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, String, int, int, int, FileRemoteCmdEventData, EventWithDst)}
+   *   but last one has an argument for the {@link FileRemoteCmdEventData}
    */
   public void walkRemote ( boolean bWait, FileRemote dirDst, int depth, String selectFilter, int bMaskSel
     , int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> evProgress) { 
@@ -1772,6 +1777,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     return length; 
   }
 
+  
+  public long nrofFilesAllOfDir () {
+    return this.props().nrofChildrenAll;
+  }
+  
   
   @Override public long lastModified(){ 
     if((flags & mTested) ==0){
@@ -2787,7 +2797,18 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      */
     long idUsage;
     
-
+    /**Only relevant for directory entry: number of refreshed (seen) children 
+     * in all tree levels.
+     * Note that this number depends from the kind of refresh.
+     */
+    int nrofChildrenAll;
+    
+    
+    /**Only relevant for directory entry: number of bytes in all refreshed (seen) children 
+     * in all tree levels.
+     * Note that this number depends from the kind of refresh.
+     */
+    long nrofBytesAll;
   }
 
   
@@ -3130,6 +3151,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       if(dateLastAccess !=-1) { FileRemote.this.dateLastAccess = dateLastAccess; }
       if(dateCreation !=-1) { FileRemote.this.dateCreation = dateCreation; }
       if(length !=-1) { FileRemote.this.length = length; }
+    }
+    
+    public void setNrofFilesInTree (int nrofFiles, long nrofBytes) {
+      FileRemote.this.props().nrofChildrenAll = nrofFiles; 
+      FileRemote.this.length = nrofBytes;
     }
     
     public int setOrClrFlagBit(int bit, boolean set){ if(set){ flags |= bit; } else { flags &= ~bit;} return flags; }

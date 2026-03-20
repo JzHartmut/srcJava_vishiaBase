@@ -1,6 +1,6 @@
 2025-08-28 01:06:04  x     +buildTimestamps.sh                      ::           .254  1130920915 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2026-03-19 19:34:07  x     .gitCommit                               ::          2.130 -1521101762 
+2026-03-20 09:47:53  x     .gitCommit                               ::           .655  1925803943 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2025-12-05 01:36:09  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -163,7 +163,7 @@
 2023-02-10 14:18:39  x     EventThread_ifc.java                     ::          1.832  1650964286 
 2026-03-17 09:34:57  x     EventTimerThread.java                    ::         29.477  1880130209 
 2023-02-09 11:04:42  x     EventTimerThread_ifc.java                ::          1.407 -0366775010 
-2025-12-28 00:27:20  x     EventWithDst.java                        ::         45.073 -0524509232 
+2026-03-19 22:07:19  x     EventWithDst.java                        ::         45.095 -0293683934 
 2023-07-24 18:31:00  x     Payload.java                             ::           .868 -1431066429 
 2023-07-24 21:23:03  x     PayloadBack.java                         ::          2.794 -0178157850 
 2023-03-20 18:21:11  x     TimeOrder.java                           ::         22.731  0696971915 
@@ -175,7 +175,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2026-03-19 20:36:21  x     FileAccessorLocalJava7.java              ::        106.276  1503346718 
+2026-03-20 09:25:45  x     FileAccessorLocalJava7.java              ::        106.830 -0268470607 
 2026-03-18 09:55:08  x     FileCallbackLocalCmp.java                ::         23.053 -0402328430 
 2025-12-31 00:16:40  x     FileCallbackLocalCopy.java               ::          7.803 -1637138438 
 2025-12-30 23:15:34  x     FileCallbackLocalDelete.java             ::          5.180 -1671717607 
@@ -190,16 +190,16 @@
 2023-07-24 20:50:29  x     FileAccessZip.java                       ::         17.511 -2066156768 
 2025-12-30 00:23:49  x     FileCluster.java                         ::         20.021 -0150122322 
 2026-03-19 11:44:06  x     FileMark.java                            ::         10.868 -0092224085 
-2026-03-19 19:21:31  x     FileRemote.java                          ::        155.718  0685204870 
+2026-03-20 00:53:38  x     FileRemote.java                          ::        156.962  1889657095 
 2025-08-29 19:40:42  x     FileRemoteAccessor.java                  ::         14.944 -0556793629 
 2025-12-30 23:22:43  x     FileRemoteCallbackCopyDispersedFiles.java ::          3.078 -1484910759 
 2026-03-18 15:52:47  x     FileRemoteCallbackSearch.java            ::         10.707 -1024409129 
 2026-03-17 01:02:13  x     FileRemoteCmdEventData.java              ::          8.883  0679698350 
-2026-03-19 00:48:26  x     FileRemoteProgressEvData.java            ::         15.279 -1188766161 
+2026-03-20 09:44:44  x     FileRemoteProgressEvData.java            ::         15.999  1417441759 
 2026-03-18 09:53:05  x     FileRemoteProgressEventConsumer.java     ::          4.502 -0307747837 
 2025-12-30 13:10:58  x     FileRemoteReport.java                    ::          1.841  1229383343 
 2025-12-30 23:22:34  x     FileRemoteTestCallback.java              ::          1.252  2068046666 
-2026-03-18 23:47:40  x     FileRemoteWalker.java                    ::         17.467  0825677265 
+2026-03-20 00:17:32  x     FileRemoteWalker.java                    ::         17.507  2111659124 
 2026-03-19 19:25:52  x     FileRemoteWalkerCallback.java            ::          5.333 -0470704417 
 2025-12-30 23:21:40  x     FileRemoteWalkerCallbackCopy.java        ::          2.396  2105255028 
 2025-12-30 23:22:07  x     FileRemoteWalkerCallbackDelete.java      ::          1.974 -0372325747 

@@ -160,6 +160,9 @@ public class FileRemoteProgressEvData extends PayloadBack implements Serializabl
    */
   public int nrFilesVisited;
   
+  /**Number of bytes in sum which are selected by String mask or marked bits. */
+  public long nrofBytesVisited;
+  
   /**Number of Files which are selected by String mask or marked bits. */
   public int nrofFilesUsed;
   
@@ -245,6 +248,7 @@ public class FileRemoteProgressEvData extends PayloadBack implements Serializabl
   this.nrDirProcessed = 0;
   this.nrDirVisited = 0;
   this.nrFilesVisited = 0;
+  this.nrofBytesVisited = 0;
   this.nrofFilesUsed = 0;
   this.nrofBytesUsed = 0;
   this.nrofBytesMarked = 0;
@@ -263,12 +267,23 @@ public class FileRemoteProgressEvData extends PayloadBack implements Serializabl
 
 
   /**Set the event to the done() state, all is done maybe with error.
-   * @param infoUnusedFinish Either {@link EventConsumer#mEventConsumerException} or {@link EventConsumer#mEventConsumFinished}
+   * <ul>
+   * <li>{@link #progressCmd} is set with   {@link FileRemoteProgressEvData.ProgressCmd#done}
+   * <li>{@link #answerToCmd} is set with the 'callingCmd' argument
+   * <li>{@link #sError} is set with the 'sError' argument
+   * <li>{@link #bDone} is set to true.
+   * <li>The event is not sent here, timeorder is not cleaned, should be done outside. 
+   *   TODO why here not?
+   * </ul>
+   * @param callingCmd The original cmd on call of walking is reflected here, 
+   *   because sometimes the destination for the event is the same for more as one command to wait,
+   *   and for that it should reported what is done. 
    * @param sError a message if any what was unexpected. Especially on unexpected exception. 
    */
-  public void done(FileRemoteCmdEventData.Cmd answer, String sError) {
+  public void done(FileRemoteCmdEventData.Cmd callingCmd, String sError) {
     this.sError = sError;
-    this.answerToCmd = answer;
+    this.progressCmd = FileRemoteProgressEvData.ProgressCmd.done;
+    this.answerToCmd = callingCmd;
 //    if(this.timeOrder !=null) {
 //      this.timeOrder.notifyConsumed(timeOrderFinish);
 //      this.timeOrder.clear();

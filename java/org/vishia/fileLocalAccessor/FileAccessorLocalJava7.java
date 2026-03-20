@@ -1140,7 +1140,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       //==========                ----------------- set breakpoints in visitFile etc. in the following class WalkFileTreeVisitor
       java.nio.file.Files.walkFileTree(co.filesrc().path(), options, depth1, visitor);  
       //
-      if(visitor.timeOrderProgress !=null ) { visitor.timeOrderProgress.deactivate(); }
+      if(visitor.timeOrderProgress !=null ) { 
+        visitor.timeOrderProgress.deactivate(); 
+      }
     } catch(IOException exc){
       sError = org.vishia.util.ExcUtil.exceptionInfo("FileAccessorLocalJava7.walkFileTree - unexpected Exception; ", exc, 0, 20).toString();
       progressFinish = EventConsumer.mEventConsumerException;
@@ -1150,7 +1152,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     }
     if(evBack !=null ) {                       // back event for finish
       FileRemoteProgressEvData progress = evBack.data();
-      progress.done(co.cmd(), sError);
+      progress.done(co.cmd(), sError);                        // set done for this calling command, to consider one destination for several actions.
       evBack.sendEvent("walkFileTreeExecInThisThread-done");
     }
   }
@@ -1595,6 +1597,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         this.walkInfo.dir.timeChildren = System.currentTimeMillis();
         this.walkInfo.dir.internalAccess().setChildrenRefreshed();  // first called before callback.finishedParentNode see above
         this.walkInfo.dir.internalAccess().setLengthAndDate(this.walkInfo.nrBytesInDir, -1, -1, System.currentTimeMillis());
+        this.walkInfo.dir.internalAccess().setNrofFilesInTree(this.walkInfo.nrofFilesInSubtree, this.walkInfo.nrBytesInDir);
       }
       if(this.walkInfo.nrofFilesSelected >0 && this.co.markSetDir() !=0 && (this.co.markSetDir() & FileMark.resetMark) ==0) {
         FileMark mark = this.walkInfo.dir.getCreateMark();
@@ -1615,6 +1618,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       if(this.progress !=null) {                         
         //--------------------------------------- creates or updates a time order for the state. 
         if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
+        this.progress.nrDirVisited +=1;
         this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshDirPost;
         this.progress.currFile = this.walkInfo.dir;          // all information about the FileRemote will be proper serialized if remote
         if(this.co.cycleProgress() ==0) {        // send back event on any file or dir entry:
@@ -1630,6 +1634,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       if(this.walkInfo.parent !=null) {
         this.walkInfo.parent.nrBytesInDirSelected += this.walkInfo.nrBytesInDirSelected;
         this.walkInfo.parent.nrofFilesSelected += this.walkInfo.nrofFilesSelected;
+        this.walkInfo.parent.nrBytesInDir += this.walkInfo.nrBytesInDir;
+        this.walkInfo.nrofFilesInSubtree += this.walkInfo.nrofFilesInSubtree;
       }
       this.walkInfo = this.walkInfo.parent;   
       return translateResult(result);
@@ -1756,8 +1762,12 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
             this.progress.nrDirVisited +=1;
           } else {
             this.progress.nrFilesVisited +=1;
+            this.progress.nrofBytesVisited += file.toFile().length();
           }
         }
+        long size = attrs.size();
+        this.walkInfo.nrBytesInDir += size;
+        this.walkInfo.nrofFilesInSubtree +=1;
         boolean selected = (this.fileFilter == null)         //_E_: check selection via String, fileFilter: 
                         || this.walkInfo.fileFilter.check(name, bDirectory) !=null;
         if( !selected                                        //_F_: not selected via String
@@ -1837,9 +1847,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
           }
           //
           setAttributes(fileRemote, file, attrs);            //_H_: copy the file attributes from nio.file..Path to FileRemote
-          long size = attrs.size();
           assert(this.walkInfo.dir == fileRemote.getParentFile());
-          this.walkInfo.nrBytesInDir += size;
           this.walkInfo.nrBytesInDirSelected += size;
           this.walkInfo.nrofFilesSelected +=1;
           if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - file; " + name);

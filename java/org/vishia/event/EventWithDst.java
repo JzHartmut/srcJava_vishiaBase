@@ -626,7 +626,7 @@ public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends 
    *   It is possible that the processing of the event hangs (deadlock). 
    * </ul>
    * See {@link #occupyRecall(Object, EventConsumer, EventThread_ifc)}.   
-   * @param timeout maximal millisecond to wait if the event is yet in processing.
+   * @param timeout maximal millisecond to wait in the calling thread if the event is yet in processing.
    * @param source Source instance able to use for monitoring the event life cycle. null is admissible.
    * @param dst The destination instance which should receive this event.
    *   If null, the dst given by constructor or the last given dst is used.
