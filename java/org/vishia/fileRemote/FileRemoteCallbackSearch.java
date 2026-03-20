@@ -122,7 +122,7 @@ public class FileRemoteCallbackSearch implements SortedTreeWalkerCallback<FileRe
   
   
   
-  @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object oWalkInfo){
+  @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object oWalkInfo, boolean bRootNode){
     this.dirCurr = dir;
     return Result.cont;
   }

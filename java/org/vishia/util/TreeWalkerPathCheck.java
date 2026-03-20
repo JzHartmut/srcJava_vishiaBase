@@ -89,7 +89,7 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String, Obj
   
   @Override public void start(String startNode, Object info){ } //callback.start(startNode); }
 
-  @Override public SortedTreeWalkerCallback.Result offerParentNode(String sName, Object data, Object walkInfo)
+  @Override public SortedTreeWalkerCallback.Result offerParentNode(String sName, Object data, Object walkInfo, boolean bRootNode)
   {
     //String sName = node instanceof TreeNodeNamed_ifc ? ((TreeNodeNamed_ifc)node).getName() : node.toString();
     PathCheck use;

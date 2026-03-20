@@ -153,7 +153,7 @@ public class FileCallbackLocalSearch  extends FileRemoteWalkerCallback
   
   
   
-  @Override public Result offerParentNode(FileRemote dir, Object oPath, Object oWalkInfo){
+  @Override public Result offerParentNode(FileRemote dir, Object oPath, Object oWalkInfo, boolean bRootNode){
     //if(dir == this.dir1Base) Debugutil.stopp();  //{ return Result.cont; } //the first entry
     //else {
     this.mMarkParent = 0;   // prepared for children search.

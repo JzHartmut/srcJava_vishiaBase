@@ -2,6 +2,7 @@ package org.vishia.fileRemote;
 
 import org.vishia.event.EventWithDst;
 import org.vishia.event.Payload;
+import org.vishia.util.Debugutil;
 import org.vishia.util.SortedTreeWalkerCallback;
 
 /**This callback operations are used to copy files from walking to the FileRemote instances
@@ -32,8 +33,11 @@ public class FileRemoteWalkerCallbackCopy  implements SortedTreeWalkerCallback<F
     this.srcRootDir = startNode;
   }
 
-  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
+  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo, boolean bRootNode ) {
     String name = parentNode.getName();
+    if(bRootNode) {
+      Debugutil.stop();
+    }
     this.dstDir = this.dstDir.subdir(name);
     this.dstDir.mkdir(true, this.evConsumer.evBack);
     this.evConsumer.awaitExecution(0, true);

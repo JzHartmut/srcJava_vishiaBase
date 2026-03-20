@@ -183,7 +183,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
   
   
   
-  @Override public Result offerParentNode(FileRemote dir, Object oPath, Object oWalkInfo){
+  @Override public Result offerParentNode(FileRemote dir, Object oPath, Object oWalkInfo, boolean bRootNode){
     //if(dir == this.dir1Base) Debugutil.stopp();  //{ return Result.cont; } //the first entry
     //else {
     super.prepareDirs(dir, false);
@@ -236,8 +236,9 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
       }
       file.setMarked(FileMark.cmpAlone);   //mark the file1, all file2 which maybe alone are marked already in callbackMarkSecondAlone.
       file.mark().setMarkParent(FileMark.cmpMissingFiles, false);
-      return Result.cont;    
+      return Result.contMarked;    
     } else {
+      final Result result;
       // There is a minimal reason that the file does no more exists, 
       // if it is deleted just in the millisecond between refreshe in offerParentNode() and now.
       // then if fast comparison is done, this is not detected. 
@@ -251,7 +252,7 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
       int cmprBits = compareFile(file, file2);
       //if( (cmprBits & FileMark.cmpContentNotEqual) !=0) Debugutil.stopp(); 
       file.setMarked(cmprBits);                            // set the result of compare.
-      if((cmprBits & FileMark.cmpTimeGreater)!=0) {
+      if((cmprBits & FileMark.cmpTimeGreater)!=0) {        // the time stamp is primary independent of cmpContentEqual, set anyway.
         cmprBits &= ~FileMark.cmpTimeGreater;
         cmprBits |= FileMark.cmpTimeLesser;                // revert time greater/lesser for the other file.
       } else if((cmprBits & FileMark.cmpTimeLesser)!=0) {
@@ -259,17 +260,22 @@ public class FileCallbackLocalCmp extends FileRemoteWalkerCallback
         cmprBits |= FileMark.cmpTimeGreater;               // revert time greater/lesser for the other file.
       }
       file2.setMarked(cmprBits);                           // set the result of compare on second. 
-      if( (cmprBits & (FileMark.cmpContentEqual | FileMark.cmpLenTimeEqual)) ==0) {
-        file.mark().setMarkParent(FileMark.cmpFileDifferences, false);
+      //if( (cmprBits & (FileMark.cmpContentEqual | FileMark.cmpLenTimeEqual)) ==0) {
+      if( (cmprBits & FileMark.cmpContentEqual) ==0) {     // content is not equal:
+        file.mark().setMarkParent(FileMark.cmpFileDifferences, false);  // set in parent!
         file2.mark().setMarkParent(FileMark.cmpFileDifferences, false);
+        //                              vvvv--- note the bits are meanwhile reverted, valid for file2.
+        result = (cmprBits &FileMark.cmpTimeGreater )!=0 ? Result.contMarkedOlder : Result.contMarked; 
         if(this.progress !=null) { this.progress.nrofFilesSelected +=1; }
+      } else {
+        result = Result.cont;
       }
       if(this.callbackUser !=null) {
         //@SuppressWarnings("removal") 
         Integer objCmprBits = new Integer(cmprBits);
         this.callbackUser.offerLeafNode(file, objCmprBits);  ////
       }
-      return Result.cont;
+      return result;
     }
   }
 

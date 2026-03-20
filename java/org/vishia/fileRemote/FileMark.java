@@ -245,7 +245,7 @@ public class FileMark extends SelectMask
     FileRemote lastDirParent = this.itsFile;
     if((this.selectMask & markRoot) ==0){
       while( (parent = parent.getParentFile()) !=null){  //break inside!
-        FileMark mark = parent.mark();
+        FileMark mark = parent.getCreateMark();
         if((mark.selectMask & FileMark.markRoot)!=0){
           break;
         }

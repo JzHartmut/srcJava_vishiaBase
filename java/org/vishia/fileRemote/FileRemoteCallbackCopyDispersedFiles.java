@@ -51,7 +51,7 @@ public class FileRemoteCallbackCopyDispersedFiles implements SortedTreeWalkerCal
     
   }
 
-  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
+  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo, boolean bRootNode ) {
     // TODO Auto-generated method stub
     return null;
   }

@@ -50,6 +50,7 @@ public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
    * This class is defined here because it runs with Java-6 too.
    * The other reason is: on continue, more nuances are regarded:
    * <ul><li>{@link #contMarked}: The file is selected, marked: For example search String is found, difference is found. 
+   * <li>{@link #contMarkedOlder}: The file is selected after comparison, it's time stamp is the older one from both. 
    * <li>{@link #contUsed}: The file was used to test, it is selected by file name pattern, but it is not marked.
    * <li>{@link #contUnused}: The file is seen, but not selected by file name pattern etc.
    * <li>{@link #contReadError}: The file is given in the directory, but it is not readable.
@@ -61,6 +62,7 @@ public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
   public enum Result
   {
     contMarked
+    , contMarkedOlder  // marked with timeStamp older on comparison
     , contUsed
     , contUnused
     , contReadError
@@ -100,7 +102,7 @@ public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
    * @param oWalkInfo internal possible information about walking, depending on usage.
    * @return information to abort, maybe boolean.
    */
-  Result offerParentNode(TypeNode parentNode, Object data, Object oWalkInfo);
+  Result offerParentNode(TypeNode parentNode, Object data, Object oWalkInfo, boolean bRootNode);
   
   /**Invoked on end of walking through a parent node.
    * @param parentNode the node which was walked through
@@ -143,7 +145,7 @@ public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
     
     @Override public void finished(Object parentNode) {  }
 
-    @Override public Result offerParentNode(Object file, Object oPath, Object filter) {
+    @Override public Result offerParentNode(Object file, Object oPath, Object filter, boolean bRootNode) {
       return Result.cont;      
     }
     

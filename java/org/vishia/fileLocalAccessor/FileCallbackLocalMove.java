@@ -10,6 +10,7 @@ import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
+import org.vishia.fileRemote.FileRemoteWalker;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.util.Debugutil;
 import org.vishia.util.SortedTreeWalkerCallback;
@@ -85,18 +86,39 @@ public class FileCallbackLocalMove  implements SortedTreeWalkerCallback<FileRemo
   
   
   
-  @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object filter) {
+  @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object walkInfoO, boolean bRootNode) {
 //    if(this.first){
 //      this.first = false;  //first level: don't change dirDst. It matches to the first source dir.
 //    } else {
-      String name = dir.getName();
-      this.dirDst = FileRemote.getDir(this.dirDst.getPathChars() + "/" + name);
-      this.dirDst.mkdir();
-      if(this.progress !=null) {
-        this.progress.currDir = dir;
+    Result  ret = Result.cont;
+    try {
+      FileRemoteWalker.WalkInfo currWalkInfo = (FileRemoteWalker.WalkInfo)walkInfoO;
+      if(!bRootNode) { //not on first level: don't change dirDst. It matches to the first source dir.
+        String name = dir.getName();
+        this.dirDst = FileRemote.getDir(this.dirDst.getPathChars() + "/" + name);
+        Path pathSrc = dir.path();
+        Path pathDst = this.dirDst.path();
+        @SuppressWarnings("resource") FileSystemProvider provSrc = pathSrc.getFileSystem().provider();
+        @SuppressWarnings("resource") FileSystemProvider provDst = pathDst.getParent().getFileSystem().provider();
+        if(provSrc == provDst) {                   //--------vv files on the same device, the copy is faster than content copy.
+          Files.move(pathSrc, pathDst); //, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+          // if no exception
+          ret = Result.skipSubtree;    // because it is moved as a whole.
+          if(this.progress !=null) {
+            this.progress.nrofBytesFileCopied = this.progress.nrofBytesFile;
+          }
+        } else {
+          this.dirDst.mkdir();
+        }
+        if(this.progress !=null) {
+          this.progress.currDir = dir;
+        }
       }
-//    }
-    return Result.cont;
+    } catch(IOException exc) {
+      System.err.println(exc.toString());
+    } finally {
+    }
+    return ret;
   }
   
   /**Checks whether all files are compared or whether there are alone files.
@@ -124,7 +146,7 @@ public class FileCallbackLocalMove  implements SortedTreeWalkerCallback<FileRemo
       if(this.progress !=null) {
         this.progress.nrofBytesFile = file.length();
       }
-      if(provSrc == provDst) {                   //--------vv files on the same device, the copy is faster than manually copy.
+      if(provSrc == provDst) {                   //--------vv files on the same device, the copy is faster than content copy.
         Files.move(pathSrc, pathDst); //, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
         if(this.progress !=null) {
           this.progress.nrofBytesFileCopied = this.progress.nrofBytesFile;
@@ -146,7 +168,7 @@ public class FileCallbackLocalMove  implements SortedTreeWalkerCallback<FileRemo
   
   
   @Override public boolean shouldAborted(){
-    return false; 
+    return this.progress == null ? false : this.progress.abort(); 
   }
 
   

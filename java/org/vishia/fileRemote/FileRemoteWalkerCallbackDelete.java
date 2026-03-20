@@ -24,7 +24,7 @@ public class FileRemoteWalkerCallbackDelete implements SortedTreeWalkerCallback<
     // left empty
   }
 
-  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
+  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo, boolean bRootNode ) {
     parentNode.deleteFilesDirTree(false, 0, "**/*", FileMark.ignoreSymbolicLinks, this.evConsumer.evBack);
     this.evConsumer.awaitExecution(0, true);
     return Result.skipSubtree;   // all is deleted, do not look for content. 

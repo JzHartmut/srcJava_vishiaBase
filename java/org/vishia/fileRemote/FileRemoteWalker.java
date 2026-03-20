@@ -229,7 +229,7 @@ public class FileRemoteWalker {
       WalkInfo walkInfoChild = new WalkInfo(dir, this.walkInfo, childFilter);
 
       if(this.walkInfo.parent !=null && this.callback !=null) {
-        result = this.callback.offerParentNode(dir, null, walkInfoChild);  // not for the entry level
+        result = this.callback.offerParentNode(dir, null, walkInfoChild, this.walkInfo.parent !=null);  // not for the entry level
       } else {
         result = SortedTreeWalkerCallback.Result.cont;
       }

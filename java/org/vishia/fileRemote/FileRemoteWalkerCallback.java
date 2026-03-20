@@ -116,7 +116,7 @@ public abstract class FileRemoteWalkerCallback implements SortedTreeWalkerCallba
   
   
   @Override public boolean shouldAborted(){
-    return this.progress !=null ? this.progress.bAbort: false || this.aborted;
+    return this.progress !=null ? this.progress.bAbort: this.aborted;
   }
 
   @Override public void finished(FileRemote startDir)

@@ -1155,6 +1155,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     }
     if(evBack !=null ) {                       // back event for finish
       FileRemoteProgressEvData progress = evBack.data();
+      if(progress.abort()) { 
+        sError = sError ==null ? "aborted" : sError + " aborted"; 
+      }
       progress.done(co.cmd(), sError);                        // set done for this calling command, to consider one destination for several actions.
       evBack.sendEvent("walkFileTreeExecInThisThread-done");
     }
@@ -1308,7 +1311,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     private FileVisitResult translateResult(FileRemoteWalkerCallback.Result result){
       FileVisitResult ret;
       switch(result){
-        case cont: case contUnused: case contUsed: case contMarked: case contReadError: ret = FileVisitResult.CONTINUE; break;
+        case cont: case contUnused: case contUsed: case contMarked: case contMarkedOlder: case contReadError: ret = FileVisitResult.CONTINUE; break;
         case skipSiblings: ret = FileVisitResult.SKIP_SIBLINGS; break;
         case skipSubtree: ret = FileVisitResult.SKIP_SUBTREE; break;
         case terminate: ret = FileVisitResult.TERMINATE; break;
@@ -1557,7 +1560,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       //
       if(/*this.walkInfo.parent !=null && */this.callback !=null) {  // not for the entry level ??
         //---------------------vvvv======                   //_N_: call the offerParentNode
-        result = this.callback.offerParentNode(dir1, dir, currInfo);  //<<<<======
+        result = this.callback.offerParentNode(dir1, dir, currInfo, this.walkInfo.parent ==null);  //<<<<======
         //
       } else {
         result = SortedTreeWalkerCallback.Result.cont;
@@ -1822,9 +1825,16 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
          && (selectMask & FileMark.cmpContentNotEqual) !=0) {// and for comparison non equals files should be regarded
           markFile &= ~ (FileMark.cmpTimeGreater | FileMark.cmpTimeLesser);  // then ignore marks of its time stamp
         }                                                    // it means if 'non equal' is the command, the file should be non equal or equality is not tested.
+        else if( (markFile & FileMark.cmpContentNotEqual) !=0        // if the file is non equal after comparison.
+         && (markFile & (FileMark.cmpTimeGreater | FileMark.cmpTimeLesser)) !=0 // and it has also the bits for lesser and greater
+         && (selectMask & (FileMark.cmpTimeGreater | FileMark.cmpTimeLesser)) !=0 // and the select mask has this bits too:
+          ) {
+          markFile &= ~ FileMark.cmpContentNotEqual;  // then remove mark for contentNotEqual to prevent selecting the other, greater of lesser time
+        }                                                    // it means if 'non equal' is the command, the file should be non equal or equality is not tested.
         if( (selectMask & FileMark.cmpTimeGreater)!=0 )
           Debugutil.stop();                                  // stop here to debug file mark with ^ given
-        if((selectMask & FileMark.mSelectMarkBits) !=0) {    // that are all bits excl. orWithSelectString and ignoreSymbolicLinks
+        // Now evaluation of the select bits to select, markFile is tuned before for time stamp comparison.
+        if((selectMask & FileMark.mSelectMarkBits) !=0) {    // general: that are all bits excl. orWithSelectString and ignoreSymbolicLinks
           boolean bMarkSelect = (markFile & FileMark.mSelectMarkBits & selectMask) !=0;
           if( (this.co.selectMask() & FileMark.orWithSelectString) !=0) {
             selected |= bMarkSelect;
@@ -1858,7 +1868,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
           this.walkInfo.nrofFilesSelected +=1;
           if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - file; " + name);
           FileRemoteWalkerCallback.Result result;
-          if(this.callback !=null && this.callback.shouldAborted()){
+          //                                                 //vv check shouldAborted important for debug, if abort is set manual
+          if(this.callback !=null && this.callback.shouldAborted()) {
             //only if a manual abort comes from the callback.
             result = SortedTreeWalkerCallback.Result.terminate;
           } else {
@@ -1883,7 +1894,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
             this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshFile;
             this.progress.nrofFilesUsed +=1;
             this.progress.nrofBytesUsed += size;
-            if(result == FileRemoteWalkerCallback.Result.contMarked) {
+            if(result == FileRemoteWalkerCallback.Result.contMarkedOlder) {
+              this.progress.nrofFilesChangedOlder +=1;
+              this.progress.nrofBytesChangedOlder += size;
+            }
+            else if(result == FileRemoteWalkerCallback.Result.contMarked) {
               this.progress.nrofFilesMarked +=1;
               this.progress.nrofBytesMarked += size;
             }

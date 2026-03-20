@@ -179,6 +179,16 @@ public class FileRemoteProgressEvData extends PayloadBack implements Serializabl
    */
   public long nrofBytesMarked;
   
+  /**Number of files which are marked because they are positive checked,
+   * for comparison, difference detected, but the time stamp is older.
+   */
+  public int nrofFilesChangedOlder;
+  
+  /**Number of bytes in sum which are marked because they are positive checked,
+   * for comparison, difference detected, but the time stamp is older.
+   */
+  public long nrofBytesChangedOlder;
+  
   /**Number of Files which are selected while walking and processing. 
    * The selection is the immediately information to handle of a marked file.
    * For example selected to copy.

@@ -90,7 +90,7 @@ public class FileCallbackLocalCopy extends FileRemoteWalkerCallback {
   
   
   
-  @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object filter) {
+  @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object filter, boolean bRootNode) {
     super.prepareDirs(dir, true);
     this.dir2Curr.mkdir();   // should exists on physic, create if not exists.
     return Result.cont;
@@ -171,7 +171,7 @@ public class FileCallbackLocalCopy extends FileRemoteWalkerCallback {
   
   
   @Override public boolean shouldAborted(){
-    return this.aborted;
+    return super.shouldAborted();
   }
 
   

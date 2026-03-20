@@ -8,7 +8,7 @@ public class FileRemoteTestCallback  implements SortedTreeWalkerCallback<FileRem
     System.out.println("start callback test: " + startNode.toString());
   }
 
-  @Override public Result offerParentNode ( FileRemote parentNode, Object oPath, Object oWalkInfo ) {
+  @Override public Result offerParentNode ( FileRemote parentNode, Object oPath, Object oWalkInfo, boolean bRootNode ) {
     System.out.println("callback test: dir = " + parentNode.toString());
     return Result.cont;
   }

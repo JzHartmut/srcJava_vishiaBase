@@ -61,7 +61,7 @@ public class FileCallbackLocalDelete implements SortedTreeWalkerCallback<FileRem
 
   @Override public void start ( FileRemote startNode, FileRemoteCmdEventData co ) { }
 
-  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
+  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo, boolean bRootNode ) {
     return Result.cont;
   }
 
