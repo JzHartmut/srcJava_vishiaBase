@@ -3147,6 +3147,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param dateLastAccess
      */
     public void setLengthAndDate(long length, long dateLastModified, long dateCreation, long dateLastAccess){
+      //if(FileRemote.this.getName().equals("ExmplWaveAvg") && length >=0) Debugutil.stopp();
       if(dateLastModified !=-1) { FileRemote.this.date = dateLastModified; }
       if(dateLastAccess !=-1) { FileRemote.this.dateLastAccess = dateLastAccess; }
       if(dateCreation !=-1) { FileRemote.this.dateCreation = dateCreation; }

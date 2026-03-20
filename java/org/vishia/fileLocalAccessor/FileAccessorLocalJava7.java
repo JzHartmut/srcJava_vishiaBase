@@ -352,7 +352,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 //    if(Files.isDirectory(pathArg)) {
 //      flags |= FileRemote.mDirectory;
 //    }
-    if(attribs.isDirectory()){ flags |= FileRemote.mDirectory; }
+    if(attribs.isDirectory()){ 
+      flags |= FileRemote.mDirectory;
+      length = -1; // do not set, set in postVisitDirectory.
+    }
     String sAbsPath = fileRemote.getAbsolutePath();
     try {
       Path linkedPath = path.toRealPath();
@@ -1596,8 +1599,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         //because that call invokes refresh the second time.
         this.walkInfo.dir.timeChildren = System.currentTimeMillis();
         this.walkInfo.dir.internalAccess().setChildrenRefreshed();  // first called before callback.finishedParentNode see above
-        this.walkInfo.dir.internalAccess().setLengthAndDate(this.walkInfo.nrBytesInDir, -1, -1, System.currentTimeMillis());
-        this.walkInfo.dir.internalAccess().setNrofFilesInTree(this.walkInfo.nrofFilesInSubtree, this.walkInfo.nrBytesInDir);
+        
+        if(this.co.depthWalk() ==0) {             //--------vv update length and date only for walk till full deepness, else the values are not correct.
+          this.walkInfo.dir.internalAccess().setNrofFilesInTree(this.walkInfo.nrofFilesInSubtree, this.walkInfo.nrBytesInDir);
+          this.walkInfo.dir.internalAccess().setLengthAndDate(this.walkInfo.nrBytesInDir, -1, -1, System.currentTimeMillis());
+        }
       }
       if(this.walkInfo.nrofFilesSelected >0 && this.co.markSetDir() !=0 && (this.co.markSetDir() & FileMark.resetMark) ==0) {
         FileMark mark = this.walkInfo.dir.getCreateMark();
