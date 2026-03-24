@@ -16,6 +16,7 @@ import org.vishia.fileRemote.FileRemoteAccessor;
 import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
+import org.vishia.util.Debugutil;
 import org.vishia.util.FileFunctions;
 import org.vishia.util.SortedTreeWalkerCallback;
 
@@ -110,6 +111,7 @@ public class FileCallbackLocalCopy extends FileRemoteWalkerCallback {
    */
   @Override public Result offerLeafNode(FileRemote file, Object info) {
 //    int repeat = 5;
+    if(file.getName().equals("testEmptyDir")) Debugutil.stopp();
     FileRemote fileDst = super.getFile2(file, true);
     Path pathSrc = file.path();
     Path pathDst = fileDst.path();

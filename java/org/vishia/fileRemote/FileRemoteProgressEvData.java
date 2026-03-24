@@ -261,6 +261,8 @@ public class FileRemoteProgressEvData extends PayloadBack implements Serializabl
   this.nrofBytesVisited = 0;
   this.nrofFilesUsed = 0;
   this.nrofBytesUsed = 0;
+  this.nrofBytesChangedOlder = 0;
+  this.nrofFilesChangedOlder = 0;
   this.nrofBytesMarked = 0;
   this.nrofFilesMarked = 0;
   this.nrofFilesSelected = 0;

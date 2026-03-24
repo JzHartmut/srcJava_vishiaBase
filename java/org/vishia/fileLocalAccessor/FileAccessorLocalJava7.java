@@ -1445,6 +1445,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       int mSelectMask = this.co.selectMask();               //_B_: set some internals.
       Path namepath = dir.getFileName();                   // NOTE namepath is null if for ex. D:/ is dir
       String name = namepath == null ? "/" : namepath.toString();
+      //if(name.equals("data")) Debugutil.stopp();
       SortedTreeWalkerCallback.Result result;
       boolean selected;
       final FilepathFilterM childFilter;
@@ -1760,6 +1761,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       try {
         final FileVisitResult ret;
         String name = file.getFileName().toString();        //_B_:
+        //if(name.equals("data")) Debugutil.stopp();
         int selectMask = this.co.selectMask();
         //if(name.startsWith("constant-values.html")) Debugutil.stopp();
         boolean isSymbolicLink;

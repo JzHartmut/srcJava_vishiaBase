@@ -1185,13 +1185,16 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   /**Recursively called method for {@link #resetMarkedRecurs(int, int[])}
+   * It does not access the file system.
    * @param mask
    * @param nrofFiles
    * @param recursion
-   * @return
+   * @return length how it is stored in FileRemote.
+   *   But TODO: a directory in FileRemote does store the whole length of all its child. 
+   *   Hence this are counted twice and more. The length returned here is faulty, too much.  TODO-2026-03
    */
   private long resetMarkedRecurs(int mask, int[] nrofFiles, int recursion){
-    long bytes = length();
+    long bytes = this.length;  // do not call length(), uses the known length only. 
     if(nrofFiles !=null){ nrofFiles[0] +=1; }
     //if(!isDirectory() && mark !=null){
     FileMark mark = this.mark();   // gets possible from the realFile

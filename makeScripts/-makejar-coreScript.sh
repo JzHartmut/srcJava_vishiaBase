@@ -34,7 +34,7 @@ if ! test -d deploy; then mkdir deploy; fi;
 cd $PWDD
 export TMPJAVAC="$BUILD_TMP/javac_$DSTNAME"
 
-
+echo 1
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
 ## See $TIMEinJAR_VISHIABASE in next block.
@@ -47,6 +47,7 @@ if test "$MD5FILE" = ""; then export MD5FILE="$BUILD_TMP/deploy/$DSTNAME-$VERSIO
 if test "$SRCZIPFILE" = ""; then export SRCZIPFILE="$DSTNAME-$VERSIONSTAMP-source.zip"; fi #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 
 
+echo 2
 ##specific condition, use the yet compiled class files to zip:
 ## This Classpath_vishiaBase is not an input for compilation, only for usage for zip.
 ## for javac CLASSPATH is used. Set in calling environment. 
@@ -69,6 +70,7 @@ if test "$SRCPATH" == ""; then
   fi
 fi  
 
+echo 3
 ##determine the destination directory for the ready to use jar file after build.
 ##It is either tools, or jars, or ../tools
 if ! test "$DSTJARDIR" = ""; then echo DSTJARDIR is set by calling script.
@@ -79,6 +81,7 @@ else mkdir jars; export DSTJARDIR="jars"                      ## fallback is: ja
 fi
 export DSTJARDIR=$(realpath "$DSTJARDIR")
 
+echo 4
 echo PWD=$PWD >$TMPJAVAC/javac.log
 echo VERSIONSTAMP = $VERSIONSTAMP >>$TMPJAVAC/javac.log  ## determine suffix of output file names
 echo TIMEinJAR = $TIMEinJAR >>$TMPJAVAC/javac.log  ## determine timestamp in jar
@@ -100,9 +103,11 @@ echo DSTJARDIR = $DSTJARDIR - >>$TMPJAVAC/javac.log
 if test "$JAVAC_HOME" = ""; then
   ##  export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
   echo "include $(dirname $0)/JAVAC_HOME.sh:"  >>$TMPJAVAC/javac.log
+  echo 6 call $(dirname $0)/JAVAC_HOME.sh
   . $(dirname $0)/JAVAC_HOME.sh
   echo JAVAC_HOME=$JAVAC_HOME >>$TMPJAVAC/javac.log
 fi  
+echo 7 JAVAC_HOME = $JAVAC_HOME
 echo JAVAC_HOME = $JAVAC_HOME >>$TMPJAVAC/javac.log
 ##regards an empty JAVAC_HOME, then javac should be able as command in the path:
 if test "$JAVAC_HOME" = ""; then export JAVAC="javac"; else export JAVAC="$JAVAC_HOME/bin/javac"; fi
@@ -121,6 +126,7 @@ fi
 #xx echo pwd=$(pwd)
 ##echo ls /tmp
 ##ls /tmp
+echo javac
 echo >>$TMPJAVAC/javac.log
 echo ====== javac ================================================ >>$TMPJAVAC/javac.log
 if ! test "$SRCPATH" = ""; then export SRCPATH="-sourcepath $SRCPATH"; fi  ## use -sourcpath ... option for javac only if given
