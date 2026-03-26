@@ -150,6 +150,22 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
                             | 0x200  //TimeOrderMng not notified because checking                       
                             ; 
   
+  /**A helper variable for debugging specific situations.
+   * <ul>
+   * <li>The problem is, the cause for debugging comes from another thread on a specific situation,
+   * but in this other thread single stepping has no sense, because the problem should be explored 
+   * in the execution thread. 
+   * <li>The solution is: Call the operation {@link #setDbgStop(boolean)} on the situation with true,
+   * then step in the other thread till end of stimuli for this thread,
+   * <li>And then switch to this thread, and set some questions of {@link #dbgStop()} in the called operations
+   *   with a break point.
+   * <li>Then the execution stops on this break point, but only if the other thread has invoked
+   *   the {@link #setDbgStop(boolean)}, means depending on the situation in the other thread.
+   * </ul>
+   * This is an proper approach to debug in certain situations with different threads.    
+   */
+  protected boolean bDbgStop;
+  
   protected final String threadName;
   
   /**This is yet only an debug information, which instance has originally created this thread.
@@ -471,7 +487,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * with a new time for elapsing. It is executed newly therefore.
    * @return the delay time in ms.
    */
-  private int checkTimeOrders(){
+  private int checkTimeOrders () {
     int timeWait = this.delayMax; //10 seconds.
     this.timeCheckNew = System.currentTimeMillis() + timeWait;  //the next check time in 10 seconds as default if no event found 
     TimeOrder order;
@@ -511,6 +527,9 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         order.event.sendEvent(order.event.getSource());                           // it is enqueued in the evThread
       } else {
         //System.out.println(LogMessage.timeCurr("timeOrder process event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
+        if(this.bDbgStop) {
+          Debugutil.stop();
+        }
         order.event.processEvent();                        // it is executed immediately in the timerThread if evThread is the same
       }
       order.repeatCyclic();
@@ -535,14 +554,13 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * The timer thread is in an delay till
    * @return time to wait. 
    */
-  protected final int stepThread()
-  {
+  protected final int stepThread () {
     boolean bExecute;
     int timeWait;
     do {
-      stateThreadTimer = 'c';
+      this.stateThreadTimer = 'c';
       //------------------------------------------------------ check all time order, timeWait is the minimal time for next call.
-      timeSleep = System.currentTimeMillis();
+      this.timeSleep = System.currentTimeMillis();
       timeWait = (int)(this.timeCheckNew - this.timeSleep); // use timeCheckNew for decision look in all time orders.
       if(timeWait < 0){                                     // check all time orders only if at least one of them is expired.
         timeWait = checkTimeOrders();                       // execute expired events, calculate new waiting time
@@ -554,13 +572,13 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       }
       if(bExecute){
         //else: check the orders and events newly. One of them may near to execute.
-        if((debugPrint & 0x0002)!=0) System.out.printf("TimeOrderMng not wait %d\n", timeWait);
+        if((this.debugPrint & 0x0002)!=0) System.out.printf("TimeOrderMng not wait %d\n", timeWait);
       }
       //if any event was executed, it should be supposed that 2.. milliseconds have elapsed.
       //therefore check time newly. don't wait, run in this loop.
     } while(bExecute);
     //wait only the calculated timeWait if no additional event has executed.
-    if((debugPrint & 0x0001)!=0) System.out.printf("TimeOrderMng wait %d\n", timeWait);
+    if((this.debugPrint & 0x0001)!=0) System.out.printf("TimeOrderMng wait %d\n", timeWait);
     if(timeWait <2){
       timeWait = 2;  //should not 0  
     }
@@ -636,6 +654,26 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   }
   
   
+  
+  
+  /**For step debugging, stop point possible in
+   * {@link #checkTimeOrders(boolean)} on 'Debugutil.stop()' 
+   * and in next {@link #dbgStop()}
+   * 
+   */
+  public void setDbgStop (boolean stop) {
+    this.bDbgStop = stop;
+  }
+
+  public boolean dbgStop() { 
+    if(this.bDbgStop) {
+      Debugutil.stopp();
+    }
+    return this.bDbgStop; 
+  }
+  
+  
+
   
   /**Info for debugging 
    * <br>This operation can be overridden for another thread organization. 
