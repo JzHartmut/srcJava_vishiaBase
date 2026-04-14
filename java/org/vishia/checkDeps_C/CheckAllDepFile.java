@@ -13,6 +13,9 @@ public class CheckAllDepFile
 
   /**Version, history and license.
    * <ul>
+   * <li>2026-04-13 Hartmut: has had trouble with null exception on localPath, but unnecessary.
+   *   See {@link CfgData#checkIsInSourcePool(String)} as fix for the sophisticated problem.
+   *   Here null test added.
    * <li>2012-12-25 Hartmut new: Inserted in the Zbnf component because it is an integral part of the Zmake concept
    *   for C-compilation.
    * <li>2011-05-00 Hartmut created: It was necessary for C-compilation to check real dependencies in a fast way.

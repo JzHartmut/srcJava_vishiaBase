@@ -420,10 +420,12 @@ public class CheckDependencyFile
     }
     try{
       String sFileSrcGenAbs = FileFunctions.normalizePath(fileSrc).toString();
-
-      String sLocalPath = cfgData.checkIsInSourcePool(sFileSrcGenAbs);
-      if(sLocalPath.contains("ObjectRefl_emC.c"))
-        Debugutil.stop();
+      // The local path is only necessary to search a mirror file. Not for general.
+      String sLocalPath = this.cfgData.checkIsInSourcePool(sFileSrcGenAbs);
+      if(sLocalPath == null) {                 // possible to repeat it for debug
+        sLocalPath = this.cfgData.checkIsInSourcePool(sFileSrcGenAbs); // set breakpoint here.
+      }
+      //if(sLocalPath !=null && sLocalPath.contains("ObjectRefl_emC.c")) Debugutil.stopp();
       //boolean needTranslation;
       final File fileSrcMirror = getFileSrcMirror(sLocalPath);
       //final File fileDeps = getFileDependencies(sLocalPath);
@@ -1009,7 +1011,9 @@ public class CheckDependencyFile
     NextCodeLine(File file){
       try{
         reader = new BufferedReader(new FileReader(file));
-      } catch(FileNotFoundException exc){ throw new RuntimeException("unexpected: " + exc.getMessage()); }
+      } catch(FileNotFoundException exc){ 
+        throw new RuntimeException("unexpected: " + exc.getMessage()); 
+      }
     }
     
     String nextCodeLine(){
