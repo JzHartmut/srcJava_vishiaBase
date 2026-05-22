@@ -829,6 +829,7 @@ public class CheckDependencyFile
   ) throws FileNotFoundException{
     //boolean isSystemFile = false;
     File fileIncl = null;
+    //if(sPathInIncludeLine.equals("OrthBandpassFilter.h")) Debugutil.stopp();
     //first search starting in the current file if it is an ""-include
     if(includeFromCurrent && sDirCurrentFile != null){
       fileIncl = FileFunctions.newFile(sDirCurrentFile + "/" + sPathInIncludeLine);

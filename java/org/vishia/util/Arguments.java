@@ -397,15 +397,18 @@ public abstract class Arguments {
   
   
   /**Replaces expressions "...$name... or $(name)... or $$name$ with the content of the named environment variable
-   * or (since 2025-03) also a {@link System#getProperty(String)} which can be set before Java-intern,
+   * or (since 2025-03) also a {@link System#getProperty(String)} which can be even internally in Java,
    * replaces also start with "/tmp/" for Windows, replaces "/tmp" with the PATH stored in TMP or TEMP.
+   * @since 2026-05 if the environment variable is not set an {@link IllegalArgumentException} is thrown. 
+   * That should be catched outside.
    * <ul>
-   * <li>$name: A java-identifier format is used as name. Since 2022-01,
-   * <li>$(name): should be used if after them other Java-identifier are following, as in shell scripts
+   * <li>$name: A java-identifier format is used as name. Since 2022-01, after name a non identifier char should follow,
+   *   or just end of string.
+   * <li>$(name): should be used if after 'name' other Java-identifier are following, as in shell scripts
    * <li>$$name$: Other syntax for the same approach, may be better readable.
    * </ul>
-   * @param argval String with possible environment variables to replace or starting with "/tmp/..." 
-   * @return replaced environment and/or "/tmp/". If nothing is replaced, this is identical with argval (same instance referred)
+   * @param argval String with possible environment variables to replace, or starting with "/tmp/..." 
+   * @return replaced environment and/or "/tmp/". If nothing is replaced, argval itself is returned without change.
    *   Hence with argval==returnedArgval it can be checked whether a replacement was done. 
    * @throws IllegalArgumentException on faulty name of environment variable
    */
@@ -426,13 +429,21 @@ public abstract class Arguments {
       int posEnvEnd = argvalRet.indexOf('$', posEnv+2);
       String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
       String env = getEnv(nameEnv);
-      argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
+      if(env !=null) {
+        argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
+      } else {
+        throw new IllegalArgumentException(argvalRet + ": Environment variable missing: $" + nameEnv);
+      }
     }
     while( (posEnv=argvalRet.indexOf("$(")) >=0) {
       int posEnvEnd = argvalRet.indexOf(')', posEnv+2);
       String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
       String env = getEnv(nameEnv);
-      argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
+      if(env !=null) {
+        argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
+      } else {
+        throw new IllegalArgumentException(argvalRet + ": Environment variable missing: $" + nameEnv);
+      }
     }
     while( (posEnv=argvalRet.indexOf("$")) >=0) {  //======== identifier after $
       int posEnvEnd = posEnv;
@@ -448,6 +459,8 @@ public abstract class Arguments {
       String env = getEnv(nameEnv);
       if(env !=null) {
         argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9);
+      } else {
+        throw new IllegalArgumentException(argvalRet + ": Environment variable missing: $" + nameEnv);
       }
     }
     return argvalRet;
@@ -846,22 +859,25 @@ public abstract class Arguments {
   
   
   /**Wraps {@link #testArgument(String, int)} in try-catch to catch a user Exception while evaluating argument strings.
-   * @param argc
-   * @param nArg
-   * @param errMsg if given, outputs the error
-   * @param farg if given, close it on error if error is not given, before an {@link IllegalArgumentException} is thrown
-   * @return true if all is ok, false if the argument is faulty and errM(sg is given. never if errMsg==null then throws
+   * @param argc The argument string of one argument maybe with environment variables, {@link #replaceEnv(String)} is called.
+   * @param nArg the number of the argument used in the called {@link #testArgument(String, int)}
+   * @param errMsg if given, a channel to output the error, then an exception is not thrown.
+   *   if null then on argument error an exception is thrown.
+   * @param farg if given, close it on error if errMsg ==null, before an {@link IllegalArgumentException} is thrown
+   * @return true if all is ok, false if the argument is faulty and errMsg is given. never if errMsg==null then throws
    * @throws IOException only on formally IO error on errMsg
    * @throws IllegalArgumentException if errMsg==null and the argument is faulty.
    */
   private final boolean tryTestArgument(String argc, int nArg, Appendable errMsg, Closeable farg) throws IOException {
     boolean bOkArg;
     CharSequence sError = "";
-    String argc1 = replaceEnv(argc);
+    String argc1 = argc;
     try {
+      argc1 = replaceEnv(argc);
       bOkArg = testArgument(argc1, nArg+1);                 // this operation may be overridden, but should call super.testArguments(...)
     } catch(Exception exc) {                               // an exception comes if testArgument causes it in user level.
-      sError = ExcUtil.exceptionInfo(" argument eval error: ", exc, 1, 20);  //prepare a proper info with stack trace
+      //sError = ExcUtil.exceptionInfo("\nERROR argument eval error: ", exc, 1, 20);  //prepare a proper info with stack trace
+      sError = exc.getMessage();      // the simple given exception message should describe the arguement error.
       bOkArg = false;
     }
     if(!bOkArg) {                 // test it, overridden
@@ -871,7 +887,7 @@ public abstract class Arguments {
         if(farg !=null) {
           farg.close();
         }
-        throw new IllegalArgumentException( argc1 + sError);
+        throw new IllegalArgumentException( argc1 + " ERROR: " + sError);
       }
     }
     return bOkArg;

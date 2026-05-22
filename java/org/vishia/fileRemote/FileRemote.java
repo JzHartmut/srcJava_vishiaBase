@@ -664,8 +664,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       , Object oFileP, boolean OnlySpecialCall) {
     //super("??"); //sDirP + (sName ==null ? "" : ("/" + sName)));  //it is correct if it is a local file. 
     super(parent == null ? sPath.toString() : parent.getPath() + "/" + sPath);  //it is correct if it is a local file. 
-//    if(StringFunctions.contains(sPath, "testCopyDirTree"))
-//      Debugutil.stop();
+    //if(StringFunctions.contains(sPath, "testCopyDirTree")) Debugutil.stopp();
+    //if(StringFunctions.indexOfAnyChar(sPath, 0, -1, "\\/") >=0) Debugutil.stopp();
     if(parent !=null){
       this.parent = parent;
       this.sDir = parent.getAbsolutePath();

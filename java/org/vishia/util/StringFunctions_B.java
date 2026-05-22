@@ -92,6 +92,39 @@ public class StringFunctions_B
 
 
   
+  /**Remove spaces before a line feed '\n' and clean the linefeed: remove '\r' from old DOS/Windows before '\n'.
+   * This is useful if text lines are gotten from a text editor, which may proved trailing spaces in a line 
+   * which are not desired.
+   * @param src Any given line with possible '\n' characters in it or not.
+   *   If src is instanceof StringBuilder, then the changes are made immediately in src.
+   * @return original src if no trailing spaces or '\r' before '\n' are found, 
+   *   or if src is a StringBuilder.
+   *   If src is not a StringBuilder and changes are made, then return
+   *   a new built StringBuilder with the desired content. 
+   */
+  public static CharSequence removeTrailingSpacesAndCleanLinefeed (CharSequence src) {
+    int pos0a = 1;
+    CharSequence sq = src;
+    StringBuilder sb = src instanceof StringBuilder ? (StringBuilder)src : null;
+    while( (pos0a = StringFunctions.indexOf(sq, '\n', pos0a)) >0) {
+      int posend = pos0a-1;
+      char cc = sq.charAt(posend);
+      if(cc == '\r') { posend -=1; }
+      while(posend >=0 && sq.charAt(posend) == ' ') { posend -=1; }
+      // posend refers the last non space or non \n
+      posend +=1;
+      if(posend < pos0a) {
+        if(sb == null) { sb = new StringBuilder(src); sq = sb; }  // use new StringBuilder only first if necessary
+        sb.replace(posend, pos0a, "");
+      }
+      pos0a = posend+2; // this is after the before found \n or after one char after it which is also ok.
+    }
+    return sq;      // returns src if not changed.
+  }
+
+  
+  
+  
   /**Cleans a text which may be parsed or such, remove undesired indentation and replace the line end characters. 
    * @param src Any source String with indentation
    * @param indent column which indentation should be removed

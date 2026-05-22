@@ -1865,7 +1865,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
           }
           //
           setAttributes(fileRemote, file, attrs);            //_H_: copy the file attributes from nio.file..Path to FileRemote
-          assert(this.walkInfo.dir == fileRemote.getParentFile());
+          //org.vishia.util.ExcUtil.check(this.walkInfo.dir == fileRemote.getParentFile());
+          
           this.walkInfo.nrBytesInDirSelected += size;
           this.walkInfo.nrofFilesSelected +=1;
           if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - file; " + name);

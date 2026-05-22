@@ -229,7 +229,7 @@ public class StringFunctions_C
    * @throws never. All possible digits where scanned, the rest of non-scanable digits are returned.
    *  For example the String contains "-123.45" it returns -123, and the retSize is 3.
    */
-  public static long parseLong(final CharSequence srcP, final int posArg, final int sizeP, final int radix
+  public static long parseLong(final CharSequence srcP, final int posArg, final int sizeP, final int[] radix
   , final int[] parsedChars, final String separatorChars) {
     int zSrc = srcP.length() - posArg;
     int restlen;
@@ -255,7 +255,12 @@ public class StringFunctions_C
   }
 
   
-  
+  public static long parseLong(final CharSequence src, final int pos, final int sizeP, final int radix
+  , final int[] parsedChars, final String separatorChars) {
+    int[] radixArg = new int[1];
+    radixArg[0] = radix;
+    return parseUlong(src, pos, sizeP, radixArg, parsedChars, separatorChars);
+  }  
   
   
   /**Adequate method for long values, see {@link #parseIntRadix(String, int, int, int, int[], String)}.
@@ -275,7 +280,7 @@ public class StringFunctions_C
    *   <code>12'345</code> or   <code>12,234</code> or   <code>12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
    * @return The parsed number, 0 if no character is detected.
    */
-  public static long parseUlong(final CharSequence src, final int pos, final int sizeP, final int radixArg
+  public static long parseUlong(final CharSequence src, final int pos, final int sizeP, final int[] radixArg
       , final int[] parsedChars, final String separatorChars)
   { long val = 0;  //exact same lines as parseInt, difference is: using long instead int. 
     int zSrc = src.length() - pos;
@@ -289,12 +294,13 @@ public class StringFunctions_C
       cc = --restlen >0 ? src.charAt(pos) : 0;
     } 
    //
-    int radix = radixArg;
+    int radix = radixArg[0];
     if(restlen > 1 && cc == '0') {                         // test 0x...
       char cBase = src.charAt(pos+1);
       int ixBase = "bBxX".indexOf(cBase);
       if(ixBase >=0) {
         radix = ixBase >=2 ? 16: 2;                        // detect 0x 0X for hexa, 0b 0B for binary
+        radixArg[0] = radix;
         ixSrc+=2; restlen -=2; 
       }
     }
@@ -329,7 +335,13 @@ public class StringFunctions_C
   }
   
 
-  
+  public static long parseUlong(final CharSequence src, final int pos, final int sizeP, final int radix
+      , final int[] parsedChars, final String separatorChars)
+  {
+    int[] radixArg = new int[1];
+    radixArg[0] = radix;
+    return parseUlong(src, pos, sizeP, radixArg, parsedChars, separatorChars);
+  }
   
   /**Parses a given String backward and convert it to the integer number.
    * The String may start with a negative sign ('-') and should contain digits after them.

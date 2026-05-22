@@ -661,7 +661,9 @@ public final class OutTextPreparer
      */
     public void finishAppend() throws IOException {
       if(!this.bSbClean && this.wrDst !=null && this.wrCurr instanceof StringBuilder) {   // extra StringBuilder to view output text:
-        this.wrDst.append((StringBuilder)this.wrCurr);               // then transfer the output to the file, but let it readable for debug
+        assert(this.wrCurr instanceof StringBuilder);       // wrLines: remove trailing spaces before \n and remove \r before \n
+        CharSequence wrLines = StringFunctions_B.removeTrailingSpacesAndCleanLinefeed((StringBuilder)this.wrCurr);
+        this.wrDst.append(wrLines);               // then transfer the output to the file, but let it readable for debug
         if(this.wrDst instanceof Flushable) {
           ((Flushable)this.wrDst).flush();             // interesting to see what's written in debug
         }
@@ -1219,9 +1221,15 @@ public final class OutTextPreparer
     
   }
   
+  private static String testTrailingSpaces(String src) {
+    //int posNl; if( (posNl= cmd.textOrVar.indexOf('\n')) >0 && cmd.textOrVar.charAt(posNl-1) == ' ') Debugutil.stopp();
+    return src;
+  }
+  
+  
   static class CmdString extends Cmd {
-    public CmdString ( int ixCmd, int[] linecol, String str)
-    { super(ixCmd, linecol, ECmd.addString, str);
+    public CmdString ( int ixCmd, int[] linecol, String str) { 
+      super(ixCmd, linecol, ECmd.addString, testTrailingSpaces(str));
     }
 
   };
@@ -2461,8 +2469,7 @@ public final class OutTextPreparer
         else { //==========================================vv no more '<' found in the script
           if(this.otx.sLineoutStart !=null) {    //--------vv line mode
             this.pos1 = (int)this.sp.getCurrentPosition();
-            String sText;
-            sText = this.sp.getCurrent().toString();                       // the rest of the line
+            String sText = StringFunctions_B.removeTrailingSpacesAndCleanLinefeed(this.sp.getCurrent()).toString();
             int posComment = sText.indexOf("##");
             if(posComment >=0) {
               sText = sText.substring(0, posComment);
@@ -2864,7 +2871,8 @@ public final class OutTextPreparer
     private Cmd parseExec(final String src, final int pos0, final int pos1, StringPartScanLineCol sp
         , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) throws ParseException {
       if(pos1 > pos0) {
-        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), this.sp.getlineCol(), src.substring(pos0, pos1)));
+        CharSequence s1 = StringFunctions_B.removeTrailingSpacesAndCleanLinefeed(src.substring(pos0, pos1));
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), this.sp.getlineCol(), s1.toString()));
       }
       final Cmd cmd;
       int pos2 = (int)this.sp.getCurrentPosition();
@@ -2974,7 +2982,8 @@ public final class OutTextPreparer
      */
     private void addCmd ( String src, int[] linecol, int from, int to, Cmd cmd) {
       if(to > from) {
-        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+        CharSequence s1 = StringFunctions_B.removeTrailingSpacesAndCleanLinefeed(src.substring(from, to));
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, s1.toString()));
       }
       if(cmd !=null) {
         this.otx.cmds.add(cmd);
@@ -2999,7 +3008,8 @@ public final class OutTextPreparer
      */
     private void addCmdSimpleVar ( String src, int[] linecol, int from, int to, ECmd eCmd, String sName) {
       if(to > from) {
-        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+        CharSequence s1 = StringFunctions_B.removeTrailingSpacesAndCleanLinefeed(src.substring(from, to));
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, s1.toString()));
       }
       Object data = this.idxConstData ==null ? null : this.idxConstData.get(sName);
       if(data != null) {                                     // given const data on construction
@@ -3039,7 +3049,8 @@ public final class OutTextPreparer
     private void addCmdValueAccess ( String src, int[] linecol, int from, int to, String sDatapath
         , String sFormat, Class<?> execClass, Map<String, Object> idxConstData) {
       if(to > from) {
-        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+        CharSequence s1 = StringFunctions_B.removeTrailingSpacesAndCleanLinefeed(src.substring(from, to));
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, s1.toString()));
       }
   //    int posSep = sDatapath.indexOf('.');                 // commented, this is done in CalculatorExpr.Operand(...)
   //    if(posSep <0) { posSep = sDatapath.length(); }
@@ -3071,13 +3082,8 @@ public final class OutTextPreparer
      */
     private Cmd addCmd ( String src, int[] linecol, int from, int to, ECmd ecmd, String sDatapath, LogMessage log ) throws ParseException {
       if(to > from) {
-        String sText = src.substring(from, to);
-//        if( this.bLastWasValueAccess                     // cannot be distinguish ... 
-//         || StringFunctions.indexAfterAnyChar(sText, 0, -1, " ") < (to - from)) {                     // add the whole text, not trimmed, if it contains other than spaces.
-          this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
-//        } else {
-//          Debugutil.stop();  // only spaces.
-//        }
+        CharSequence s1 = StringFunctions_B.removeTrailingSpacesAndCleanLinefeed(src.substring(from, to));
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, s1.toString()));
       }
       final Cmd cmd;
       if(ecmd !=ECmd.nothing) {
@@ -3307,7 +3313,10 @@ public final class OutTextPreparer
     int ixCmd = ixCmdArg;
     Debugutil.retest(2); 
     switch(cmd.cmd) {
-      case addString: wrCt.append(cmd.textOrVar); break;
+      case addString: 
+        //int posNl; if( (posNl= cmd.textOrVar.indexOf('\n')) >0 && cmd.textOrVar.charAt(posNl-1) == ' ') Debugutil.stopp();
+        wrCt.append(cmd.textOrVar); 
+        break;
       case addVar: {                                   // <&access...>
         //Integer ixVar = varValues.get(cmd.str);
         Object data = data4Cmd(cmd, args, wrCt);
