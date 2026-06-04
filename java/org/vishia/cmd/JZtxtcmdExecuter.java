@@ -85,6 +85,10 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2026-06-01 enhanced: {@link ExecuteLevel#exec_forContainer(org.vishia.cmd.JZtxtcmdScript.ForStatement, StringFormatter, int, int)}
+   *   now can even work with Iterator given as container. Before only with an Iterable from lists.
+   * <li>2026-06-01 improved: {@link ExecuteLevel#evalCondition(org.vishia.cmd.JZtxtcmdScript.JZcmditem):
+   *   better error message on condition check exception, before: no relevant error message on a condition exception.    
    * <li>2023-12-08 new {@link JzTcMain#new_int(int)} and {@link JzTcMain#new_String(int)} to get an int[] via script forexmpl: <code>Obj intArray = jztc.new_int(12);</code>
    * <li>2023-12-08 {@link ExecuteLevel#evalObject(org.vishia.cmd.JZtxtcmdScript.JZcmditem, boolean)} whith conversion '~'
    *   calls now {@link FileFunctions#absolutePath(String, File)} which also replaces /tmp/, ~/, $Env/ with the correct file path parts.
@@ -2152,6 +2156,20 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
       if(container instanceof String && ((String)container).startsWith("<?")){
         throw new IllegalArgumentException("JZcmd.execFor - faulty container type;" + (String)container);
       }
+      else if(container !=null && container instanceof Iterator<?>){
+        Iterator<?> iter = ((Iterator<?>)container);
+        this.bForHasNext = iter.hasNext();
+        while(cont == kSuccess && this.bForHasNext){
+          Object foreachData = iter.next();
+          forVariable.setValue(foreachData);
+          this.bForHasNext = iter.hasNext();  //an element after it?
+          if(statement.condition !=null && ! evalCondition(statement.condition)) {
+            cont = kBreak;
+          } else if(subContent !=null) {
+            cont = this.execute(subContent, out, indentOut, this.localVariables, nDebug);
+          }
+        }//while of for-loop
+      }
       else if(container !=null && container instanceof Iterable<?>){
         Iterator<?> iter = ((Iterable<?>)container).iterator();
         this.bForHasNext = iter.hasNext();
@@ -3790,6 +3808,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
       boolean ret;
       if(arg.textArg !=null) return true;
       else if(arg.dataAccess !=null){
+        String sError = null;
         try{
           Object obj = dataAccess(arg.dataAccess, localVariables, jzcmdMain.bAccessPrivate, false, false, null);
           //if(obj instanceof Number){
@@ -3803,11 +3822,17 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
             ret = obj !=null;          //else: conversion null or not null to boolean
           }
         } catch(NoSuchElementException exc){
+          sError = exc.getMessage();
           ret = false;
         } catch(NoSuchFieldException exc){
+          sError = exc.getMessage();
           ret = false;
         } catch(NoSuchMethodException exc){
+          sError = exc.getMessage();
           ret = false;
+        }
+        if(sError !=null) {
+          System.err.printf("\nERROR on if(condition): %s", sError);
         }
       } else if(arg.statementlist !=null){
         throw new IllegalArgumentException("JZcmdExecuter - unexpected, faulty syntax");

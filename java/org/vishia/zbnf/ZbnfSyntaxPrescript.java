@@ -1860,7 +1860,7 @@ public class ZbnfSyntaxPrescript
   protected void throwParseException(StringPartScan spInput, String sMsg)
   throws ParseException
   { //reportContent(report, 0);
-    throw new ParseException(sMsg + ", found: " + spInput.getCurrent(60), spInput.getLineAndColumn(null));
+    throw new ParseException(sMsg + ", found: \n" + spInput.getCurrent(60), spInput.getLineAndColumn(null));
   }
 
 

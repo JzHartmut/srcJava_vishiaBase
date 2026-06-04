@@ -1,6 +1,7 @@
 package org.vishia.util;
 
 import java.io.File;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -110,6 +111,8 @@ public class FilePath
 {
   /**Version, history and license.
    * <ul>
+   * <li>2026-06-01 Hartmut new {@link #depFiles} first used for VScodium-clangd for depending header files for a compile unit. 
+   *   Usage for other approaches possible and recommended. 
    * <li>2020-01-28 Hartmut new in {@link #absbasepath(CharSequence, FilePathEnvAccess)} with null as env possible.
    * <li>2020-01-28 Hartmut bugfix in {@link #expandFiles(List, FilePath, FilePath, FilePathEnvAccess)}
    * <li>2020-01-28 Hartmut {@link #getFile()}
@@ -270,10 +273,15 @@ public class FilePath
   private boolean someFiles;
   
   
+  /**null or the list of local paths with file.ext for depending files.
+   * Using of that can be determined by the application.
+   */
+  private List<String> depFiles;
+  
   /**An empty file path which is used as argument if a common base path is not given. */
   private static FilePath emptyParent = new FilePath();
   
-
+  private static List<String> emptyList = new LinkedList<>();
 
   /**Empty instance. */
   private FilePath(){
@@ -288,11 +296,16 @@ public class FilePath
    * </pre>
    * <ul>
    * <li>One can use '/' or '\' as path separator. Internally the '/' is stored.
-   * <li>If a ':' is found on charAt(1) the character before is the drive letter.
+   * <li>If a ':' is found on charAt(1) the character before is the drive letter for Windows usage.
    * <li>If a '/' on first position or after the second ':': it is an absolute path.
    * <li>A ':' not on second position: The separator between base path and local path.
    * <li>The extension is the part inclusive the last dot.
-   * <li>A simple '.' or '..' is stored as the name 
+   * <li>A simple '.' or '..' is stored as the name
+   * <li>The " ^=" possible with white space is used as separator, following by depending files.
+   *   More as one depending files are separated with comma ",".
+   *   For one depending file see {@link #addDependingFile(String)}.
+   *   This is new @since 2026-06, but not used for Zmake. 
+   * <li>Trailing spaces after the name or path are trimmed. @since 2026-06    
    * </ul> 
    * The syntax may be described in ZBNF-Form. This syntax was used in the originally XML presentation from 2005: 
    * <pre>
@@ -312,34 +325,37 @@ public class FilePath
    */
   public FilePath(String pathP){
     String path = pathP.replace('\\', '/');
-    if(path.contains("**"))
-      Debugutil.stop();
-    int zpath = path.length();
+    //if(path.contains("**")) Debugutil.stopp();
+    int zPath = path.length();
+    int posDepFiles = path.indexOf("^=");
+    int posEndFile = posDepFiles >=0 ? posDepFiles : path.length();
+    while(posEndFile > 0 && path.charAt(posEndFile-1) == ' ') { posEndFile -=1;}
     int posColon = path.indexOf(':');
     int pos1slash = path.indexOf('/');
     int posbase;   //start of base path, ==poslocal if not given
     int poslocal;  //start of local path or whole path, after ':' or after root-/ 
     int pos1;
-    if(zpath >=1 && path.charAt(0) == '&'){ //starts with a script variable:
-      int pos9 = posColon > 0 && (posColon < pos1slash || pos1slash < 0) ? posColon : pos1slash > 0 ? pos1slash : zpath;
+    if(posEndFile >=1 && path.charAt(0) == '&'){ //starts with a script variable:
+      int pos9 = posColon > 0 && (posColon < pos1slash || pos1slash < 0) ? posColon : pos1slash > 0 ? pos1slash : posEndFile;
       this.scriptVariable = path.substring(1, pos9); //access it on runtime, not on preparation time.
-      varFilePath = null; varChars = null; varFileset = null;  //set only in the running version.
-      absPath = false;  //hint: it may be an absolute path depending of content of scriptVariable 
+      this.varFilePath = null; this.varChars = null; this.varFileset = null;  //set only in the running version.
+      this.absPath = false;  //hint: it may be an absolute path depending of content of scriptVariable 
       if(pos9 == pos1slash){
         pos1 = pos9 +1;   //rest of path starts after slash as separator. A colon may be found behind.
       } else {
         pos1 = pos9;      //rest of path starts on colon, it is an empty base path
       }
     } else if(posColon == 1){ //it means a ':' is found anywhere: check if it is a drive designation
-      drive = path.substring(0,1);
+      this.drive = path.substring(0,1);
       posColon = path.indexOf(':', 2);
-      absPath = pos1slash == 2;
-      pos1 = absPath ? 3 : 2;
-      scriptVariable = null; varFilePath = null; varChars = null; varFileset = null;
+      if(posColon > posEndFile) { posColon = -1; }
+      this.absPath = pos1slash == 2;
+      pos1 = this.absPath ? 3 : 2;
+      this.scriptVariable = null; this.varFilePath = null; this.varChars = null; this.varFileset = null;
     } else { //no variable, no drive
-      absPath = pos1slash == 0;
-      pos1 = absPath ? 1 : 0;
-      scriptVariable = null; varFilePath = null; varChars = null; varFileset = null;
+      this.absPath = pos1slash == 0;
+      pos1 = this.absPath ? 1 : 0;
+      this.scriptVariable = null; this.varFilePath = null; this.varChars = null; this.varFileset = null;
     }
     if(posColon >0){
       posbase = pos1;
@@ -352,16 +368,16 @@ public class FilePath
     //posbase, poslocal is set.
     //
     if(posbase >=0){
-      basepath = path.substring(posbase, poslocal-1);  //may be ""
+      this.basepath = path.substring(posbase, poslocal-1);  //may be ""
     } else { 
-      basepath = null; // left empty
+      this.basepath = null; // left empty
     }
-    int posname = path.lastIndexOf('/') +1;
+    int posname = path.lastIndexOf('/', posEndFile) +1;
     if(posname < poslocal){ posname = poslocal; }
     //
     if(posname > poslocal){
       this.localdir = path.substring(poslocal, posname-1);
-      int posAlltree = localdir.indexOf("/**");
+      int posAlltree = this.localdir.indexOf("/**");
       this.allTree = posAlltree >=0;
       //@since 2020-01-04 let ** in this.localdir, need for correct search in expandFiles(...) 
 //      if(posAlltree == this.localdir.length()-3) { //ends with /**, the expectable case:
@@ -369,22 +385,32 @@ public class FilePath
 //      } else {
 //        //unclarified, a path /path/**/path/name.ext, then what's happen
 //      }
-      someFiles = localdir.indexOf('*') >=0;  //it is nonsense too, someFiles only with name with *
+      this.someFiles = this.localdir.indexOf('*') >=0;  //it is nonsense too, someFiles only with name with *
     } else {
-      localdir = "";
+      this.localdir = "";
     }
-    int posext = path.lastIndexOf('.');
+    int posext = path.lastIndexOf('.', posEndFile);
     if(posext <= posname){  //not found, or any '.' before start of name
-      posext = zpath;  //no extension.
+      posext = posEndFile;  //no extension.
     } 
-    name = path.substring(posname, posext);
-    someFiles |= name.indexOf('*')>=0;
-    ext = path.substring(posext);  //with "."
-    someFiles |= ext.indexOf('*')>=0;
-    if(posname +1 == posext && posname +2 == zpath && path.charAt(posname) == '.'){
+    this.name = path.substring(posname, posext);
+    this.someFiles |= this.name.indexOf('*')>=0;
+    this.ext = path.substring(posext, posEndFile);  //with "."
+    this.someFiles |= this.ext.indexOf('*')>=0;
+    if(posname +1 == posext && posname +2 == posEndFile && path.charAt(posname) == '.'){
       //special form.
-      name = "..";
-      ext = "";
+      this.name = "..";
+      this.ext = "";
+    }
+    if(posDepFiles >=0) {
+      posDepFiles +=2;   // skip over "^="
+      while(posDepFiles < zPath) {
+        int posSep = path.indexOf(',', posDepFiles);
+        if(posSep < 0) { posSep = zPath; }
+        String sFile = path.substring(posDepFiles, posSep).trim();
+        addDependingFile(sFile);
+        posDepFiles = posSep +1;  // after "," or just after zPos
+      }
     }
   }
   
@@ -408,7 +434,7 @@ public class FilePath
    *   It would be a poorly manageable variety (?)  
    * 
    * @param src Any given FilePath, usual member of a {@link FileSet}.
-   *   This src is used but completed with the maybe here given common and access path. 
+   *   This src is used but completed with the maybe here given common and access path.
    * @param commonPath A common path of this FilePath enhances the local or given base part of FilePath
    * @param accessPath An access path enhances the given local or base part
    * @param env To resolve variables and access to the currDir.
@@ -471,21 +497,69 @@ public class FilePath
 //      }
 //      this.absPath = true;
       this.localdir = localDir.toString();
-      if(!localdir.endsWith("/"))
-        Assert.stop();
-      else
-        Assert.stop();
+      //if(localdir.endsWith("/")) Debugutil.stopp();
+      assert(!this.localdir.endsWith("/"));
       this.name = src.name;
       this.ext = src.ext;
       this.allTree = localdir.indexOf('*') >=0;
       this.someFiles = src.someFiles;
+      this.depFiles = src.depFiles;
     }
   }
   
   
   
   
-  
+  /**Add one depending file with path to this FilePath.
+   * Depending files are for example able to use as Header file for compilation units (Zmake)
+   * or also destination files on given source files.
+   * The 'sFileArg' can have the following form with specific start sequence:
+   * (Note: writing "* /" without space)
+   * <ul>
+   * <li>"* /PATH": Use the {@link #localdir} before slash, if localdir is null, then remove the "* /".
+   *   The name of the file is full qualified. It is also possible that "* /SUBDIR/NAME.EXT" is used.
+   * <li>"* /*.EXT": Use the {@link #localdir} before slash if possible, use the {@link #name} before ".EXT"
+   * <li>"**.EXT": It is the short form of "* /*.EXT", the depending file is beside the #file(), but with other extension.
+   * <li>"*.EXT": The {@link #localdir} is not used, only sensible for special cases
+   * <li>"PATH/TO/NAME.EXT": full qualified depending file in the same {@link #basepath} (depending on user evaluation)
+   * <li>"/ABSPATH/TO/NAME.EXT": full qualified depending file in the same {@link #basepath}
+   *   absolute given depending file may be possible for user evaluation, not specific tested here, saved as given.
+   * </ul>
+   * @param sFileArg
+   * @since 2026-06-02
+   */
+  public void addDependingFile (String sFileArg) {
+    String sFile = sFileArg;
+    if(sFile.length() >0) {
+      if(this.depFiles == null) { this.depFiles = new LinkedList<>(); }
+      if(sFile.startsWith("*/*.")) {
+        if(this.localdir !=null && this.localdir.length() >0) {
+          sFile = this.localdir + "/" + this.name + sFile.substring(3);    // same localdir/name only ".extension" new
+        } else {
+          sFile = this.name + sFile.substring(3);
+        }
+      }
+      else if(sFile.startsWith("**.")) {                //vv "**." is a short form of "**/*.ext"
+        if(this.localdir !=null && this.localdir.length() >0) {
+          sFile = this.localdir + "/" + this.name + sFile.substring(2);    // same localdir/name only extension new
+        } else {
+        sFile = this.name + sFile.substring(2);
+      
+        }
+      }
+      else if(sFile.startsWith("*.")) {                 //vv "*.ext" only file name with given extension
+        sFile = this.name + sFile.substring(2);         // same name  extension new
+      }
+      else if(sFile.startsWith("*/")) {                //vv "**/name.ext", replace the local path
+        if(this.localdir !=null && this.localdir.length() >0) {
+          sFile = this.localdir + sFile.substring(1);   // localdir "/name.ext"
+        } else {
+          sFile = sFile.substring(2);
+        }
+      }
+      this.depFiles.add(sFile);
+    }
+  }
   
   
   
@@ -1639,6 +1713,7 @@ public class FilePath
    * @param env maybe null, then the current dir gotten via new File(".") is used on relative paths.
    * @return the whole path inclusive a given general path in a {@link UserFileSet} as absolute path.
    */
+  @SuppressWarnings("static-method") 
   private CharSequence absbasepath(CharSequence sBasepath, FilePathEnvAccess env){ 
     CharSequence ret = sBasepath;
     if(isRootpath(ret) ==0){ //a relative path: insert the currdir of the script only if it is not a root directory already:
@@ -1687,6 +1762,23 @@ public class FilePath
   }
   
 
+  /**Returns true if at least one depending file is given. 
+   * @return
+   */
+  public boolean hasDependingFiles () { 
+    if(this.depFiles !=null) Debugutil.stopp();
+    return this.depFiles !=null; 
+  }
+
+
+
+  /**Possible iterator over all given depending files.
+   * @return an empty Iterator (not null, delivers hasNext() = false) if there are no depending files.
+   */
+  public Iterator<String> iterDependingFiles () {
+    if(this.depFiles == null) { return emptyList.iterator(); }
+    else return this.depFiles.iterator();
+  }
   
   
   /**This class is used only temporary while processing the parse result into a instance of {@link FilePath}

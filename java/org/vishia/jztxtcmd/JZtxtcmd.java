@@ -303,7 +303,7 @@ INPUT          pathTo JZcmd-File to execute
       //catch the last level of error. No error is reported direct on command line!
       Throwable exc1 = exc.getCause();
       if(exc1 == null){ exc1 = exc; }
-      System.err.println("JZcmd.main() - uncaught ERROR; "); // + exc1.getMessage());
+      System.err.println("JZcmd.main() - uncaught ERROR; " + exc1.getMessage());
       exc1.printStackTrace(System.err);
       System.exit(MainCmdLogging_ifc.exitWithErrors);
     }

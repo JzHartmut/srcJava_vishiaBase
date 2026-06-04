@@ -34,6 +34,8 @@ public final class FileSet
   
   /**Version, history and license.
    * <ul>
+   * <li>2026-06-01 Hartmut new: {@link #add_dependingFile(String)} as wrapper to {@link FilePath#addDependingFile(String)},
+   *   It is primary an enhancement for Zmake because of usage of clangd in VScodium 
    * <li>2017-09-01 Hartmut new: A FilePath can refer a {@link FileSet} variable or especially a {@link JZtxtcmdFileset} variable.
    *   Then it is not a FileSet but it is a reference to an included FileSet. On {@link FileSet#listFiles(List, FilePath, FilePathEnvAccess, boolean)}
    *   it will be recognized and unpacked. It is on runtime. Note: On script compilation time the variable content may not existent yet.
@@ -88,11 +90,20 @@ public final class FileSet
     FilePath filepath = new FilePath(val); 
     if(filepath.isNotEmpty()){
       //only if any field is set. not on empty val
-      filesOfFileset.add(filepath); 
+      this.filesOfFileset.add(filepath); 
+    }
+  }
+
+  
+  public void add_dependingFile(String val) {
+    int zFilepath = this.filesOfFileset.size();
+    if(zFilepath >0) {
+      FilePath filepath = this.filesOfFileset.get(zFilepath-1);  // get the last added one
+      filepath.addDependingFile(val);
     }
     
   }
-
+  
   
   
   /**Builds a list of {@link FilePath} from the given fileSet. The new FilePath in files are absolute without a {@link FilePath#scriptVariable}

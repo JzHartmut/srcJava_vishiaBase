@@ -57,6 +57,7 @@ public class JZtxtcmdScript extends CompiledScript
   /**Version, history and license.
    * 
    * <ul>
+   * <li>2026-06-01 Hartmut new: {@link UserFileset#add_dependingFile(String)} due to changed syntax 
    * <li>2023-01-28 Hartmut new: {@link #iterSubroutines()} necessary to search all sub routines with a specified name pattern,
    *   Used for {@link org.vishia.gral.cfg.GuiCfg} in srcJava_vishiaGui component. 
    * <li>2023-01-28 Hartmut chg {@link JZcmditem#writeStructLine(Appendable)} starts now with "JZtxtcmdScript: " 
@@ -327,7 +328,7 @@ public class JZtxtcmdScript extends CompiledScript
     final ZbnfParser parserGenCtrl = new ZbnfParser(this.console);
     try{ 
       parserGenCtrl.setSyntax(JZtxtcmdSyntax.syntax);
-    } catch(ParseException exc){ throw new ScriptException("JZcmd.ctor - internal syntax error; " + exc.getMessage()); }
+    } catch(ParseException exc){ throw new ScriptException("setScriptFromString - internal syntax error; " + exc.getMessage()); }
     //
     parserGenCtrl.setXmlSrcline(checkXmlOutput !=null);
     bOk = parserGenCtrl.parse(sourceScript);
@@ -1284,6 +1285,8 @@ public class JZtxtcmdScript extends CompiledScript
     public void set_commonPath(String val){ this.fileset.set_commonPath(val); }
     
     public void set_filePath(String val){ this.fileset.add_filePath(val); }
+    
+    public void add_dependingFile(String val){ this.fileset.add_dependingFile(val); }
     
     @SuppressWarnings("unused")
     public void add_addFileset(String val) { }

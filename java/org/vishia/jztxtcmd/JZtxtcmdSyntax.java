@@ -2,6 +2,7 @@ package org.vishia.jztxtcmd;
 
 import org.vishia.cmd.JZtxtcmdExecuter;
 import org.vishia.cmd.JZtxtcmdScript;
+import org.vishia.cmd.JZtxtcmdScript.DefVariable;
 
 /**This class contains the syntax as ZBNF string for a JZtxtcmd script.
  * See {@link JZtxtcmd}, {@link JZtxtcmdScript}, {@link JZtxtcmdExecuter}.
@@ -17,6 +18,7 @@ public final class JZtxtcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2026-06-01 Hartmut Enhancement for FileSet, used for Zmake for clangd in VScodium.  
    * <li>2021-12-30 Hartmut Enhancement: Now it is possible to read an include script from an operation,
    *   which is hence stored in the jar file. Syntay is: include <code>%<#?backlevel>:pkg.path.Class.operation()</code>.
    *   The <code>backlevel</code> is to built a reference current directory for further includes. 
@@ -297,13 +299,15 @@ public final class JZtxtcmdSyntax {
     + " defineSubelement::= <$-?ident> [( [{ <objExpr?argument> ? ,}])<?whatisit=(>].\n"  
     + " \n"
     + " \n"
-    + " DefFileset::= <definePath?defVariable> [ =  ( \n"
+    + " DefFileset::= <definePath?defVariable> [ =  ( \n"  // see org.vishia.cmd.JZtxtcmdScript.UserFileset extends DefVariable used as parserStorage 
     + " [ commonpath = [<\"\"?commonPath>|<*;,)(\\ \\r\\n?commonPath>] , ] \n"
     + " { [{ //JZcmd | //JZtxtcmd | //<*\\n\\r?>}] \n"
-    + "     [ <\"\"?filePath>             ##filePath in \"\"\n"
-    + "     | <*;,)(\\ \\r\\n?filePath>   ##filePath without \"\"\n"
-    + "     ] "
-    + "   [{ //JZcmd | //<*\\n\\r?>}] ? , } \n"
+    + "   [ <\"\"?filePath>             ##filePath in \"\"\n"        //  see UserFileset#set_filePath
+    + "   | <*;,)(\\ \\r\\n?filePath>   ##filePath without \"\"\n"   //
+    + "   ]                             ##vv depending file in [...,...] \n"
+    + "   [ \\[ { <*\\ ,\\[\\]?dependingFile> | <\"\"?dependingFile> ? , } \\] ] \n"  // depending file in [...,...]
+    + "   [{ //JZcmd | //<*\\n\\r?> }]  ##//JZcmd as separator or newline as separator \n"
+    + " ? , } \n"
     + " ) ] .\n"
     + " \n"
     + " DefFilepath::= <definePath?defVariable> [ = <textValue?> ]. \n"

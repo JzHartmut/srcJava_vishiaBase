@@ -1,6 +1,7 @@
 package org.vishia.cmd;
 
 import java.io.File;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -24,7 +25,9 @@ public final class JZtxtcmdFilepath {
   
   
   /**Version, history and license.
-   * <ul>   
+   * <ul>
+   * <li>2026-06-01: {@link #hasDependingFiles()}, {@link #iterDependingFiles()} usable in JZtxtcmd scripts  
+   * <li>2019-09-20: {@link #allTree()} 
    * <li>2014-06-10 Hartmut chg: {@link ExecuteLevel} implements {@link FilePath.FilePathEnvAccess} now
    *   instead this, therewith a {@link JZtxtcmdFileset#listFiles(List, JZtxtcmdFilepath, boolean, org.vishia.util.FilePath.FilePathEnvAccess)}
    *   does not need an accessPath, it may be empty respectively null.
@@ -319,7 +322,17 @@ public final class JZtxtcmdFilepath {
   public String ext(){ return data.ext(); }
   
   
+  /**Returns true if at least one depending file is given. 
+   * @return
+   */
+  public boolean hasDependingFiles () { return this.data.hasDependingFiles(); }
+
   
+  /**Possible iterator over all given depending files.
+   * @return an empty Iterator (not null, delivers hasNext() = false) if there are no depending files.
+   */
+  public Iterator<String> iterDependingFiles () { return this.data.iterDependingFiles(); }
+
 
   
   @Override
