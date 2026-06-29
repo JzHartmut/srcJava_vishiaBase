@@ -13,7 +13,8 @@ public interface ToStringBuilder {
    * The user can concatenate Strings without to much resources and with more simple programming
    * if all classes supports this operation. Pattern: <pre>
    * </pre> 
-   * @param app an Appendable, especially a StringBuilder which have no additional tyry.catch necessities
+   * @param app an Appendable, especially a StringBuilder which have no additional try.catch necessities
+   *   null not admissible, call with 'new StringBuilder()' if not given. 
    * @param cond Any string optional, for conditions to control the output.
 //   * @throws IOException This is the necessity of {@link Appendable#append(CharSequence)}.
 //   * It may be caught to throw new RuntimeException(exc) it not expected.

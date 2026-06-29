@@ -713,6 +713,7 @@ public final class OutTextPreparer
      * but checks \n to count {@link #lineCt()} and {@link #linePos}.
      */
     @Override public WriteDst append ( CharSequence csq, int start, int end ) throws IOException {
+      //if(StringFunctions.contains(csq, "switchState:")) Debugutil.stopp();
       if(this.bSbClean && this.wrCurr instanceof StringBuilder) { ((StringBuilder)this.wrCurr).setLength(0); this.bSbClean = false; } 
       for(int ix = start; ix < end; ++ix) {
         char cc = csq.charAt(ix);                          // append char by char to check \n and count linePos 
@@ -1866,7 +1867,8 @@ public final class OutTextPreparer
    * @param log if null then an exception is thrown anyhow on a parsing error. If given if possible an Error is written but the script is parsed furthermore. 
    * @throws ParseException
    */
-  public static void parseTemplates ( Map<String, OutTextPreparer> idxScript, Class<?> execClass, final Map<String, Object> idxConstData, LogMessage log ) throws ParseException {
+  public static boolean parseTemplates ( Map<String, OutTextPreparer> idxScript, Class<?> execClass, final Map<String, Object> idxConstData, LogMessage log ) throws ParseException {
+    boolean bOk = true;
     if(idxScript!=null) {
       for(Map.Entry<String, OutTextPreparer> e: idxScript.entrySet()) {
         OutTextPreparer otx = e.getValue();
@@ -1878,12 +1880,14 @@ public final class OutTextPreparer
           if(log !=null) {
             Throwable exc1 = exc.getCause();
             log.writef("\nERROR parseTemplates in script: %s: %s %s", otx.sIdent, exc, exc1);
+            bOk = false;
           } else {
             throw exc;
           }
         }
       }
     }
+    return bOk;
   }
 
   /**Reads a given template which may contain the pattern for several separated OutTextPreparer.
@@ -3420,7 +3424,7 @@ public final class OutTextPreparer
   
   
   
-  private Object data4Cmd ( Cmd cmd, DataTextPreparer args, WriteDst wrCt ) throws IOException {
+  @SuppressWarnings("synthetic-access") private Object data4Cmd ( Cmd cmd, DataTextPreparer args, WriteDst wrCt ) throws IOException {
     @SuppressWarnings("unused") boolean bDataOk = true;
     Object data;  //========================================= first gather the data
     if(args.logExec !=null) { args.logExec.append(" " + cmd.linecol[0]); } 
@@ -3449,7 +3453,7 @@ public final class OutTextPreparer
         if(args.logExec !=null) { args.logExec.append(" Exception dataAccess: ").append(this.sIdent).append(':').append(cmd.toString()); }
         CharSequence sMsg = ExcUtil.exceptionInfo("", exc, 1, 10);
         data = "<??>";
-        wrCt.wrCurr.append("<??OutTextPreparer variable error: '" + this.sIdent + ":" + cmd.toString() + "'" + sMsg + "\" ??>");
+        wrCt.wrCurr.append("<??OutTextPreparer gTxt: " + this.sIdent + ":" + cmd.toString() + ", error:" + sMsg + "\" ??>");
       }
       
     }
