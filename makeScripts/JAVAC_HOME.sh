@@ -15,7 +15,7 @@ if test "$OS" = "Windows_NT"; then
   JAVAC_HOME=c:/Programs/Java/jdk1.8.0_241
   if test -d $JAVAC_HOME; then echo $JAVAC_HOME/
   else JAVAC_HOME="c:/Program Files/Java/jdk1.8.0_241"
-    if test -f $JAVAC_HOME; then echo $JAVAC_HOME/; fi
+    if test -d $JAVAC_HOME; then echo $JAVAC_HOME/; fi
   fi
   #should be found in path
   echo ""
@@ -23,7 +23,7 @@ else
   JAVAC_HOME="$JAVA_HOME"
   ##JAVAC_HOME="/usr/Java/JDK8_86zulu/"
   ##JAVAC_HOME="/usr/share/JDK/jdk1.8.0_241"
-  if test -f $JAVAC_HOME; then echo $JAVAC_HOME/
+  if test -d $JAVAC_HOME; then echo $JAVAC_HOME/
   else echo "JAVAC_HOME faulty: " $JAVAC_HOME
   fi
 fi

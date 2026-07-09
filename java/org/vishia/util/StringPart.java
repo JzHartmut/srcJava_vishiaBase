@@ -2789,6 +2789,18 @@ else return pos - this.begin;
   }
   
 
+  /**Sets the actual part of the given Part as destination. The Part references the substring inside {@link #content}.
+   * The content can be gotten as String from dst with {@link Part#toString()}
+   * Note: renaming 1019-05-26 from setCurrentPart(...). 
+   */
+  protected final void setCurrentPartToDst(String[] dst) {
+    if(dst !=null && dst.length >=1) {
+      if(this.end > this.begin) dst[0] = this.content.subSequence(this.begin, this.end).toString();
+      else                      dst[0] = "";
+    }
+  }
+  
+
   /** Returns the last part of the string before any seek or scan operation.
    * 
    */

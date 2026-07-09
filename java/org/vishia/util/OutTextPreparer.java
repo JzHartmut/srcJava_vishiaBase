@@ -227,9 +227,16 @@ try {
  * <br><br><b><code>&lt;if:condition>conditional Text&lt;elsif:condition>other Text&lt;:else>else-Text&lt;.if></code></b>
  * The condition is an expression built with the {@link CalculatorExpr#setExpr(StringPartScan, Map, Class, boolean)}
  * <br>
- * for example also a type check is possible: <code><:if:obj ?instanceof classXyz></code>
+ * For example even a type check is possible: <code><:if:obj ?instanceof classXyz></code>
  * whereas the <code>classXyz</code> can be given in the static reflection class as static variable as
  * <code>public static Class<?> classXyz = MyClassXyz.class; </code> 
+ * <br><b>check of affiliations between &lt;:if:condition>, &lt;:elsif:conditon:sRelation>, 
+ *   &lt;:else:sRelation>, &lt;.if:sRelation>:</b>
+ * The 'sRelation' is optional. It is tested whether the given 'sRelation' is contained as part {@link String#contains(CharSequence)}
+ * in the condition of &lt;:if:condtion>. 
+ * If it does not match, an Exception with a proper ERROR message as syntax error is thrown. 
+ * This helps in docu to the gTxt script. The 'sRelation' have to match, it is tested.
+ * This feature does not need effort in Runtime. 
  * <br>
  * <br><b><code>&lt;for:var:container>text for any element &lt;&var> with &lt;&var_key> in loop &lt;:if:var_next>, &lt;.if>&lt;.for></code></b><br>
  * The container can be an array, any {@link Iterable} such a {@link List} or a {@link Map}.
@@ -239,6 +246,12 @@ try {
  * <li><code>var_next</code> is the following element or null for the last element 
  * </ul>
  * One can test <code>&lt;if:var_next>....&lt;.if></code> to detect whether there is a following element for example to output an separator.
+ * <br><b>check of affiliations between &lt;:for:variable:...> and &lt;.for:variable>:</b>
+ * The 'variale' in the end-&lt;.for:variable> is optional. It is tested whether the given 'variable' is the same 
+ * as in the in the &lt;:for:variable:...>. 
+ * If it does not match, an Exception with a proper ERROR message as syntax error is thrown. 
+ * This helps in docu to the gTxt script. The 'sRelation' have to match, it is tested.
+ * This feature does not need effort in Runtime. 
  * <br>
  * <br>
  * <b>Write output </b><br>
@@ -340,6 +353,17 @@ try {
  * But if the operation has an error, it can return an error message, which is then placed in the code
  * maybe on the current main location. 
  * <br><br>
+ * <b>Debug possibilities</b>
+ * <ul>
+ * <li>Use &lt;debug> as statement in gTxt to execute {@link #debug()} where a breakpoint can be set.
+ * <li>Then set a breakpoint on begin of {@link #execSwitchCmd(Cmd, int, WriteDst, DataTextPreparer)} or
+ *   in {@link #execSub(WriteDst, DataTextPreparer, int, int)} in the while loop after <code>cmd = this.cmds.get(ixCmd++);</code>
+ *   to run step by step in gTxt cmd execution, 
+ *   look for the command, do single step in Java on interesting stuff.
+ * <li>Alternative: loop to {@link #_trace} to see which statements {@link Cmd} are executed till now,
+ *   maybe important to see which &lt:if> are used. But this does not show the affiliated data from user instances.
+ * <li>... more TODO  
+ * </ul>    
  * <b>...more</b><br>
  * <ul>
  * <li>&lt;:set:variable=value>: sets a new created variable, can be used as &lt;&variable> etc.
@@ -962,6 +986,15 @@ public final class OutTextPreparer
   
   static class Cmd extends CalculatorExpr.Operand{
     
+    /**Name of the script part. This is only used for Debug especially in {@link OutTextPreparer#_trace}
+     * to see which script. 
+     */
+    public String sIdentScript; 
+    
+    /**This String is stored from <:if:condition>, <:for:> to check 
+     * whether the opposite <.if:related> is correct. Only used while parsing. */
+    String sRelated;
+    
     /**Index of this command in the {@link OutTextPreparer#cmds}
      */
     public final int ixCmd;
@@ -1042,7 +1075,7 @@ public final class OutTextPreparer
     
     
     @Override public String toString() {
-      return this.linecol[0] + "," + this.linecol[1] + " " + this.cmd + ":" + this.textOrVar;
+      return this.linecol[0] + "," + this.linecol[1] + " [" + this.ixCmd + "] " + this.cmd + ":" + this.textOrVar;
     }
     
   }//sub class Cmd
@@ -1284,6 +1317,15 @@ public final class OutTextPreparer
    * 
    */
   private String[] nameVariablesByIx;
+  
+  
+  /**This is a list of all executed cmds till a break point (for example &lt;:debug> statement).
+   * It is essential to look which statements where executed (especially conditinally, &lt;if:...> etc.
+   * The list is cleared on entry on {@link #execLineCt(WriteDst, DataTextPreparer)}
+   * to start script part execution. Its capacity is delibaretely limited to prevent using too much unnecessary memory.
+   */
+  List<Cmd> _trace = new LinkedList<>();
+  
   
   
   /**Index of the OUT element in variables 
@@ -2546,6 +2588,7 @@ public final class OutTextPreparer
     
     private void parseElementCmd ( LogMessage log ) throws ParseException {
       this.pos1 = (int)this.sp.getCurrentPosition() -2;     //before '<:' as end of text before
+      String[] sRelated = new String[1];                    // dst for '<.  :related> to check the associated <:  :related>
       this.sp.scanStart();
       if(this.sp.scan("args:").scanOk()){ 
         parseArgs();
@@ -2560,7 +2603,7 @@ public final class OutTextPreparer
         this.pos0 = (int)this.sp.getCurrentPosition();  //after newline
       }
       else if(this.sp.scan("wr:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-        //====>  ------------------------------------------ <:if:...>
+        //====>  ------------------------------------------ <:wr:...>
         parseWr(log);
         this.ixCtrlCmd[++this.ixixCmd] = this.otx.cmds.size()-1;  //The position of the current wr
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
@@ -2573,24 +2616,41 @@ public final class OutTextPreparer
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
         
       }
-      else if(this.sp.scan("elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-        //====>
-        parseIf( ECmd.elsifCtrl, log);
-        Cmd ifCmdLast;
-        int ixixIfCmd = this.ixixCmd; 
-        if(  ixixIfCmd >=0 
-          && ( (ifCmdLast = this.otx.cmds.get(this.ixCtrlCmd[this. ixixCmd])).cmd == ECmd.ifCtrl 
-             || ifCmdLast.cmd == ECmd.elsifCtrl
-          )  ) {
-          ((IfCmd)ifCmdLast).offsElsif = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
-        } else { 
-          int[] lineCol = sp.getlineCol();
+      else if(this.sp.scan("elsif:").scanToAnyChar(":>", '\\', '"', '"').scanOk()) {
+        String cond = this.sp.getLastScannedString().toString();
+        if(sp.scan(">").scanOk()
+          || this.sp.scan(":").scanToAnyCharDst(">", '\0', '\0', '\0', sRelated).scanOk()
+        ) {
+          //====>
+          Cmd ifcmd = parseIf( ECmd.elsifCtrl, cond, log);
+          Cmd ifCmdLast;
+          int ixixIfCmd = this.ixixCmd; 
+          if(  ixixIfCmd >=0 
+            && ( (ifCmdLast = this.otx.cmds.get(this.ixCtrlCmd[this. ixixCmd])).cmd == ECmd.ifCtrl 
+               || ifCmdLast.cmd == ECmd.elsifCtrl
+            )  ) {
+            if(sRelated[0] !=null) {             // it is null if <.if> is written, because scanOk() comes first before ||
+              if(!ifCmdLast.sRelated.contains(sRelated[0])) { //vv------ ERROR if the relation text does not match
+                int[] lineCol = this.sp.getlineCol();
+                this.sp.close();
+                throw new ParseException("OutTextPreparer <.if:" + sRelated[0] + "> does not match with <:elsif:" + ifCmdLast.sRelated + ">: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1], lineCol[0]);
+              }
+              ifcmd.sRelated = sRelated[0];
+            }
+            ((IfCmd)ifCmdLast).offsElsif = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
+          } else { 
+            int[] lineCol = this.sp.getlineCol();
+            this.sp.close();
+            throw new ParseException("OutTextPreparer faulty <:elsif>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1], lineCol[0]);
+          }
+          this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;  //The position of the current <:elsif>
+          
+          this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+        } else {
+          int[] lineCol = this.sp.getlineCol();
           this.sp.close();
-          throw new ParseException("OutTextPreparer faulty <:elsif>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1], lineCol[0]);
+          throw new ParseException("OutTextPreparer <:elsif: faulty" + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1], lineCol[0]);
         }
-        this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;  //The position of the current <:elsif>
-        
-        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
       else if( this.sp.scan("else>").scanOk()   //--------vv The end of '<:else:' may be <:else:any comment>
             || this.sp.scan("else:").scanToAnyChar(">", '\0', '\0', '\0').scanChar('>').scanOk()) { 
@@ -2617,6 +2677,7 @@ public final class OutTextPreparer
         String entryVar = this.sp.getLastScannedString().toString();
         //====>
         ForCmd cmd = (ForCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.forCtrl, container, log);
+        cmd.sRelated = container;
         DataAccess.IntegerIx ixOentry = this.otx.nameVariables.get(entryVar); 
         if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
           ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
@@ -2759,6 +2820,7 @@ public final class OutTextPreparer
     private void parseElementEndCmd ( LogMessage log ) throws ParseException {
       this.pos1 = (int)this.sp.getCurrentPosition() -2;     //before '<.' as end of text before
       this.sp.scanStart();
+      String[] sRelated = new String[1];                    // dst for '<.  :related> to check the associated <:  :related>
       if(this.sp.scan("wr>").scanOk()) { //The end of an if
         Cmd wrCmd;
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null, log);  //The last text before <.wr>
@@ -2778,9 +2840,10 @@ public final class OutTextPreparer
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
       else if(this.sp.scan("if>").scanOk()       //--------vv The end of '<.if:' may be <.if:any comment>
-           || this.sp.scan("if:").scanToAnyChar(">", '\0', '\0', '\0').scanDebug().scanChar('>').scanOk()) { 
+           || this.sp.scan("if:").scanToAnyCharDst(">", '\0', '\0', '\0', sRelated).scanDebug().scanChar('>').scanOk()) { 
         Cmd cmd = null;
-        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null, log);  //The last text before <.if>
+        //if(sRelated[0] !=null && sRelated[0].equals("evTrans")) Debugutil.stopp();
+        Cmd endifCmd = addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null, log);  //The last text before <.if>
         while(  this. ixixCmd >=0 
           && ( (cmd = this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd])).cmd == ECmd.ifCtrl 
             || cmd.cmd == ECmd.elsifCtrl
@@ -2794,6 +2857,13 @@ public final class OutTextPreparer
           this.ixCtrlCmd[this. ixixCmd] = 0;    // no more necessary.
           this. ixixCmd -=1;
           if(cmd.cmd == ECmd.ifCtrl) {
+            if(sRelated[0] !=null) {             // it is null if <.if> is written, because scanOk() comes first before ||
+              if(!cmd.sRelated.contains(sRelated[0])) { //vv------ ERROR if the relation text does not match
+                int[] lineCol = this.sp.getlineCol();
+                this.sp.close();
+                throw new ParseException("OutTextPreparer <.if:" + sRelated[0] + "> does not match with <:if:" + cmd.sRelated + ">: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1], lineCol[0]);
+              }
+            }
             break;
           } else {
             cmd = null;    //remain ifCtrl to check: at least <:if> necessary.
@@ -2820,10 +2890,11 @@ public final class OutTextPreparer
         
         else {
           int[] lineCol = sp.getlineCol();
+          Cmd lastCmd = this.ixixCmd <0 ? null :  this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd]);
           String sError = String.format("\nOutTextPreparer faulty <.for> missing opening <:for:...>:"
-                                      + "\n  otx=%s @%d,%d, last ctrl is <:%s:...> \n  Following text is: %s\n"
+                                      + "\n  otx=%s @%d,%d, last ctrl is %s \n  Following text is: %s\n"
                                       , this.otx.sIdent, lineCol[0], lineCol[1]
-                                      , this.ixixCmd <0 ? "??" :  this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd]).cmd
+                                      , lastCmd
                                       , this.sp.getCurrent(30).toString().replace('\n', '|'));
           this.sp.close();
           throw new ParseException(sError, 0);
@@ -2861,14 +2932,24 @@ public final class OutTextPreparer
     }
     
     
-    private void parseIf ( ECmd ecmd, LogMessage log) throws ParseException {
-      String cond = this.sp.getLastScannedString().toString();
-  //    if(cond.contains("?instanceof"))
-  //      Debugutil.stop();
+    private IfCmd parseIf ( ECmd ecmd, String cond, LogMessage log) throws ParseException {
+      //if(cond.contains("?instanceof")) Debugutil.stopp();
       //====>
       IfCmd ifcmd = (IfCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ecmd, cond, log);
       ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
-      
+      ifcmd.sRelated = cond;
+      return ifcmd;
+    }
+    
+    
+    private IfCmd parseIf ( ECmd ecmd, LogMessage log) throws ParseException {
+      String cond = this.sp.getLastScannedString().toString();
+      //if(cond.contains("?instanceof")) Debugutil.stopp();
+      //====>
+      IfCmd ifcmd = (IfCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ecmd, cond, log);
+      ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
+      ifcmd.sRelated = cond;
+      return ifcmd;
     }
     
     
@@ -3087,7 +3168,9 @@ public final class OutTextPreparer
     private Cmd addCmd ( String src, int[] linecol, int from, int to, ECmd ecmd, String sDatapath, LogMessage log ) throws ParseException {
       if(to > from) {
         CharSequence s1 = StringFunctions_B.removeTrailingSpacesAndCleanLinefeed(src.substring(from, to));
-        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, s1.toString()));
+        Cmd cmdString = new CmdString(this.otx.cmds.size(), linecol, s1.toString());
+        cmdString.sIdentScript = this.otx.sIdent;
+        this.otx.cmds.add(cmdString);
       }
       final Cmd cmd;
       if(ecmd !=ECmd.nothing) {
@@ -3143,6 +3226,7 @@ public final class OutTextPreparer
           throw new ParseException("OutTextPreparer " + this.otx.sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage(), 0);
         }
         if(cmd !=null) {
+          cmd.sIdentScript = this.otx.sIdent;
           this.otx.cmds.add(cmd);
         }
       } else {
@@ -3228,6 +3312,7 @@ public final class OutTextPreparer
       throw new IllegalArgumentException("OutTextPreparer mismatch: The data does not match to the script.");
     }
     assert(this.nameVariablesByIx!=null);
+    this._trace.clear();                                    // _trace newly for this script part.
     execSub(wrCt, args, 0, this.cmds.size());
     wrCt.finishAppend();                        // finish a possible existing append content from before.
     if(wrCt.wrCurr instanceof Flushable) {
@@ -3268,6 +3353,7 @@ public final class OutTextPreparer
       if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
         debug();
       cmd = this.cmds.get(ixCmd++);
+      traceCmd(cmd);
       if(this.ixOUT >=0) {                         //------vv only if OUT is automatically built
         args.args[this.ixOUT+1] = cmd;                     // variable "OTXCMD" is the current cmd nice to have for debug only.
       }
@@ -3541,10 +3627,10 @@ public final class OutTextPreparer
     }
     if( bIf) { //execute if branch
       execSub(wrCt, args, ixCmd, ixCmd + ifcmd.offsElsif -1);
-      return ixCmd + ifcmd.offsEndCtrl -1;  //continue after <.if>
+      return ixCmd -1 + ifcmd.offsEndCtrl;  //continue after <.if>
     } else {
       //forward inside if to the next <:elsif or <:else
-      return ixCmd + ifcmd.offsElsif -1;  //if is false, go to <:elsif, <:else or <.if.
+      return ixCmd -1  + ifcmd.offsElsif;  //if is false, go to <:elsif, <:else or <.if.
     }
   }
   
@@ -3755,13 +3841,23 @@ public final class OutTextPreparer
   }
   
   
+  private void traceCmd(Cmd cmd) {
+    while(this._trace.size()>100) {
+      this._trace.remove(0);
+    }
+    this._trace.add(cmd);
+  }
   
+  /**Possible set a breakpoint here to stop execution.
+   * 
+   */
+  void debug() { 
+    Debugutil.stop(); 
+  }
+
   
   @Override public String toString() { return this.sIdent; } // + ":" + this.pattern; }
   
   
-  void debug() { 
-    Debugutil.stop(); 
-  }
   
 } //class OutTextPreparer

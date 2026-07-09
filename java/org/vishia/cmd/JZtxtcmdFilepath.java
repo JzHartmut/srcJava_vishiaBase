@@ -331,7 +331,7 @@ public final class JZtxtcmdFilepath {
   /**Possible iterator over all given depending files.
    * @return an empty Iterator (not null, delivers hasNext() = false) if there are no depending files.
    */
-  public Iterator<String> iterDependingFiles () { return this.data.iterDependingFiles(); }
+  public Iterator<FilePath> iterDependingFiles () { return this.data.iterDependingFiles(); }
 
 
   

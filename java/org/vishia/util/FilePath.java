@@ -276,12 +276,12 @@ public class FilePath
   /**null or the list of local paths with file.ext for depending files.
    * Using of that can be determined by the application.
    */
-  private List<String> depFiles;
+  private List<FilePath> depFiles;
   
   /**An empty file path which is used as argument if a common base path is not given. */
   private static FilePath emptyParent = new FilePath();
   
-  private static List<String> emptyList = new LinkedList<>();
+  private static List<FilePath> emptyList = new LinkedList<>();
 
   /**Empty instance. */
   private FilePath(){
@@ -438,6 +438,7 @@ public class FilePath
    * @param commonPath A common path of this FilePath enhances the local or given base part of FilePath
    * @param accessPath An access path enhances the given local or base part
    * @param env To resolve variables and access to the currDir.
+   *   In a JZtxtcmd script it is the instance of {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a variable is not found.
    * @since 2019-03-31: Uses env.getCurrentDir to build an absolute path. 
    *   Reason: Problematic use case detected: If the current dir is changed during exection with a non absolute FilePath, the access will be faulty.
@@ -525,39 +526,48 @@ public class FilePath
    * <li>"/ABSPATH/TO/NAME.EXT": full qualified depending file in the same {@link #basepath}
    *   absolute given depending file may be possible for user evaluation, not specific tested here, saved as given.
    * </ul>
-   * @param sFileArg
+   * @param sFileArg see description.
+   * @effect Stores the resulting FilePath in {@link #depFiles}
    * @since 2026-06-02
+   * @since 2026-06-02 meanningful refactored, now stores a FilePath instead a simple String.
+   *  The simple String was only the file name, now full access inclusively {@link #realfile(FilePathEnvAccess)} is possible
    */
   public void addDependingFile (String sFileArg) {
     String sFile = sFileArg;
+    FilePath fp = new FilePath();
     if(sFile.length() >0) {
       if(this.depFiles == null) { this.depFiles = new LinkedList<>(); }
-      if(sFile.startsWith("*/*.")) {
-        if(this.localdir !=null && this.localdir.length() >0) {
-          sFile = this.localdir + "/" + this.name + sFile.substring(3);    // same localdir/name only ".extension" new
-        } else {
-          sFile = this.name + sFile.substring(3);
-        }
+      if(sFile.startsWith("*/*.")) {              //--------vv only extension is changed:
+        fp.drive = this.drive; fp.basepath = this.basepath; fp.absPath = this.absPath;
+        fp.allTree = this.allTree; fp.someFiles = this.someFiles();
+        fp.localdir = this.localdir; 
+        fp.name = this.name; fp.ext = sFile.substring(3);
       }
       else if(sFile.startsWith("**.")) {                //vv "**." is a short form of "**/*.ext"
-        if(this.localdir !=null && this.localdir.length() >0) {
-          sFile = this.localdir + "/" + this.name + sFile.substring(2);    // same localdir/name only extension new
-        } else {
-        sFile = this.name + sFile.substring(2);
-      
-        }
+        fp.drive = this.drive; fp.basepath = this.basepath; fp.absPath = this.absPath;
+        fp.allTree = this.allTree; fp.someFiles = this.someFiles();
+        fp.localdir = this.localdir; 
+        fp.name = this.name; fp.ext = sFile.substring(2);
       }
       else if(sFile.startsWith("*.")) {                 //vv "*.ext" only file name with given extension
-        sFile = this.name + sFile.substring(2);         // same name  extension new
+        fp.drive = this.drive; fp.basepath = this.basepath; fp.absPath = this.absPath;
+        fp.allTree = this.allTree; fp.someFiles = this.someFiles();
+        fp.localdir = ""; 
+        fp.name = this.name; fp.ext = sFile.substring(1);
       }
       else if(sFile.startsWith("*/")) {                //vv "**/name.ext", replace the local path
-        if(this.localdir !=null && this.localdir.length() >0) {
-          sFile = this.localdir + sFile.substring(1);   // localdir "/name.ext"
-        } else {
-          sFile = sFile.substring(2);
-        }
+        fp.drive = this.drive; fp.basepath = this.basepath; fp.absPath = this.absPath;
+        fp.allTree = this.allTree; fp.someFiles = this.someFiles();
+        int posExt = sFile.lastIndexOf('.');
+        if(posExt < 0) { posExt = sFile.length(); }
+        int posName = sFile.lastIndexOf('/');
+        fp.localdir = this.localdir + sFile.substring(1, posName); 
+        fp.name = sFile.substring(posName+1, posExt); 
+        fp.ext = sFile.substring(posExt);
+      } else {
+        fp = new FilePath(sFile);   // independent file, maybe absolute.
       }
-      this.depFiles.add(sFile);
+      this.depFiles.add(fp);
     }
   }
   
@@ -604,6 +614,7 @@ public class FilePath
   /**Returns the local directory path part. This method is usefully if another file path should be built 
    * but with the same local directory part. Usual {@link #localname(FilePathEnvAccess)} may be more usefully. 
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence localdir(FilePathEnvAccess env) throws NoSuchFieldException{
@@ -625,6 +636,7 @@ public class FilePath
    * with the same local file part but another absolute directory and another extension. 
    * That is the usual usefully if destination files should be build from given source files.
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence localname(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -645,6 +657,7 @@ public class FilePath
    * with the same local file path part but another absolute directory. 
    * That is the usual usefully if a file with the same name and local directory should be copied to another location.
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence localfile(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -702,6 +715,7 @@ public class FilePath
    * A current directory is gotten via {@link FilePathEnvAccess#getCurrentDir()}
    * and not from the systems current directory. 
    * @param env Access to the environment to get the current directory and to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    *  
    */
@@ -721,6 +735,7 @@ public class FilePath
    * A current directory is gotten via {@link FilePathEnvAccess#getCurrentDir()}
    * and not from the systems current directory. 
    * @param env Access to the environment to get the current directory and to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    *  
    */
@@ -742,6 +757,7 @@ public class FilePath
    * A current directory is gotten via {@link FilePathEnvAccess#getCurrentDir()}
    * and not from the systems current directory. 
    * @param env Access to the environment to get the current directory and to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence absname(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -767,6 +783,7 @@ public class FilePath
    * A current directory is gotten via {@link FilePathEnvAccess#getCurrentDir()}
    * and not from the systems current directory. 
    * @param env Access to the environment to get the current directory and to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence absfile(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -783,6 +800,25 @@ public class FilePath
   public CharSequence absfileW(FilePathEnvAccess env) throws NoSuchFieldException{ return toWindows(absfile(env)); }
   
   
+  /**Returns the complete file path as absolute canonical path with resolved symbolic links. 
+   * The necessary current directory is gotten via {@link FilePathEnvAccess#getCurrentDir()}
+   * and not from the systems current directory. The last one is not changed inside Java,
+   * the {@link FilePathEnvAccess#getCurrentDir()} has more flexibility.
+   * @param env Access to the environment to get the current directory and to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
+   * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
+   */
+  public String realfile(FilePathEnvAccess env) throws NoSuchFieldException{ 
+    CharSequence basePath = absbasepath(env);
+    StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+    addLocalName(uRet);
+    uRet.append(this.ext);
+    File file = new File(uRet.toString());
+    String realfile = FileFunctions.getCanonicalPath(file);
+    return realfile;
+  }
+  
+
   /**Returns the local file with replaced wildcard in the local dir. See {@link #addLocalNameReplwildcard(StringBuilder, FilePath).
    * @param replWildc With them localdir and name a wildcard in this.localdir and this.name is replaced.
    * @return the whole path inclusive a given general path .
@@ -799,6 +835,7 @@ public class FilePath
   
   /**Returns the base path part like given, either as absolute path or relative path. 
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence basepath(FilePathEnvAccess env) throws NoSuchFieldException{ return basepath(null, emptyParent, null, env); }
@@ -815,6 +852,7 @@ public class FilePath
   
   /**Returns the directory part like given, either as absolute path or relative path. 
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence dir(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -838,6 +876,7 @@ public class FilePath
   
   /**Returns the file path without extension like given, either as absolute path or relative path. 
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence pathname(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -861,6 +900,7 @@ public class FilePath
   
   /**Returns the file path like given, either as absolute path or relative path. 
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence file(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -893,6 +933,7 @@ public class FilePath
   
   /**Returns the base path and the local dir like given with ':' as separator between both parts. 
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence base_localdir(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -912,6 +953,7 @@ public class FilePath
   
   /**Returns the base path and the local file like given with ':' as separator between both parts. 
    * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @throws NoSuchFieldException if a {@link #scriptVariable} is used and it is not found in the context. 
    */
   public CharSequence base_localfile(FilePathEnvAccess env) throws NoSuchFieldException{ 
@@ -1195,7 +1237,8 @@ public class FilePath
    * @param commonPath
    * @param accessPath
    * @param scriptVariable either a CharSequence or FilePath. If given the this.scriptVariable is not used. It is processed with this parameter already.
-   * @param env
+   * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @return
    * @throws NoSuchFieldException
    */
@@ -1553,7 +1596,8 @@ public class FilePath
    * @param uRetP If given appends.
    * @param commonPath
    * @param accessPath
-   * @param env
+   * @param env Access to the environment to resolve variables.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @return Either a String which is the name or a new StringBuilder or uRetP if uRetP given.
    * @throws NoSuchFieldException
    */
@@ -1711,6 +1755,7 @@ public class FilePath
   /**Builds the absolute path with given basepath maybe absolute or not, maybe with drive letter or not. 
    * @param sBasepath
    * @param env maybe null, then the current dir gotten via new File(".") is used on relative paths.
+   *   Use 'jztcsub' in a JZtxtcmd script which refers to {@link org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel}
    * @return the whole path inclusive a given general path in a {@link UserFileSet} as absolute path.
    */
   @SuppressWarnings("static-method") 
@@ -1766,7 +1811,7 @@ public class FilePath
    * @return
    */
   public boolean hasDependingFiles () { 
-    if(this.depFiles !=null) Debugutil.stopp();
+    //if(this.depFiles !=null) Debugutil.stopp();
     return this.depFiles !=null; 
   }
 
@@ -1775,7 +1820,7 @@ public class FilePath
   /**Possible iterator over all given depending files.
    * @return an empty Iterator (not null, delivers hasNext() = false) if there are no depending files.
    */
-  public Iterator<String> iterDependingFiles () {
+  public Iterator<FilePath> iterDependingFiles () {
     if(this.depFiles == null) { return emptyList.iterator(); }
     else return this.depFiles.iterator();
   }

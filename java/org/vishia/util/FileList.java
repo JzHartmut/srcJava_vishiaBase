@@ -241,10 +241,10 @@ public class FileList
       for(Map.Entry<String, File> entry: sort.entrySet()){
         //write files:
         File file = entry.getValue();
-        if( ! file.isDirectory()) {
+        if( ! file.isDirectory()) {     //------------------vv first check all files
           String name = file.getName();
-          if(name.startsWith("#"))
-             Debugutil.stop();
+          //if(name.startsWith("#")) Debugutil.stopp();
+          if(name.endsWith(".xml")) Debugutil.stopp();
           if( ! name.equals(this.args.sFileList)
            && (filterChild = filter.check(name, false)) !=null
             ) {
@@ -255,7 +255,7 @@ public class FileList
       }
       for(Map.Entry<String, File> entry: sort.entrySet()){
         File file = entry.getValue();
-        if( file.isDirectory()) {
+        if( file.isDirectory()) {       //------------------vv second check all directories
           String name = file.getName();
           //if(name.equals("asciidoc-gen")) Debugutil.stopp();
           //if(name.startsWith("docuSrc")) Debugutil.stopp();

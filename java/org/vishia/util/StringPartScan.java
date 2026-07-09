@@ -1161,6 +1161,32 @@ public class StringPartScan extends StringPart
   }
 
   
+  /**Adequate to {@link #scanToAnyChar(String, char, char, char)}
+   * but writes the parse result into the given dst instead to {@link #getLastScannedString()}
+   * @param sCharsEnd some character as termination, one of them should match
+   * @param transcriptChar typically '\\', 0 if not used
+   * @param quotationStartChar typically '\"', may be "<" or such, 0 if not used
+   * @param quotationEndChar The end char, typically '\"', may be ">" or such, 0 if not used
+   * @return
+   * @since 2026-07-09
+   */
+  public final StringPartScan scanToAnyCharDst(String sCharsEnd
+      , char transcriptChar, char quotationStartChar, char quotationEndChar, String[] dst)
+  { if(scanEntry()){
+      int posEnd = indexOfAnyChar(sCharsEnd, 0, end-begin, transcriptChar, quotationStartChar, quotationEndChar);
+      if(posEnd >=0){
+        lentoPos(posEnd);
+        this.setCurrentPartToDst(dst);
+        fromEnd();
+      } else {
+        bCurrentOk = false;
+      }
+    }
+    return this;
+  }
+
+  
+  
   
   /**Scan all till a defined string is found.
    * Writes the part without the requested sEnd in {@link #getLastScannedString()} output 
