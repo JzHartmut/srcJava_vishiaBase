@@ -1,9 +1,9 @@
 package org.vishia.util;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -14,13 +14,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.io.Reader;
+import java.io.Writer;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+
 
 
 /**This class contains some static file and command line functions.
@@ -772,6 +776,233 @@ public class FileFunctions {
     return nrofBytes;
   }
 
+  
+  
+  /**Writes the content of text to the given file, but only if the given content of the existing file is different. 
+   * It calls first {@link #cmpFileCharSeq(File, CharSequence, String, Charset)}:
+   * The existing file will be read line per line and compared line by line with 'text'.
+   * If no difference is given till end of file and 'text', the file is not change, the timestamp is prevented.
+   * The file is opened as existing file, but automatically created if not existing. 
+   * If the file is existing as a hard linked file (other directory entries references the same file content),
+   * also on overwrite this hard linked file property is preserved. 
+   * It means writing to one file on the file system is visible on all hard linked files.
+   * 
+   * @param fout The file to write
+   * @param text The StringBuilder with content to write
+   * @param sEndlineComment see {@link #cmpFileCharSeq(File, CharSequence, String, Charset)}, this is used to compare.
+   * @param log For logging errors on Exception (console, log out)
+   * @return true if the file was newly written, false if the existing file is equals maybe excluding comments
+   * @throws IOException 
+   */
+  public static boolean writeToFile_ifDifferent (File fout, CharSequence text
+  , String sEndlineComment, String sEncoding
+  ) throws IOException {
+    //Hint: RandomAccessFile is not usable, because it does not support encodings for text.
+    Charset charset = sEncoding == null ? Charset.forName("UTF-8") : Charset.forName(sEncoding);
+    boolean bWr = false;
+    int posLine = 0;
+    int posEnd = text.length();
+    if(!fout.exists()) {
+      bWr = true;
+    } else {
+      boolean bSame = cmpFileCharSeq(fout, text, sEndlineComment, charset);
+      bWr = !bSame;
+      
+    }
+    if(bWr) {
+      posLine = 0;                                          // open as exiting file, create if necessary, prevent hard linked files.
+      try (Writer fw = new BufferedWriter(new FileWriter(fout, charset, false))) {
+        while(posLine < posEnd) {                           // write from current position in both, file and text
+          char cc = text.charAt(posLine);                   // write char per char is not slower than StringBuilder.toString()
+          fw.write(cc);
+          posLine +=1;
+        }
+        fw.close();
+      } catch (IOException exc) {
+        throw new IOException(exc.getMessage());              // but throw the exception to outside
+      }
+
+    }
+    return bWr;
+  }
+
+  
+  
+  /**Compare the content of a textual file with the given text.
+   * @param fin File to compare with
+   * @param text text to compare with, maybe a StringBuilder or a String
+   * @param sCommentCtrl null or a possible comment control String:
+   *   <ul><li>If this argument's length is <=2, then it is the String where a line comment starts.
+   *     For example <code>"//"</code> for C/++ language or <code>"#"</code> for scripts.
+   *   <li>Else: The first character is any char, which is the separator character to build parts between. 
+   *     In the next example the <code>,</code> is the separator character:
+   *   <li><code>",//,8,(*,*)"</code>
+   *   <li>The first part, here <code>//</code> is the String where a line comment starts.
+   *   <li>After them a control character follows for trim:
+   *     <ul>
+   *     <li><code>6</code> trim only left side, change in indentation is ignored
+   *     <li><code>9</code> trim only right side, especially before the end line comment
+   *     <li><code>8</code> trim left and right, indentation and trailing spaces, especially before end line commment
+   *     <li>If the same character as the separator character is found, no trim is done.
+   *       This is for example in <code>",//,,(*,*)"</code>.
+   *     <li>Trim trims white spaces: tabulator or spaces.
+   *     </ul>
+   *   <li>After trim, an optional multi line comment Start String can be given, here <code>(*</code>
+   *   <li>The multi line comment Start String needs an appropriate end String, here <code>*)</code>
+   *   <li>Multi line comment Strings can be omitted, for example with <code>,//,8</code>
+   *   <li>If the syntax is faulty, an IllegalArgumentException is thrown. 
+   *     This is for example on missing comment end String is missing.
+   *   </ul>
+   *   NOTE: The multi line comment is not full tested. Do not use it yet. 
+   *   Problems are: Multi line is also comment in line. If more as one comment in line is found,
+   *   the line should be shortened by this comment parts, a new instance of line 
+   *   and also an instance to compare the line in text is necessary.
+   * @param charset null or a specific encoding. If null, UTF-8 is used.
+   * @return true if text and fIn are the same, excluding non tested comments.
+   * @throws IOException
+   */
+  public static boolean cmpFileCharSeq (File fin, CharSequence text
+  , String sCommentCtrl, Charset charset
+  ) throws IOException {
+    String sEndlineComment = null, sStartComment = null, sEndComment = null;
+    int zStartComment=0, zEndComment =0;
+    boolean bTrimLeft = false, bTrimRight = false, bTrim = false;
+    if(sCommentCtrl !=null) {           //------------------vv analyse arguement sCommentCtrl
+      int zCommentCtrl = sCommentCtrl.length();
+      if(sCommentCtrl.length() <=2) {
+        sEndlineComment = sCommentCtrl;                     // only end line comment as simple case
+      } else {                                    //--------// more as 2 chars, first is the separator char
+        char cCommentSep = sCommentCtrl.charAt(0);
+        int posTrim = sCommentCtrl.indexOf(cCommentSep,1);  // end of end line comment, possible trim character
+        if(posTrim < 0) {
+          sEndlineComment = sCommentCtrl.substring(1);      // second separator key not found, all is end line comment
+        } else {
+          sEndlineComment = sCommentCtrl.substring(1, posTrim); // end line comment till 2th separator
+          if(posTrim +1 < zCommentCtrl) {              // characters exists after second separator key:
+            char cTrim = sCommentCtrl.charAt(posTrim+1); // maybe possible the cCommentSep itself, then no trim
+            switch(cTrim) {
+            case '6': bTrimLeft = true; break;
+            case '9': bTrimRight = true; break;
+            case '8': bTrim = true; break;
+            default: throw new IllegalArgumentException("faulty character for trim, only < > # are allowed: " + sCommentCtrl);
+            }
+            int posComment = sCommentCtrl.indexOf(cCommentSep, posTrim +1); // start of more-line comment
+            if(posComment > 0 ) {
+              int posEndComment = sCommentCtrl.indexOf(cCommentSep, posComment+1); // 4th separator: end of sStartComment
+              if(posEndComment <0 || posEndComment <= posComment+1) {
+                throw new IllegalArgumentException("end comment separator missing or faulty, should be '#endLineComment#6#startComment#endComment': " + sCommentCtrl);
+              }
+              sStartComment = sCommentCtrl.substring(posComment+1, posEndComment);
+              zStartComment = posEndComment - posComment+1;
+              sEndComment = sCommentCtrl.substring(posEndComment+1);
+              zEndComment = zCommentCtrl - posEndComment+1;
+    } } } } }
+    boolean bSearchFirstEndCommentFile = false;
+    String line;
+    int posTextLine = 0;
+    int posEnd = text.length();
+    boolean bSame = true;
+    try (BufferedReader fa = new BufferedReader(new FileReader(fin, charset))) { // Try-With-Resources
+      do {
+        int posNl = StringFunctions.indexOf(text, '\n', posTextLine);
+        if(posNl <0) { posNl = text.length(); }             // text between posTextLine ... posNl
+        int posEndTextline = posNl;
+        //
+        int lineStartAfterEndComment = -1;     //<<----------- it is set in do ... readline()...
+        do {
+          line = fa.readLine();   // loop if a end comment should be searched and not found.
+        } while(line !=null && bSearchFirstEndCommentFile && (lineStartAfterEndComment = line.indexOf(sEndComment)) <0);
+        //
+        if(line == null && posNl > posTextLine) {   // The file is shorter than the buffer
+          bSame = false;
+        }
+        else {
+          int lineEndFile = -1;
+          if(lineStartAfterEndComment >=0) {                // the end comment was searched and found, line starts after it.
+            line = line.substring(lineStartAfterEndComment + zEndComment);
+          }
+          bSearchFirstEndCommentFile = false;
+          if(bTrim) { line = line.strip(); }
+          else if(bTrimLeft) {
+            line = line.stripLeading();
+            int pos1 = StringFunctions.indexNoWhitespace(text, posTextLine, posNl);
+            if(pos1 >0) { posTextLine = pos1; }
+          }
+          if(sEndlineComment !=null) {  //==================vv truncate after sEndlineComment
+            lineEndFile = line.indexOf(sEndlineComment);
+            if(lineEndFile >=0) {                           // search backward the last character which is not a whitespace
+              int end1 = StringFunctions.lastIndexOfNoChar(line, 0, lineEndFile, " \t");
+              if(end1 >=0) { lineEndFile = end1 +1; }
+              line = line.substring(0, lineEndFile);  //<<---- line without endComment
+            }
+            posEndTextline = StringFunctions.indexOf(text, posTextLine, posNl, sEndlineComment);
+            if(posEndTextline >=0) {                        // search backward the last character which is not a whitespace
+              int end1 = StringFunctions.lastIndexOfNoChar(text, posTextLine, posEndTextline, " \t");
+              if(end1 >=0) { posEndTextline = end1 +1; }
+            } else {
+              posEndTextline = posNl; 
+            }
+          }                             //==================^^ truncate after sEndlineComment
+          if(sStartComment !=null) {    //==================vv check sStartComment
+            int posCommentFile;         //------------------vv for line check in a loop, more as one possible
+            while( (posCommentFile  = line.indexOf(sStartComment)) >=0) {  // Note: line does no more contain sEndlineComment
+              int posEndCommentFile = line.indexOf(sEndComment, posCommentFile + zStartComment);
+              if(posEndCommentFile >0) {          //--------vv cut comment
+                line = line.substring(0, posCommentFile) + line.substring(posEndCommentFile + zEndComment);
+              } else {                            //--------vv comment over more lines:
+                line = line.substring(0, posCommentFile);
+                bSearchFirstEndCommentFile = true;  //<<<<---- search line with sEndComment
+                break;
+              }
+            }
+            int posCommentText;                             // vv search the sEndComment in the whole text:
+            while( (posCommentText  = StringFunctions.indexOf(text, posTextLine, posEndTextline, sStartComment))>=0) {
+              int posEndCommentText = StringFunctions.indexOf(text, posCommentText + zStartComment, -1, sEndComment);
+              if(posEndCommentText >=0) {
+                posTextLine = posEndCommentText + zEndComment;
+                if(posTextLine >= posEndTextline) {          //--------vv in a line later
+                  posNl = StringFunctions.indexOf(text, '\n', posTextLine);
+                  if(posNl <0) { posNl = text.length(); }
+                  if(sEndlineComment !=null) {  //==================vv truncate after sEndlineComment
+                    posEndTextline = StringFunctions.indexOf(text, posTextLine, posNl, sEndlineComment);
+                    if(posEndTextline <0) { posEndTextline = posNl; }
+                  }                             //==================^^ truncate after sEndlineComment
+                  posCommentText = StringFunctions.indexOf(text, posTextLine, posEndTextline, sStartComment);
+                } else {
+                  // TODO
+                }
+              }
+              break; // do not loop yet.
+            }
+          }                             //==================^^ check sStartComment
+          if(bTrimRight) {
+            if(lineEndFile <0 ) {                 //--------vv trim right till endlineComment is not done: 
+              line = line.stripTrailing();
+            }
+            if(posEndTextline == posNl) {            //--------vv trim right till posEndTextline is not done: 
+              int end1 = StringFunctions.lastIndexOfNoChar(text, posTextLine, posEndTextline, " \t");
+              if(end1 >=0) { posEndTextline = end1 +1; }
+            }
+          }
+          if(bSame && !StringFunctions.equals(text, posTextLine, posEndTextline, line)) {
+            bSame = false;;
+          }
+        }
+        posTextLine = posNl +1;                  // continue in wr, the output from translation
+      } while(bSame && line !=null && posTextLine < posEnd);
+      if(posTextLine >= posEnd ) {
+        line = fa.readLine();
+        bSame = (line ==null);                      // file is longer, not bSame.
+      }
+      fa.close();
+    } catch(IOException exc) {     //=======================vv close the fa on exception
+      throw new IOException(exc.getMessage());              // but throw the exception to outside
+    }
+    return bSame;
+  }
+  
+  
+  
   
   /**Copy a file. The time-stamp and read-only-properties will be kept for dst. 
    * @param src A src file. 
