@@ -913,10 +913,10 @@ public class FileFunctions {
           line = fa.readLine();   // loop if a end comment should be searched and not found.
         } while(line !=null && bSearchFirstEndCommentFile && (lineStartAfterEndComment = line.indexOf(sEndComment)) <0);
         //
-        if(line == null && posNl > posTextLine) {   // The file is shorter than the buffer
-          bSame = false;
+        if(line == null) {              //------------------vv end of file
+          bSame = posTextLine >= posEnd;                    // same if even end of text
         }
-        else {
+        else {                          //------------------vv cmp line and text 
           int lineEndFile = -1;
           if(lineStartAfterEndComment >=0) {                // the end comment was searched and found, line starts after it.
             line = line.substring(lineStartAfterEndComment + zEndComment);

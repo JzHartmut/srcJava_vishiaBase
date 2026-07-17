@@ -505,36 +505,15 @@ public final class OutTextPreparer
    */
   public static final String version = "2024-08-30";
   
-  
-  
-  /**Helper class with some static operations and data.
-   * TODO build a standard variable of type {@link Class} to access operations of this class.
-   * The {@link DataAccess} supports it.
+  /**Possible set a breakpoint here to debug execution.
    * 
    */
-  public static class GtxtHelper {
-    /**It can be used to set a debug stop point in an otx script.
-     * Call there: <code><&testOtx(val, val, ...)></code>
-     * 
-     */
-    public static void testgTxt(Object ... val) {
-      Debugutil.stop();
-      //if(val[0] instanceof StateTransCond && ((FBlock_FBcl)val[0]).name().equals("trans_Back_Working_On__HoldPos_Working_On")) Debugutil.stopp();
-    }
-
-
-    /**Conditional debug stop in the otx
-     * Call there: <code><&testOtx(stringAccess, 'expectedValue', val)></code>
-     * 
-     */
-    public static void testgTxtCond(String valTest, String sTest, Object ... val) {
-      if(valTest !=null && valTest.equals(sTest))
-        Debugutil.stop();
-    }
-
-
+  @SuppressWarnings("static-method") 
+  void debug(Cmd cmd, String sInfo, Object[] values, Map<String, Object> argsByName) { 
+    Debugutil.stop(); 
   }
-  
+
+
   
   @ConstRef static final public Map<String, Object> idxConstDataDefault = new TreeMap<String, Object>(); {
     //this.idxConstDataDefault.put("null", null);   //This does not work because null is not recognized as constData
@@ -1204,12 +1183,30 @@ public final class OutTextPreparer
   
   
   static class DebugCmd extends Cmd {
+    
+    /**String to compare for a conditional break. 
+     * See {@link OutTextPreparer#execSwitchCmd(Cmd, int, WriteDst, DataTextPreparer)}, 'case debug:'
+     * The value will be compared with the given values[0] value.
+     */
     public String cmpString;
-
-    public DebugCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, StringPartScanLineCol spDatapath, Class<?> reflData) throws Exception {
-      super(ixCmd, linecol, outer, ECmd.debug, spDatapath, reflData);
-    }
-
+    
+    /**Value access on a &lt;:debug:cmpString: valueAccess: valueAccess:...>
+     * <ul>
+     * <li>This values access is prepared using the 
+     *   {@link CalculatorExpr.Operand#Operand(String, Map, Class, Map)} with 
+     *   <ul><li>the String given access path, the parsed dataPath, 
+     *   <li>{@link OutTextPreparer#nameVariables} to evaluate name given variables,
+     *   <li>{@link ParseHelper#execClass} as the given class for element access and 
+     *   <li>{@link ParseHelper#idxConstData} for constant data,
+     *   </ul>
+     *   which all can be used as also for data for other commands. 
+     *   See {@link OutTextPreparer.ParseHelper#parseElementCmd(LogMessage)}, detection of 'sp.scan("debug:")'
+     * <li>The values are evaluated on hit the debug in Runtime using
+     *   {@link OutTextPreparer#data4Cmd(org.vishia.util.CalculatorExpr.Operand, DataTextPreparer, WriteDst)}.
+     * <li>See {@link OutTextPreparer#execSwitchCmd(Cmd, int, WriteDst, DataTextPreparer)}, 'case debug:'
+     */
+    CalculatorExpr.Operand[] valuesAcc;
+    
     public DebugCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, String sDatapath, Class<?> reflData, final Map<String, Object> idxConstData) throws Exception {
       super(ixCmd, linecol, outer, ECmd.debug, sDatapath, reflData, idxConstData);
     }
@@ -1324,8 +1321,15 @@ public final class OutTextPreparer
    * The list is cleared on entry on {@link #execLineCt(WriteDst, DataTextPreparer)}
    * to start script part execution. Its capacity is delibaretely limited to prevent using too much unnecessary memory.
    */
-  List<Cmd> _trace = new LinkedList<>();
+  private List<Cmd> _trace = new LinkedList<>();
   
+  
+  /**This variable is set to true if a &lt;:debug:...> statement is executed.
+   * Then a possible source line for a manual breakpoint is executed.
+   * If it breaks, then set '_bDebug' manually to false for continue.
+   * Later a InterprocessCommunication may be sensitive to debug in an IDE. 
+   */
+  private boolean _bDebug = false;
   
   
   /**Index of the OUT element in variables 
@@ -2582,9 +2586,11 @@ public final class OutTextPreparer
       else { //No proper cmd-end found, then the '<-' is already scanned, but it is an textual character.
         throw new ParseException("faulty <&" + sp.getCurrent(20), 0);
       }
- 
-    
     }    
+    
+    
+    
+    
     
     private void parseElementCmd ( LogMessage log ) throws ParseException {
       this.pos1 = (int)this.sp.getCurrentPosition() -2;     //before '<:' as end of text before
@@ -2763,12 +2769,31 @@ public final class OutTextPreparer
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, cmd);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }  
-      else if(this.sp.scan("debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-        String cmpString = this.sp.getLastScannedString().toString();
+      else if(this.sp.scan("debug:").scanIdentifier().scan(":").scanToAnyChar(",:>", '\\', '"', '"').scanOk()) {
         String debugVar = this.sp.getLastScannedString().toString();
+        String cmpString = this.sp.getLastScannedString().toString();
+        List<String> listDatapathValues = null;
+        while(this.sp.scanChar(':').scanToAnyChar(":>", '\\', '"', '"').scanOk()) {
+          if(listDatapathValues == null) { listDatapathValues = new LinkedList<>(); }
+          listDatapathValues.add(this.sp.getLastScannedString().toString());  // data path to any variables
+        }
+        if(!this.sp.scan(">").scanOk()) {
+          throw new ParseException("faulty <:debug:... missing >" + sp.getCurrent(20), 0);
+        }
         //====>
         DebugCmd cmd = (DebugCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.debug, debugVar, log);
         cmd.cmpString = cmpString;
+        if(listDatapathValues !=null) {
+          cmd.valuesAcc = new CalculatorExpr.Operand[listDatapathValues.size()];
+          int ixValues = -1;
+          for(String dataPath: listDatapathValues) {
+            try {             //---------vvvvv---------------- prepare data access adequate as data4Cmd
+            cmd.valuesAcc[++ixValues] = new CalculatorExpr.Operand(dataPath, this.otx.nameVariables, this.execClass, this.idxConstData);
+            } catch(Exception exc) {
+              throw new ParseException("value access not readable: " + dataPath + " >>" + this.sp.getCurrent(20), 0);
+            }
+          }
+        }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }  
       else if(this.sp.scan("debug>").scanOk()) {
@@ -2983,8 +3008,7 @@ public final class OutTextPreparer
     private void parseCall(final String src, final int pos0, final int pos1, final StringPartScanLineCol sp
         , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript, LogMessage log) throws ParseException {
       String sCallVar = this.sp.getLastScannedString();
-      if(sCallVar.equals("otxIfColors"))
-        otx.debug();
+      //if(sCallVar.equals("otxIfColors")) Debugutil.stopp();
       CallCmd cmd = (CallCmd)addCmd(src, this.sp.getlineCol(), pos0, pos1, ECmd.call, sCallVar, log);
       //if(cmd !=null) {
       final OutTextPreparer call;  
@@ -3350,9 +3374,12 @@ public final class OutTextPreparer
       }
     }
     while(ixCmd < ixEndExcl) {
-      if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
-        debug();
       cmd = this.cmds.get(ixCmd++);
+      if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
+        debug(cmd, this.sIdent, args.args, args.argsByName);
+      if(this._bDebug) {
+        debug(cmd, null, args.args, args.argsByName);
+      }
       traceCmd(cmd);
       if(this.ixOUT >=0) {                         //------vv only if OUT is automatically built
         args.args[this.ixOUT+1] = cmd;                     // variable "OTXCMD" is the current cmd nice to have for debug only.
@@ -3498,8 +3525,22 @@ public final class OutTextPreparer
         }
       } break;
       case debug: {
-        if(((DebugCmd)cmd).cmpString ==null || data4Cmd(cmd, args, wrCt).toString().equals(((DebugCmd)cmd).cmpString)){
-          debug();
+        Object data = data4Cmd(cmd, args, wrCt);
+        Object[] values = null;
+        if(((DebugCmd)cmd).cmpString ==null || data.toString().equals(((DebugCmd)cmd).cmpString)){
+          CalculatorExpr.Operand[] valuesAccess = ((DebugCmd)cmd).valuesAcc;
+          if(valuesAccess !=null) {
+            values = new Object[valuesAccess.length+1];
+            int ixValue = 0;
+            for(CalculatorExpr.Operand valueAcc: valuesAccess) {
+              values[++ixValue] = data4Cmd(valueAcc, args, wrCt);
+            }
+          } else {
+            values = new Object[1];
+          }
+          values[0] = data;
+          this._bDebug = true;
+          debug(cmd, ((DebugCmd)cmd).cmpString, values, args.argsByName);
         }
       } break;
     default:
@@ -3510,10 +3551,13 @@ public final class OutTextPreparer
   
   
   
-  @SuppressWarnings("synthetic-access") private Object data4Cmd ( Cmd cmd, DataTextPreparer args, WriteDst wrCt ) throws IOException {
+  @SuppressWarnings("synthetic-access") private Object data4Cmd ( 
+  CalculatorExpr.Operand cmd //  Cmd cmd
+  , DataTextPreparer args, WriteDst wrCt 
+  ) throws IOException {
     @SuppressWarnings("unused") boolean bDataOk = true;
     Object data;  //========================================= first gather the data
-    if(args.logExec !=null) { args.logExec.append(" " + cmd.linecol[0]); } 
+    if(args.logExec !=null && cmd instanceof Cmd) { args.logExec.append(" " + ((Cmd)cmd).linecol[0]); } 
     if(cmd.expr !=null) {
       try {                                                // only one time, set the destination data for calc
         //if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
@@ -3528,7 +3572,7 @@ public final class OutTextPreparer
     else if(cmd.ixValue >=0) { //-------------------------- any index to the arguments or local arguments
       data = execDataAccess(wrCt, cmd, args); 
     } 
-    else if(cmd.cmd != ECmd.exec && cmd.dataAccess !=null) {
+    else if( (!(cmd instanceof Cmd) || (((Cmd)cmd).cmd != ECmd.exec)) && cmd.dataAccess !=null) {
       try {
         if(cmd.dataAccess.datapath().size()>3)
           Debugutil.stop();
@@ -3569,22 +3613,18 @@ public final class OutTextPreparer
   
   /**Accesses the data
    * @param wr only used on exception to write an elaborately info
-   * @param cmd contains {@link Cmd#ixValue} for first variable 
+   * @param cmd may be instanceof {@link Cmd} for log, contains {@link Cmd#ixValue} for first variable 
    *  and possible {@link Cmd#dataAccess} for deeper values.
    *  If it is instanceof {@link ValueCmd} then {@link ValueCmd#sFormat} is used to format numeric and time values if given
    * @param args dynamic data for access
    * @return The accessed object, maybe null.
    * @throws IOException
    */
-  private Object execDataAccess ( Appendable wr, Cmd cmd, DataTextPreparer args ) throws IOException {
+  private Object execDataAccess ( Appendable wr, CalculatorExpr.Operand cmd, DataTextPreparer args ) throws IOException {
     Object data0 = cmd.ixValue <0 ? null: args.args[cmd.ixValue];
     Object data;
     if(cmd.dataAccess !=null) {
-      if(args.logExec !=null) { args.logExec.append(" " + cmd.linecol[0]); } 
-//      String sDataAccess = cmd.dataAccess.toString();
-//      if(sDataAccess.contains("Dtype")) {
-//        Debugutil.stop();
-//      }
+      if(args.logExec !=null && cmd instanceof Cmd) { args.logExec.append(" " + ((Cmd)cmd).linecol[0]); } 
       try {
         //====>                     // base on a given variable as args or static
         data = cmd.dataAccess.access(data0, true, false, this.nameVariables, args.args);
@@ -3848,13 +3888,6 @@ public final class OutTextPreparer
     this._trace.add(cmd);
   }
   
-  /**Possible set a breakpoint here to stop execution.
-   * 
-   */
-  void debug() { 
-    Debugutil.stop(); 
-  }
-
   
   @Override public String toString() { return this.sIdent; } // + ":" + this.pattern; }
   
