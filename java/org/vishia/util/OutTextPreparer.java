@@ -509,8 +509,10 @@ public final class OutTextPreparer
    * 
    */
   @SuppressWarnings("static-method") 
-  void debug(Cmd cmd, String sInfo, Object[] values, Map<String, Object> argsByName) { 
+  boolean debug(Cmd cmd, String sInfo, Object[] values, Map<String, Object> argsByName) { 
     Debugutil.stop(); 
+    boolean bDbg = true;
+    return bDbg;
   }
 
 
@@ -2788,7 +2790,7 @@ public final class OutTextPreparer
           int ixValues = -1;
           for(String dataPath: listDatapathValues) {
             try {             //---------vvvvv---------------- prepare data access adequate as data4Cmd
-            cmd.valuesAcc[++ixValues] = new CalculatorExpr.Operand(dataPath, this.otx.nameVariables, this.execClass, this.idxConstData);
+              cmd.valuesAcc[++ixValues] = new CalculatorExpr.Operand(dataPath, this.otx.nameVariables, this.execClass, this.idxConstData);
             } catch(Exception exc) {
               throw new ParseException("value access not readable: " + dataPath + " >>" + this.sp.getCurrent(20), 0);
             }
@@ -3375,10 +3377,11 @@ public final class OutTextPreparer
     }
     while(ixCmd < ixEndExcl) {
       cmd = this.cmds.get(ixCmd++);
-      if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
-        debug(cmd, this.sIdent, args.args, args.argsByName);
+      if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd) {
+        this._bDebug = debug(cmd, this.sIdent, args.args, args.argsByName);
+      }  
       if(this._bDebug) {
-        debug(cmd, null, args.args, args.argsByName);
+        this._bDebug = debug(cmd, null, args.args, args.argsByName);
       }
       traceCmd(cmd);
       if(this.ixOUT >=0) {                         //------vv only if OUT is automatically built
@@ -3527,7 +3530,7 @@ public final class OutTextPreparer
       case debug: {
         Object data = data4Cmd(cmd, args, wrCt);
         Object[] values = null;
-        if(((DebugCmd)cmd).cmpString ==null || data.toString().equals(((DebugCmd)cmd).cmpString)){
+        if(data instanceof String && ((String)data).length()==0 || ((DebugCmd)cmd).cmpString ==null || data.toString().equals(((DebugCmd)cmd).cmpString)){
           CalculatorExpr.Operand[] valuesAccess = ((DebugCmd)cmd).valuesAcc;
           if(valuesAccess !=null) {
             values = new Object[valuesAccess.length+1];
@@ -3539,8 +3542,7 @@ public final class OutTextPreparer
             values = new Object[1];
           }
           values[0] = data;
-          this._bDebug = true;
-          debug(cmd, ((DebugCmd)cmd).cmpString, values, args.argsByName);
+          this._bDebug = debug(cmd, ((DebugCmd)cmd).cmpString, values, args.argsByName);
         }
       } break;
     default:

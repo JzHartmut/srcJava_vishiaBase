@@ -1580,7 +1580,13 @@ public class CalculatorExpr
      * <li>If sDatapath describes a more complex expression, then the parsed expression is stored
      *   in {@link #expr}. The fields {@link #dataConst} and {@link #dataAccess} remains null.
      * </ul>  
-     * @param sDatapath textual given value. It is either a literal, a simple variable ...TODO docu
+     * @param sDatapath textual given value. It is either a literal, a simple variable 
+     *   <ul>
+     *   <li>If it is empty (""), then all elements are set to null, but {@link #textOrVar} = "", as special case.
+     *   <li>Used as argument of called {@link CalculatorExpr#CalculatorExpr(String, Map, Class)}
+     *     respectively {@link CalculatorExpr#setExpr(String)} and then {@link CalculatorExpr#setExpr(StringPartScan, Class, boolean)},
+     *     see docu there. 
+     *   </ul>
      * @param variables Container with some variable names associated to indices in a value array.
      * @param reflData type wich can contain a static member with the required name in sDatapath if the name is not found in variables 
      * @param idxConstData If this is not null, then it is first used to find {@link #dataConst} with sDatapath as key.
@@ -1603,33 +1609,40 @@ public class CalculatorExpr
       else if(sDatapath !=null){
 //      if(sDatapath.startsWith("&("))
 //      Debugutil.stop();
-        if(sDatapath.contains("("))
-          Debugutil.stop();
-        //====>  ============================================
-        CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);     // use the full capability of expr though usual unnecessary
-        List<CalculatorExpr.Operation> exprOper = expr.listOperations();
-        CalculatorExpr.Operand exprOperand;
-        CalculatorExpr.Operation oper;
-        if( exprOper.size()==1 
-         && (oper = exprOper.get(0)) !=null
-         && oper.unaryOperator == null && oper.unaryOperators == null
-         && oper.kindOperand == Operation.kDatapath
-         && (exprOperand = oper.operand()) !=null
-          ) { // and then extract the only few information
-          //The expr has exact 1 Operand, copy its content to this,  the access on exec is fast. That's the advantage.
-          this.dataAccess = exprOperand.dataAccess;        // maybe null clarified in parseArgument
-          this.dataConst = exprOperand.dataConst;          // maybe null
-          this.ixValue = exprOperand.ixValue;              // maybe -1 or given
-          this.expr = null;                                // do not use the slower access to a complex expression
-          this.textOrVar = exprOperand.textOrVar;          // used only as string literal if all other is null, -1
-        } else {
-          //the sDatapath is a more complex expression
+        if(sDatapath.length()==0) {               //--------vv special case, datapath is empty:
           this.dataAccess = null;
           this.dataConst = null;
           this.ixValue = -1;
-          this.expr = expr;                                // or use a complex expression, also possible. More effort on access.
+          this.expr = null;
           this.textOrVar = sDatapath;
-        }
+        } else {
+          //if(sDatapath.contains("(")) Debugutil.stopp();
+          //====>  ============================================
+          CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);     // use the full capability of expr though usual unnecessary
+          List<CalculatorExpr.Operation> exprOper = expr.listOperations();
+          CalculatorExpr.Operand exprOperand;
+          CalculatorExpr.Operation oper;
+          if( exprOper.size()==1 
+           && (oper = exprOper.get(0)) !=null
+           && oper.unaryOperator == null && oper.unaryOperators == null
+           && oper.kindOperand == Operation.kDatapath
+           && (exprOperand = oper.operand()) !=null
+            ) { // and then extract the only few information
+            //The expr has exact 1 Operand, copy its content to this,  the access on exec is fast. That's the advantage.
+            this.dataAccess = exprOperand.dataAccess;        // maybe null clarified in parseArgument
+            this.dataConst = exprOperand.dataConst;          // maybe null
+            this.ixValue = exprOperand.ixValue;              // maybe -1 or given
+            this.expr = null;                                // do not use the slower access to a complex expression
+            this.textOrVar = exprOperand.textOrVar;          // used only as string literal if all other is null, -1
+          } else {
+            //the sDatapath is a more complex expression
+            this.dataAccess = null;
+            this.dataConst = null;
+            this.ixValue = -1;
+            this.expr = expr;                                // or use a complex expression, also possible. More effort on access.
+            this.textOrVar = sDatapath;
+          }
+        } 
       }
       else { //empty without text and without datapath
         this.ixValue = -1;
@@ -3688,7 +3701,7 @@ public class CalculatorExpr
           int ixVar = oper.operand_.ixValue;
           int ix2 = -2;
           int ixCheck = 0;
-          while(args.length >= (ixCheck+1) && args[ixCheck].getClass().isArray()) {
+          while(args.length >= (ixCheck+1) && args[ixCheck] !=null && args[ixCheck].getClass().isArray()) {
             int z = Array.getLength(args[ixCheck]); 
             if(ixVar < z) {
               ix2 = ixVar;
