@@ -58,7 +58,8 @@ public interface ToStringAppend {
      */
     public static String toStringS(ToStringAppend thiz, Object ... cond) {
       try {
-        return thiz.toStringAppend(new StringBuilder(), cond).toString();
+        StringBuilder sb = new StringBuilder();
+        return thiz.toStringAppend(sb, cond).toString();
       } catch (IOException exc) {
         throw new RuntimeException(exc.getCause());
       }

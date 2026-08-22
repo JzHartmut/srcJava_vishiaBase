@@ -973,8 +973,9 @@ public class StringPartScan extends StringPart
   /**Returns the part of the last scanning yet only from {@link #scanIdentifier()}
    * @return A persistent String of the last scanned String.
    */
-  public final String getLastScannedString()
-  { return sLastString[ixLastString--].toString();
+  public final String getLastScannedString() { 
+    if(ixLastString <0) { return null; }
+    else { return sLastString[ixLastString--].toString();}
   }
   
 

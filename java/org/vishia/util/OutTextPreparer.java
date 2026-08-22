@@ -354,16 +354,7 @@ try {
  * maybe on the current main location. 
  * <br><br>
  * <b>Debug possibilities</b>
- * <ul>
- * <li>Use &lt;debug> as statement in gTxt to execute {@link #debug()} where a breakpoint can be set.
- * <li>Then set a breakpoint on begin of {@link #execSwitchCmd(Cmd, int, WriteDst, DataTextPreparer)} or
- *   in {@link #execSub(WriteDst, DataTextPreparer, int, int)} in the while loop after <code>cmd = this.cmds.get(ixCmd++);</code>
- *   to run step by step in gTxt cmd execution, 
- *   look for the command, do single step in Java on interesting stuff.
- * <li>Alternative: loop to {@link #_trace} to see which statements {@link Cmd} are executed till now,
- *   maybe important to see which &lt:if> are used. But this does not show the affiliated data from user instances.
- * <li>... more TODO  
- * </ul>    
+ * See {@link #debug(Cmd, String, Object[], Map)}
  * <b>...more</b><br>
  * <ul>
  * <li>&lt;:set:variable=value>: sets a new created variable, can be used as &lt;&variable> etc.
@@ -506,12 +497,49 @@ public final class OutTextPreparer
   public static final String version = "2024-08-30";
   
   /**Possible set a breakpoint here to debug execution.
-   * 
+   * <ul>
+   * <li>For debug of execution and data in a script you can set a breakpoint in {@link #debug(Cmd, String, Object[], Map)}.
+   *  on beginning of this class immediately after {@link #version}. 
+   * <li>If this breakpoint is hit, the return value is false, but can be set before return to true.
+   *   If this operation returns with true, the instance variable {@link #_bDebug} (even able to find on beginning 
+   *   of the alphabetic sorted variable of this) is set to true and can be even manually set to false on demand.
+   *   If {@link #_bDebug} is true, then on each cmd in the while loop in {@link #execSub(WriteDst, DataTextPreparer, int, int)} 
+   *   this debug(...) operation is called again. This enables single step of all cmd.  
+   * <li>To stimuli a breakpoint for this debug(...) operation you can write >> <code>&lt;:debug></code> << as statement in a gTxt script.
+   *   If the execution hits this statement, the {@link #debug(Cmd, String, Object[], Map)} is called.
+   * <li>A more powerful operation is, write >> <code>&lt;:debug:NAME:cmprAccess:access:access:...></code> <<
+   *   The >> <code>cmprAccess</code> << should be an expression in the script which returns a String. 
+   *   This String is compared with >> <code>NAME</code> << which is any identifier (without ''). 
+   *   If both are equal, only then the debug(...) operation is called.
+   *   This is the possibility for a conditional breakpoint depending on data.
+   * <li>If the >> <code>NAME</code> << is not given, means >> <code>&lt;:debug:: :access:access:...></code> << is written,
+   *   then the debug(...) operation is called unconditionally, but with data, see next:
+   * <li>The >> <code>cmprAccess</code> << result and all further >> <code>access</code> << results
+   *   are written in the Object[] array given as argument 'values'
+   *   This gives the possibility to view some prepared values of the script execution.
+   * <li>All current stored script variable can be seen in the 'argsByName' map, which is the same as 
+   *   the given execution 'args' {@link DataTextPreparer#argsByName} which is given in the calling level before,
+   *   as argument of {@link #execLineCt(WriteDst, DataTextPreparer)} and all further levels. 
+   * <li>Look on {@link #_trace} to see which statements {@link Cmd} are executed till now,
+   *   maybe important for example to see which &lt:if> are executed. 
+   *   But this does not show the affiliated data from user instances.
+   * <li>An even powerful possibility for debug is: Set {@link DataTextPreparer#debugOtx} and {@link DataTextPreparer#debugIxCmd}
+   *   from outside before call a script. Then on the indexed command the debug(...) is executed.
+   *   This saves effort to change the gTxt-script.  
+   * </ul>    
+   * @param cmd the current cmd to execute, it is the <:debug...> if called from there.
+   * @param sInfo info of the cmd
+   * @param values all results of access in the >> <code>&lt;:debug:NAME:cmprAccess:access:access:...></code> << cmd,
+   *   or all {@link DataTextPreparer#args} if this operation is called furthermore in cmd execution.
+   * @param argsByName information from {@link DataTextPreparer#argsByName}
+   * @param bDbgSrc true then this operation is called from the >> <code>&lt;:debug:...></code> << statement. 
+   * @return set it to true to furthermore call this operation on each cmd, 
+   *   set it false to stop debugging. 
    */
   @SuppressWarnings("static-method") 
-  boolean debug(Cmd cmd, String sInfo, Object[] values, Map<String, Object> argsByName) { 
+  boolean debug(Cmd cmd, String sInfo, Object[] values, Map<String, Object> argsByName, boolean bDbgSrc) { 
     Debugutil.stop(); 
-    boolean bDbg = true;
+    boolean bDbg = bDbgSrc || this._bDebug;
     return bDbg;
   }
 
@@ -811,8 +839,14 @@ public final class OutTextPreparer
     CalculatorExpr.Data calcExprData;
     
     
+    /**null or possible name of an gTxt script to execute {@link OutTextPreparer#debug(Cmd, String, Object[], Map, boolean)}
+     * on a definitive cmd.
+     */
     public String debugOtx;
     
+    /**Index of the cmd to start debug.
+     * Because the commands are not proper able to see use often 1.
+     */
     public int debugIxCmd;
     
     
@@ -2771,9 +2805,11 @@ public final class OutTextPreparer
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, cmd);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }  
-      else if(this.sp.scan("debug:").scanIdentifier().scan(":").scanToAnyChar(",:>", '\\', '"', '"').scanOk()) {
-        String debugVar = this.sp.getLastScannedString().toString();
-        String cmpString = this.sp.getLastScannedString().toString();
+      else if ( this.sp.scan("debug:").scanIdentifier().scan(":").scanToAnyChar(",:>", '\\', '"', '"').scanOk()
+             || this.sp.scan("debug::").scanToAnyChar(",:>", '\\', '"', '"').scanOk() 
+              ) {
+        String debugVar = this.sp.getLastScannedString();
+        String cmpString = this.sp.getLastScannedString();  // the first identifier, it is null for <:debug::...>
         List<String> listDatapathValues = null;
         while(this.sp.scanChar(':').scanToAnyChar(":>", '\\', '"', '"').scanOk()) {
           if(listDatapathValues == null) { listDatapathValues = new LinkedList<>(); }
@@ -3308,6 +3344,7 @@ public final class OutTextPreparer
     } else {
       WriteDst wrCt = new WriteDst(wr, 1);       // simple instance with the Appendable
       execLineCt(wrCt, args);
+      Debugutil.stop();      // -->> break to see written output
     }
   }
 
@@ -3378,10 +3415,10 @@ public final class OutTextPreparer
     while(ixCmd < ixEndExcl) {
       cmd = this.cmds.get(ixCmd++);
       if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd) {
-        this._bDebug = debug(cmd, this.sIdent, args.args, args.argsByName);
+        this._bDebug = debug(cmd, this.sIdent, args.args, args.argsByName, false);  // debug break on pre defined cmd
       }  
       if(this._bDebug) {
-        this._bDebug = debug(cmd, null, args.args, args.argsByName);
+        this._bDebug = debug(cmd, null, args.args, args.argsByName, false);
       }
       traceCmd(cmd);
       if(this.ixOUT >=0) {                         //------vv only if OUT is automatically built
@@ -3542,7 +3579,7 @@ public final class OutTextPreparer
             values = new Object[1];
           }
           values[0] = data;
-          this._bDebug = debug(cmd, ((DebugCmd)cmd).cmpString, values, args.argsByName);
+          this._bDebug = debug(cmd, ((DebugCmd)cmd).cmpString, values, args.argsByName, true);
         }
       } break;
     default:

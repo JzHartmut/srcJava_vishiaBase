@@ -1,6 +1,6 @@
 #!/bin/sh
 ## intern script for genJavadoc
-## Note: the $DSTDIR can be set outside also to D:/vishia.
+# ## Note: the $DSTDIR can be set outside also to D:/vishia.
 ## $DST should contain for ex. Java/srcJava_vishiaBase to create it parallel to other main components.
 ## set $JAVAC_HOME maybe outside to a version for proper javadoc.
 
@@ -29,8 +29,13 @@ echo output to $DSTDIR/$DST
 ## -nodeprecated
 echo currdir=$PWD
 export ARGS="-Xdoclint:none -d $DSTDIR/$DST -encoding UTF-8 -private -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
-echo $JAVAC_HOME/bin/javadoc $ARGS
-"$JAVAC_HOME/bin/javadoc" $ARGS 1> $DSTDIR/$DST/javadoc.rpt 2> $DSTDIR/$DST/javadoc.err
+##export ARGS="-d $DSTDIR/$DST -encoding UTF-8 -private -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
+##echo $JAVAC_HOME/bin/javadoc $ARGS
+##"$JAVAC_HOME/bin/javadoc" $ARGS 1> $DSTDIR/$DST/javadoc.rpt 2> $DSTDIR/$DST/javadoc.err
+javadoc --version
+echo javadoc $ARGS
+javadoc $ARGS 1> $DSTDIR/$DST/javadoc.rpt 2> $DSTDIR/$DST/javadoc.err
+cat $DSTDIR/$DST/javadoc.err
 if test -d ../img; then
 	if test ! -d $DSTDIR/$DST/img; then mkdir $DSTDIR/$DST/img; fi;
   cp ../img/* $DSTDIR/$DST/img
@@ -43,7 +48,8 @@ if ! test -z "$DST_priv"; then
   if ! test -d $DSTDIR/$DST_priv ; then mkdir --parents $DSTDIR/$DST_priv ; fi
   export ARGS="-Xdoclint:none -d $DSTDIR/$DST_priv -encoding UTF-8 -private -linksource -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
   echo javadoc $ARGS
-  "$JAVAC_HOME"/bin/javadoc $ARGS 1> $DSTDIR/$DST_priv/javadoc.rpt 2> $DSTDIR/$DST_priv/javadoc.err
+  ##"$JAVAC_HOME"/bin/
+  javadoc $ARGS 1> $DSTDIR/$DST_priv/javadoc.rpt 2> $DSTDIR/$DST_priv/javadoc.err
   if test -d ../img; then
   	if test ! -d "$DSTDIR/$DST"_priv/img; then mkdir "$DSTDIR/$DST"_priv/img; fi;
     cp ../img/* "$DSTDIR/$DST"_priv/img
@@ -56,4 +62,5 @@ echo you should copy or compare and copy the doc to the destination
 echo and/or zip the doc, shipment and unzip it on the destination.
 echo it should be manually done.
 
-pause
+read -p "... press any key" XX
+

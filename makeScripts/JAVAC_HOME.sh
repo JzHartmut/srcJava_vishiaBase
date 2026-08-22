@@ -10,6 +10,7 @@
 #You should switch the order of JAVAC_HOME proposals to select the desired too.
 #You should add more JAVAC_HOME proposals if necessary.
 #
+echo called: $0
 if test "$OS" = "Windows_NT"; then
 
   JAVAC_HOME=c:/Programs/Java/jdk1.8.0_241
@@ -23,7 +24,7 @@ else
   JAVAC_HOME="$JAVA_HOME"
   ##JAVAC_HOME="/usr/Java/JDK8_86zulu/"
   ##JAVAC_HOME="/usr/share/JDK/jdk1.8.0_241"
-  if test -d $JAVAC_HOME; then echo $JAVAC_HOME/
+  if test -d $JAVAC_HOME; then echo $JAVAC_HOME
   else echo "JAVAC_HOME faulty: " $JAVAC_HOME
   fi
 fi
