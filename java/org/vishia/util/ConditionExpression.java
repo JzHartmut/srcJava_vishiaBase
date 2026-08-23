@@ -171,7 +171,7 @@ public class ConditionExpression {
     
     /**One member of a superior ListCond or the only one Evout which determines the condition.
      */
-    public final PinCond pinCond;
+    private PinCond pinCond;
     
     /**If not null, then contains more as one pinCond in the sub List or just a deeper sublist.
      * The members are AND or OR related due to {@link #bAnd}
@@ -214,11 +214,11 @@ public class ConditionExpression {
      * not removed (it is final) but ignored because {@link #listCond} is not null and is prior used.
      * @param pinCond
      */
-    public Cond (PinCond pinCond) {
-      this.bAnd = true;                              // a next added event is AND related
+    public Cond (PinCond pinCond, boolean bAnd) {
+      this.bAnd = bAnd;                              // a next added event is AND related
       this.listCond = null;                          // not used, maybe later defined in addPin(...)
       this.pinCond = pinCond;                        // the relevant info
-      this.hash = pinCond.hashCode() + kHashAddAND;   // hash is the same as we would have an OR-list
+      this.hash = System.identityHashCode(pinCond);   // hash is the simple of pin
     }
     
     
@@ -240,7 +240,7 @@ public class ConditionExpression {
         this.listCond.addAll(src.listCond);          // add all sub lists, let it unchanged
       } 
       else if( src.pinCond !=null) {      //---------vv listCondSrc.pinCond only given:
-        Cond entry = new Cond(src.pinCond);  // add the pinCond as entry in this
+        Cond entry = new Cond(src.pinCond, true);  // add the pinCond as entry in this
         this.listCond.add(entry);
       }
       this.hash = src.hashCode();                        // hash is the same as we would have an OR-list
@@ -279,6 +279,8 @@ public class ConditionExpression {
     }
     
     
+    public PinCond pinCond() { return this.pinCond; }
+    
     
     public List<Cond> iterSublist () { return this.listCond; }
     
@@ -286,19 +288,23 @@ public class ConditionExpression {
     
     public long hash () { return this.hash; }
     
-    /**Add an pinAdd to the given list as a single contribution. 
+    /**Add a pinAdd to the given list as a single contribution. 
      * See also {@link #addCond(Cond)} to add an expression contribution, a sub list.
      * This event is AND or OR related, depending on {@link #bAnd}, with the other entries in the own {@link #listCond}.
+     * <br>If the instance are first created with {@link #ConditionExpression(PinCond, boolean)}
+     * then the {@link #pinCond} is removed and a {@link #listCond()} is created with the primary given {@link #bAnd}.
      * @param pinAdd
      */
     public void addPin(PinCond pinAdd) {
       if(this.listCond == null && this.pinCond !=null) { //vv given: only pinCond is set as single entry
         this.listCond = new LinkedList<>();                  // this should be a part of the list.
-        Cond entry1 = new Cond(this.pinCond);      // builds an entry with only this event, formal a ListCond
+        this.hash = (this.bAnd ? kHashAddAND : kHashAddOR);       // build hash new
+        Cond entry1 = new Cond(this.pinCond, true);                // builds an entry with only this event, formal a ListCond
+        this.pinCond = null;                                 // remove it because contained in listCond
         this.listCond.add(entry1);                           // the given this.pinCond is not removed, but no more used.
-        this.hash = entry1.hash;                             // starts hash new, hash of the list entry1, containing OR information
+        this.hash += entry1.hash;                             // starts hash new, hash of the list entry1, containing OR information
       }
-      Cond entry = new Cond(pinAdd);              // builds an entry with only this event, formal a ListCond
+      Cond entry = new Cond(pinAdd, true);                         // builds an entry with only this event, formal a ListCond
       this.listCond.add(entry);
       this.hash += entry.hash;                               // adds the hash of the list entry, containing OR information
     }
@@ -361,6 +367,9 @@ public class ConditionExpression {
    */
   private List<FBcond> listFBcond = new LinkedList<>();
   
+  /**True, false or both, or multiple pins */
+  private int[] valuesFBcond = new int[6];
+  
   private List<FBcond> listFBcondRemoved = new LinkedList<>();
 
 
@@ -393,27 +402,27 @@ public class ConditionExpression {
    * @param bAnd
    * @return
    */
-  public long[] buildTrueTable (Cond cond, long[] tblSum, long[] tblPrev, boolean bAnd) {
+  public long[] buildTrueTable (Cond cond, long[] tblSum, long[] tblPrev) {
     long[] ret = tblSum;
     if(cond.listCond !=null) {  //===========================vv the cond contains not only one pin:
       // first add all sub condition lists
-      for(Cond listSub : cond.iterSublist()) { 
+      for(Cond condSub : cond.iterSublist()) { 
         long[] tblSub = null;
-        if(listSub.listCond !=null) {   //===================vv first go recursively in the deepest level
-          tblSub = buildTrueTable(listSub, tblSub, tblPrev, listSub.bAnd);
-          ret = addCondition(null, ret, tblSub, bAnd);
+        if(condSub.listCond !=null) {   //===================vv first go recursively in the deepest level
+          tblSub = buildTrueTable(condSub, tblSub, tblPrev);
+          ret = addCondition(null, ret, tblSub, cond.bAnd);
         }
       }
       //
       for(Cond listSub : cond.iterSublist()) {  //===========vv then add immediately given conditions of this level
         if(listSub.pinCond !=null) {
-          ret = addCondition(listSub.pinCond, ret, null, bAnd);
+          ret = addCondition(listSub.pinCond, ret, null, cond.bAnd);
           assert(listSub.iterSublist() ==null);
         }
       }
     }                            //==========================^^ not only one pin 
     else if(cond.pinCond !=null) {  //=======================vv condition contains only one pin, this is anyway on the deepest level
-      ret = addCondition(cond.pinCond, ret, tblPrev, bAnd);  // add the true table bits of this pin
+      ret = addCondition(cond.pinCond, ret, tblPrev, cond.bAnd);  // add the true table bits of this pin
       assert(cond.iterSublist() ==null);
     }
     return ret;
@@ -530,6 +539,21 @@ public class ConditionExpression {
     }
   }
   
+  
+  
+  /**Returns false, if any FBcond is only contained with one PinCond as its contribution.
+   * Then it means clean is not necessary.
+   * @return true if at least one {@link FBcond} is presented with more as one {@link PinCond}.
+   *   It means clean should be done.
+   */
+  public boolean needsClean () {
+    for(int value: this.valuesFBcond) {
+      if(value == 3) {     //TODO maybe enhanced, check whether more as one bit is set.
+        return true;
+      }
+    }
+    return false;
+  }
   
 
   /**Simple check each bit and build condition with AND of all relevant conditions.
@@ -726,16 +750,7 @@ public class ConditionExpression {
     } else { 
       fbCond.addCondition(1, pinAdd);
     }
-    int ixFbx = 0;
-    for(FBcond fbx: listFBcond) {
-      if(pinAdd.fbCond() == fbx) {
-        break;
-      }
-      ixFbx +=1;
-    }
-    if(ixFbx >= this.listFBcond.size()) {
-      this.listFBcond.add(pinAdd.fbCond());
-    }
+    int ixFbx = ixFBcondAdd(pinAdd);
     int bitPos1 = bitpos(ixFbx);
     long[] maskC;
     if(bitPos1 <= 32 ) {
@@ -769,5 +784,31 @@ public class ConditionExpression {
     return mask;
   }
 
+  
+  
+  
+  /**Register or get the index to the {@link FBcond} in {@link #listFBcond}
+   * and register true and false in {@link #valuesFBcond}.
+   * @param pinAdd the given pin.
+   * @return
+   */
+  private int ixFBcondAdd (PinCond pinAdd) {
+    int ixFBx = 0;
+    for(FBcond fbx: this.listFBcond) {
+      if(pinAdd.fbCond() == fbx) {
+        break;
+      }
+      ixFBx +=1;
+    }
+    if(ixFBx >= this.listFBcond.size()) {
+      this.listFBcond.add(pinAdd.fbCond());
+    }
+    if(this.valuesFBcond.length <= ixFBx) {
+      this.valuesFBcond = Arrays.copyOf(this.valuesFBcond, ixFBx+1);
+    }
+    this.valuesFBcond[ixFBx] |= 1<< pinAdd.ixCond();
+    return ixFBx;    
+  }
+  
   
 }
