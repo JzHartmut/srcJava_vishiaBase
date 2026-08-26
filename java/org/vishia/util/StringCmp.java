@@ -10,7 +10,37 @@ import java.io.File;
 public class StringCmp {
 
   
-  public static String version = "2020-03-21";
+  /**Version, history and license.
+   * <ul>
+   * <li>2026-08-25 bugfix important: If the last line was ending with an end comment and no newline was found,
+   *   then comparison has start on beginning. A rarely big error. Fixed. 
+   * <li>2022-07-27 only source tree moved (?)
+   * <li>2020-03-23 enhancements, white space detection, commented.
+   * <li>2020-03-13 Some enhancements, especially return int instead bool with the position of the first difference.
+   * <li>2020-02-15 Created
+   * </ul>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   */
+  public static String version = "2026-08-25";
   
   static String sWhitespace = " \t\r\n\f";
   
@@ -61,8 +91,15 @@ public class StringCmp {
       int z1 = s1.length();
       int z2 = s2.length();
       int[] ix1= {0}, ix2= {0};
+      int ix1z = -1, ix2z = -1;
       boolean bok = true;
       while(ix1[0] < z1) {
+        if(ix1z < ix1[0]) { ix1z = ix1[0]; }
+        else { Debugutil.stopp(); assert(false); bok = false; throw new IllegalArgumentException("ERROR in compare"); }
+        if(ix2z < ix1[0]) { ix2z = ix1[0]; }
+        else { Debugutil.stopp(); assert(false); bok = false; throw new IllegalArgumentException("ERROR in compare"); }
+        
+        //if(ix1z == 7100) Debugutil.stopp();
         if(dbgStop >0 && ix1[0] == dbgStop) {
           dbgStop +=0;  //set breakpoint here
         }
@@ -86,44 +123,68 @@ public class StringCmp {
 
   
   
+  /**Get the next character from the charsequence, but consider comment, whitespace.
+   * 
+   * @param cs Charsequence contains the text
+   * @param zcs the length of cs
+   * @param ix [0] is the current index, returned even by reference here
+   * @param bWhitespace true then skip white spaces, on any sequence of white spaces all are skipped and a space is returned.
+   * @param endlineComment String for Start endline comment
+   * @param commentStart String for comment start
+   * @param commentEnd String for comment end
+   * @param recursive recursions counter to abort faulty deep nesting only 2 level.
+   * @return The next character outside comments, space instead whitespaces
+   */
   private static char readNextChar(CharSequence cs, int zcs, int[] ix, boolean bWhitespace
       , String endlineComment, String commentStart, String commentEnd, int recursive ) {
     assert(ix[0] < zcs);  //ix[0] should be tested.
     if(recursive >2) throw new RuntimeException("recursion"); //abort independent of assertion mode
-    char cc = cs.charAt(ix[0]++);  
+    char cc = cs.charAt(ix[0]++);     //<<--------------------- the next character, valid if not special conditions       
     boolean bSkipped;
     do {
       bSkipped = false;
       if(cc == '(')
         Debugutil.stop();
-      if(cc == endlineComment.charAt(0) && (ix[0] + endlineComment.length()) <= zcs 
+      if(cc == endlineComment.charAt(0) && (ix[0] + endlineComment.length()) <= zcs  //------vv candidate for end line comment
           && StringFunctions.equals(cs, ix[0]-1, ix[0]-1+endlineComment.length(), endlineComment)) {
-        int[] whichChar = {0};
-        int ixCommentEnd = StringFunctions.indexOfAnyChar(cs, ix[0] + commentStart.length(), -1, "\r\n", whichChar)+1;
-        ix[0] = ixCommentEnd;
-        if(whichChar[0] == 0 && ix[0] < zcs && cs.charAt(ix[0]) == '\n') {
-          ix[0] +=1;  //skip \n after \r
-        }
-        cc = ix[0] < zcs ? cs.charAt(ix[0]++) : '\0';
-        bSkipped = true;
+        int[] whichChar = {0};                               // end line comment: search the end of line for next char.
+        int ixCommentEnd = StringFunctions.indexOfAnyChar(cs, ix[0] + commentStart.length(), -1, "\r\n", whichChar);
+        if(ixCommentEnd >=0) {
+          ix[0] = ixCommentEnd+1;
+          if(whichChar[0] == 0 && ix[0] < zcs && cs.charAt(ix[0]) == '\n') {
+            ix[0] +=1;  //skip \n after \r
+          }
+          cc = ix[0] < zcs ? cs.charAt(ix[0]++) : '\0';        // the next char on start of the next line.
+          bSkipped = true;   // repeat here even the check of end line comment for the next line after end line comment.
+        } else {                       //--------------------vv comment till end of text, not closed.
+          ix[0] = zcs;  
+          cc = '\0';
+        } 
       }
-      if(cc == commentStart.charAt(0) && (ix[0] + commentStart.length()) <= zcs 
+      if(cc == commentStart.charAt(0) && (ix[0] + commentStart.length()) <= zcs      //----- vv candidate of more line comment
           && StringFunctions.equals(cs, ix[0]-1, ix[0]-1+commentStart.length(), commentStart)) {
         int ixCommentEnd = StringFunctions.indexOf(cs, commentEnd, ix[0] + commentStart.length());
-        if(ixCommentEnd >=0) {
+        if(ixCommentEnd >=0) {             //----------------vv end of comment found maybe in line later:
           ix[0] = ixCommentEnd + commentEnd.length();
           cc = ix[0] < zcs ? cs.charAt(ix[0]++) : '\0';
-          bSkipped = true;
+          bSkipped = true;  // repeat here even the first check for end line comment.
+        } else {                       //--------------------vv comment till end of text, not closed.
+          ix[0] = zcs;  
+          cc = '\0';
         }
       }
       if(bWhitespace && sWhitespace.indexOf(cc)>=0) {
         while( ix[0] < zcs //skip all whitespaces after them, skip all comments and enline comment too, hence recursively 
-            && sWhitespace.indexOf(        //in recursion do not detect whitespace, elsewhere it would be recursively again.
-                 readNextChar(cs, zcs, ix, false, endlineComment, commentStart, commentEnd, recursive +1)
-                                      )>=0 
-              );  //incremented ix[0]
-        if(ix[0] < zcs) { ix[0] -=1; } //backward to the last character, it is not a whitespace if ix[0] is not on end.
-        cc = ' ';  //use a space for comparison.
+            && sWhitespace.indexOf(cc = cs.charAt(ix[0])) >=0) {
+          ix[0] +=1;
+        }
+//                //in recursion do not detect whitespace, elsewhere it would be recursively again.
+//                 readNextChar(cs, zcs, ix, false, endlineComment, commentStart, commentEnd, recursive +1)
+//                                      )>=0 
+//              );  //incremented ix[0]
+//        if(ix[0] < zcs) { ix[0] -=1; } //backward to the last character, it is not a whitespace if ix[0] is not on end.
+        cc = ' ';  //use a space for comparison instead white space sequence
+        bSkipped = false;    // do not bSkipped=true because comments are tested after white space comparison, the space is the valid returned.
       }
     } while(bSkipped);
     return cc;

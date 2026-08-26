@@ -353,18 +353,22 @@ try {
  * But if the operation has an error, it can return an error message, which is then placed in the code
  * maybe on the current main location. 
  * <br><br>
- * <b>Debug possibilities</b>
- * See {@link #debug(Cmd, String, Object[], Map)}
- * <b>...more</b><br>
+ * <b>Debug possibilities</b>:  See {@link #debug(Cmd, String, Object[], Map)}
+ * <br><br>
+ * <b>Set variables:</b>: &lt;:set:variable=value>
  * <ul>
  * <li>&lt;:set:variable=value>: sets a new created variable, can be used as &lt;&variable> etc.
- * <li>&lt;:set:variable='string':value>: If the value starts with a string literal, it can be concatenated with some other values.
+ * <li>&lt;:set:variable='string':value:'string':...>: If the value starts with a string literal, it can be concatenated with some other values.
  * <li>&lt;:set:variable>....&lt;.set>: unfortunately not ready, should set a variable with a prepared expression with placeholder.
- * <li>&lt;:type:value:org.path.to.Class>: checks the value whether it is of the type of the given class.
- *   This produces an "<??ERROR text??>" if it is not matching. 
+ * </ul>
+ * <b>Type check and documentation:</b>
+ * <ul><li>&lt;:type:value:org.path.to.Class>: checks the value whether it is of the type of the given class.
+ *   This produces an "&lt;??ERROR text??>" if it is not matching. 
  *   <br>Able to switch off for faster execution using {@link DataTextPreparer#setCheck(boolean)} for each script. 
+ * <li>The importance of this statement is, see which Java-type is it in the gTxt-source.
+ *   Check of the type is a kind of assertions. But it needs less calculation time, hence switch off the check usual is not necessary.
  * </ul>   
- * @author Hartmut Schorrig
+ * @author Hartmut Schorrig, LPGL License
  *
  */
 public final class OutTextPreparer
@@ -373,6 +377,7 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
+   * <li>2026-08: Improve debug possibilities 
    * <li>2026-01-14: {@link #parseTemplates(Map, Class, Map, LogMessage)} and {@link #parse(Class, Map, Map, LogMessage)} with LogMessage.
    *   The problem occurs because a &lt;call:SUBSCRIPT...> was not found because other input files were used to parse.
    *   This parse error can be tolerate, because on runtime this script is anyway never read.
@@ -3500,8 +3505,12 @@ public final class OutTextPreparer
         Object data = data4Cmd(cmd, args, wrCt);
         boolean bOk = cmdt.type.isInstance(data);
         if(!bOk) {
-          Class<?> typefound = data.getClass();
-          wrCt.wrCurr.append("<?? typecheck fails, " + cmdt.textOrVar + " is type of " + typefound.getCanonicalName() + " ??>");
+          if(data == null) {
+            wrCt.wrCurr.append("<?? typecheck fails, data not given: " + cmdt.textOrVar + " ??>");
+          } else {  
+            Class<?> typefound = data.getClass();
+            wrCt.wrCurr.append("<?? typecheck fails: " + cmdt.textOrVar + " is type of " + typefound.getCanonicalName() + " ??>");
+          }
         }
       } break;
       case addLinenr: {
@@ -3579,7 +3588,7 @@ public final class OutTextPreparer
             values = new Object[1];
           }
           values[0] = data;
-          this._bDebug = debug(cmd, ((DebugCmd)cmd).cmpString, values, args.argsByName, true);
+          this._bDebug = debug(cmd, ((DebugCmd)cmd).cmpString, values, args.argsByName, false);
         }
       } break;
     default:

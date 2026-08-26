@@ -76,7 +76,33 @@ import java.util.List;
  */
 public class ConditionExpression {
 
-  
+  /**Version, history and license.
+   * <ul>
+   * <li>2026-08-11 Created, some refactoring after
+   * </ul>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   */
+  public static String version = "2026-08-25";
+
   /**Describes an instance which offers a simple condition, true or false or an enumeration. 
    * It is designated as "pin" of a function block. 
    *
@@ -138,13 +164,10 @@ public class ConditionExpression {
   
   
   
-  /**Inner class for instances to describe nested complex conditions.
+  /**Inner class for instances to describe a simple or even nested complex conditions.
    * It contains
    * <ul><li>{@link #pinCond} if the condition is defined only by this one pin
    * <li>{@link #listCond} If the condition is OR or AND related with more as one pin. 
-   *    If this element is given (not null), then the content of {@link #pinCond} is ignored.
-   *    That occurs if first only one pin is given, and later more. 
-   *    Because {@link #pinCond} is final, it is not removed in this situation.
    * <li>{@link #bAnd} dedicates whether the items in {@link #listCond} are AND or OR related.
    * <li>{@link #hash} the hash to find out unique instances if the same content is given.
    * </ul>
@@ -157,7 +180,9 @@ public class ConditionExpression {
    *   Then it is nested.
    * </ul>  
    * Usual AND and OR relations should be alternate, or better a canonical form with only two nested levels
-   *   should be used, first OR, second AND. But the algorithm works for all combinations.  
+   * should be used, first OR, second AND. But the algorithm works for all combinations.
+   * But AND and OR can be given even in any order and kind. 
+   * The operation {@link ConditionExpression#buildTrueTable(Cond, long[], long[])} regard all AND and OR in any kind.  
    *
    */
   public static class Cond implements ToStringAppend {
@@ -379,6 +404,9 @@ public class ConditionExpression {
   
   
   
+  /**Copy constructor to enhance a condition in the first level.
+   * @param src
+   */
   public ConditionExpression (ConditionExpression src) {
     for(FBcond fbExpr : src.listFBcond) {
       this.listFBcond.add(fbExpr);
@@ -387,6 +415,27 @@ public class ConditionExpression {
   
   
   
+  
+  /**Builds a table of bits, known as true table, with a given maybe complex (nested) condition.
+   * <ul><li>The return value for a simple A & B returns 0x8888888888888888, only the 4 last bits are relevant.
+   * <li>Return for A | B is 0xeeeeeeeeeeeeeeee (three bits are set in bit 3..0)
+   * <li>Return for A & B || ~A & ~B is 0x9999999999999999
+   * <li>More complex conditions are adequat processed.
+   * <li>The {@link #listFBcond} is filled in order of seen {@link Cond#pinCond()},
+   *   adequate {@link #valuesFBcond} is filled. 
+   * <li>If {@link PinCond} are only given with one value true or false, then {@link #valuesFBcond} will contain
+   *   only a single bit set in each index, and {@link #needsClean()} returns false.
+   *   This detects, that {@link #getCondition(long[], Object)} will be return the same expression as given in 'cond',
+   *   (maybe with changed nesting), and it may be not necessary to call it. 
+   * </ul> 
+   * @param cond the given condition
+   * @return the true table of the condition, only with one element if the number of different {@link PinCond}
+   * does not exceed 6 different true/false pins. 
+   * If there are more, then an array is returned. TODO not implemented yet.
+   */
+  public long[] buildTrueTable (Cond cond) {
+    return buildTrueTable(cond, null, null, 0);
+  }  
   
   
   /**Builds a table of bits, known as true table, with a given maybe complex (nested) condition.
@@ -402,14 +451,17 @@ public class ConditionExpression {
    * @param bAnd
    * @return
    */
-  public long[] buildTrueTable (Cond cond, long[] tblSum, long[] tblPrev) {
+  private long[] buildTrueTable (Cond cond, long[] tblSum, long[] tblPrev, int recursive) {
+    if(recursive > 100) {
+      throw new IllegalArgumentException("too many recursions");
+    }
     long[] ret = tblSum;
     if(cond.listCond !=null) {  //===========================vv the cond contains not only one pin:
       // first add all sub condition lists
       for(Cond condSub : cond.iterSublist()) { 
         long[] tblSub = null;
         if(condSub.listCond !=null) {   //===================vv first go recursively in the deepest level
-          tblSub = buildTrueTable(condSub, tblSub, tblPrev);
+          tblSub = buildTrueTable(condSub, tblSub, tblPrev, recursive+1);
           ret = addCondition(null, ret, tblSub, cond.bAnd);
         }
       }
@@ -526,6 +578,11 @@ public class ConditionExpression {
 
   
   
+  /**Checks whether a pin is currently acitve in the condition
+   * after build the new {@link Cond} with {@link #getCondition(long[], Object)}.
+   * @param pin
+   * @return
+   */
   public boolean containsPinCond (PinCond pin) {
     FBcond fb = pin.fbCond();
     if(this.listFBcondRemoved.contains(fb)) {
