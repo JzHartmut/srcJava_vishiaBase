@@ -210,6 +210,8 @@ public class ConditionExpression {
      */
     public final boolean bAnd;
     
+    public final int eCond;
+    
     /**This is the hash to use for a superior instance which contains this {@link Cond},
      * or it is even usable for unified instances of this. 
      * <ul>
@@ -230,6 +232,7 @@ public class ConditionExpression {
       this.listCond = new LinkedList<>();
       this.pinCond = null;
       this.hash =  bAnd ? kHashAddAND : kHashAddOR;  // differ AND or OR in hash as base value
+      this.eCond = 0;
     }
     
     /**Creates an instance usual as member of a superior {@link #listCond} with only this {@link PinCond} as condition. 
@@ -239,8 +242,9 @@ public class ConditionExpression {
      * not removed (it is final) but ignored because {@link #listCond} is not null and is prior used.
      * @param pinCond
      */
-    public Cond (PinCond pinCond, boolean bAnd) {
+    public Cond (PinCond pinCond, boolean bAnd, int eCond) {
       this.bAnd = bAnd;                              // a next added event is AND related
+      this.eCond = eCond;
       this.listCond = null;                          // not used, maybe later defined in addPin(...)
       this.pinCond = pinCond;                        // the relevant info
       this.hash = System.identityHashCode(pinCond);   // hash is the simple of pin
@@ -259,13 +263,14 @@ public class ConditionExpression {
      */
     public Cond (Cond src) {
       this.bAnd = src.bAnd;                              // a next added event is OR related
+      this.eCond = 0;
       this.listCond = new LinkedList<>();                          // not used, maybe later defined in addPin(...)
       this.pinCond = null;
       if( src.listCond !=null) {                     // the relevant info
         this.listCond.addAll(src.listCond);          // add all sub lists, let it unchanged
       } 
       else if( src.pinCond !=null) {      //---------vv listCondSrc.pinCond only given:
-        Cond entry = new Cond(src.pinCond, true);  // add the pinCond as entry in this
+        Cond entry = new Cond(src.pinCond, true, src.eCond);  // add the pinCond as entry in this
         this.listCond.add(entry);
       }
       this.hash = src.hashCode();                        // hash is the same as we would have an OR-list
@@ -320,16 +325,16 @@ public class ConditionExpression {
      * then the {@link #pinCond} is removed and a {@link #listCond()} is created with the primary given {@link #bAnd}.
      * @param pinAdd
      */
-    public void addPin(PinCond pinAdd) {
+    public void addPin(PinCond pinAdd, int eCond) {
       if(this.listCond == null && this.pinCond !=null) { //vv given: only pinCond is set as single entry
         this.listCond = new LinkedList<>();                  // this should be a part of the list.
         this.hash = (this.bAnd ? kHashAddAND : kHashAddOR);       // build hash new
-        Cond entry1 = new Cond(this.pinCond, true);                // builds an entry with only this event, formal a ListCond
+        Cond entry1 = new Cond(this.pinCond, true, this.eCond);                // builds an entry with only this event, formal a ListCond
         this.pinCond = null;                                 // remove it because contained in listCond
         this.listCond.add(entry1);                           // the given this.pinCond is not removed, but no more used.
         this.hash += entry1.hash;                             // starts hash new, hash of the list entry1, containing OR information
       }
-      Cond entry = new Cond(pinAdd, true);                         // builds an entry with only this event, formal a ListCond
+      Cond entry = new Cond(pinAdd, true, eCond);                         // builds an entry with only this event, formal a ListCond
       this.listCond.add(entry);
       this.hash += entry.hash;                               // adds the hash of the list entry, containing OR information
     }
@@ -549,7 +554,7 @@ public class ConditionExpression {
             assert(valFalse != mask);  // because valTrue != valFalse
             PinCond pin = fbx.getCondition(1);
             if(retCond == null) { retCond = new Cond(false); } // a new OR table necessary
-            retCond.addPin(pin);                      // add it as solitary
+            retCond.addPin(pin, 2);                      // add it as solitary
             valAnd &= ~maskTrue;                             // remove all these bits from the true table of possible combination bits
             valResult &= ~maskTrue;                          // maskTrue is more left in respect to mask
             valResult |= valResult << bitPos;                // replace maskTrue bits with maskFalse bits, copy the remaining false values to the maskTrue position for further compare.
@@ -558,7 +563,7 @@ public class ConditionExpression {
             assert(valTrue != mask);    // because valTrue != valFalse
             PinCond pin = fbx.getCondition(0);
             if(retCond == null) { retCond = new Cond(false); } // a new OR table necessary
-            retCond.addPin(pin);
+            retCond.addPin(pin, 1);
             valAnd &= ~mask;
             valResult &= ~mask;                 // copy the remaining true values to the maskFalse position for further compare.
             valResult |= valResult >>> bitPos;        // hint: use logic shift, left side a 00 should be inserted.
@@ -661,12 +666,12 @@ public class ConditionExpression {
             if( (mBit & maskFalse) !=0) {
               FBcond fbx = this.listFBcond.get(nCond);
               PinCond pin = fbx.getCondition(0);
-              listCondAnd.addPin(pin);
+              listCondAnd.addPin(pin, 1);
             } else {
               if( (mBit & maskTrue) !=0) {
                 FBcond fbx = this.listFBcond.get(nCond);
                 PinCond pin = fbx.getCondition(1);
-                listCondAnd.addPin(pin);
+                listCondAnd.addPin(pin, 2);
               }
             }
           }
