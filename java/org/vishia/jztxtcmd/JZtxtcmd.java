@@ -44,13 +44,15 @@ import org.vishia.zbnf.ZbnfParser;
 
 
 /**This is the Script executer and text generator started form command line.
- * The simplest form is:
+ * The simplest form of usage from a command line or command script is:
  * <pre>
- * java path/to/zbnf.jar org.vishia.zcmd.JZcmd path/to/scriptFile
+ * java path/to/zbnf.jar org.vishia.jztxtcmd.JZtxtcmd path/to/scriptFile
  * </pre>
- * This class contains the translator which uses the ZBNF parser. The core executer is {@link JZtxtcmdExecuter}.
- * The translated script is stored in an instance of {@link JZtxtcmdScript} which are both parts of the component
- * <code>srcJava_vishiaBase</code>.  
+ * This class contains only the frame for call. 
+ * The translator is contained in {@link JZtxtcmdScript} and uses the {@link ZbnfParser}.
+ * The translated script is stored in an instance of {@link JZtxtcmdScript}.
+ * Execution is done in {@link JZtxtcmdExecuter}.
+ * All these are parts of the component <code>srcJava_vishiaBase</code> compiled as <code>srcJava_vishiaBase.jar</code>  
  * <br>
  * <b>Execution from command line or from Java with String[]-args:</b>
  * <br><br>
@@ -61,7 +63,7 @@ import org.vishia.zbnf.ZbnfParser;
  * <br>
  * <b>Execution in a java context</b>
  * <br><br>
- * There are some differenz possibilities. The motivation to execute a part of a algorithm in a JZcmd script instead in Java pure may be:
+ * There are some differences possibilities. The motivation to execute a part of a algorithm in a JZcmd script instead in Java pure may be:
  * <ul>
  * <li>Text generation: The text is better able to write in the script form. 
  * <li>Flexibility in application: It does not need to write or change Java source code for any changes

@@ -3453,7 +3453,7 @@ public final class OutTextPreparer
           case wrEnd: {
             args.args[this.ixOUT] = wrCt = wdBack;        // restore the current output 
           } break;
-        default:
+        default:  //====>>>>
           ixCmd = execSwitchCmd(cmd, ixCmd, wrCt, args);
         } // switch
       } else { //data error

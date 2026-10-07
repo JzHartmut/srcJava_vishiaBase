@@ -20,6 +20,56 @@ public class Debugutil
     return 0;
   }
   
+  /**Possibility to break always in this operation.
+   * You can change the sources between ...stop() and ...stopp() to activate break.
+   * Set here always a break point.
+   * @return not used. A return statement is only contained to set the breakpoint. It is not remove by optimizing
+   * because the method itself does not know anything about the ignoring of the return value on its call.
+   */
+  public static int stopp(String msg){
+    return 0;
+  }
+  
+  /**Possibility to break conditional in this operation.
+   * You can change the sources between ...stop() and ...stopp() to activate break.
+   * Set here always a break point.
+   * @return not used. A return statement is only contained to set the breakpoint. It is not remove by optimizing
+   * because the method itself does not know anything about the ignoring of the return value on its call.
+   */
+  public static int stoppEqual(String s1, String s2){
+    if(s1.equals(s2)) {
+      return 1;
+    }
+    return 0;
+  }
+  
+  /**Possibility to break conditional in this operation.
+   * You can change the sources between ...stop() and ...stopp() to activate break.
+   * Set here always a break point.
+   * @return not used. A return statement is only contained to set the breakpoint. It is not remove by optimizing
+   * because the method itself does not know anything about the ignoring of the return value on its call.
+   */
+  public static int stoppEq(CharSequence s1, String s2, String msg){
+    if(StringFunctions.equals(s1, s2)) {
+      return 1;
+    }
+    return 0;
+  }
+  
+  public static int stoppStartsWith(CharSequence s1, String s2, String msg){
+    if(StringFunctions.startsWith(s1,s2)) {
+      return 1;
+    }
+    return 0;
+  }
+  
+  public static int stoppContains(CharSequence s1, String s2, String msg){
+    if(StringFunctions.contains(s1,s2)) {
+      return 1;
+    }
+    return 0;
+  }
+  
   /**This method can be used to force re compilation and re-test for a routine with changing the value. 
    */
   public static int retest(int x){

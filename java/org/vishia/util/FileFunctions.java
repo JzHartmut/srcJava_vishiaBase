@@ -810,7 +810,7 @@ public class FileFunctions {
       
     }
     if(bWr) {
-      posLine = 0;                                          // open as exiting file, create if necessary, prevent hard linked files.
+      posLine = 0;                                          // open as exiting file, create if necessary, preserve hard linked files.
       try (Writer fw = new BufferedWriter(new FileWriter(fout, charset, false))) {
         while(posLine < posEnd) {                           // write from current position in both, file and text
           char cc = text.charAt(posLine);                   // write char per char is not slower than StringBuilder.toString()

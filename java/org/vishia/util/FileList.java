@@ -244,7 +244,7 @@ public class FileList
         if( ! file.isDirectory()) {     //------------------vv first check all files
           String name = file.getName();
           //if(name.startsWith("#")) Debugutil.stopp();
-          if(name.endsWith(".xml")) Debugutil.stopp();
+          //if(name.endsWith(".xml")) Debugutil.stopp();
           if( ! name.equals(this.args.sFileList)
            && (filterChild = filter.check(name, false)) !=null
             ) {
